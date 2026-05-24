@@ -10,10 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.106.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
-  },
+  "@stripe/stripe-js": "^4.0.0",
+  "@supabase/supabase-js": "^2.106.0",
+  "react": "^19.2.6",
+  "react-dom": "^19.2.6"
+},
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
