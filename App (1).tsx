@@ -727,10 +727,37 @@ export default function TutorApp() {
     }catch(e){showToast("❌ "+e.message);}
   };
 
-  const handlePaymentSuccess=(result)=>{
+  const sendEmail = async (type, data) => {
+    try {
+      await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+          "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlodGNtZW15cndlamVldHliZXBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTQ0NjAsImV4cCI6MjA5NDY5MDQ2MH0.xyGnBYE2ex1vn5jbwrbfTbvcUtNC9SmzBIUiRQoIPEo` },
+        body: JSON.stringify({ type, data }),
+      });
+    } catch(e) { console.error("Email error:", e); }
+  };
+
+  const handlePaymentSuccess=async(result)=>{
     setPaymentResult(result);
     setAppTab("student-confirm");
     showToast("🎉 Booking confirmed!");
+    // Envoyer emails de confirmation
+    if (selectedBid && user) {
+      const jitsiRoom = `tutorapp-${Date.now()}`;
+      const jitsiLink = `https://meet.jit.si/${jitsiRoom}`;
+      await sendEmail("booking_confirmed", {
+        studentEmail: user.email,
+        studentName: user.email?.split("@")[0],
+        teacherEmail: selectedBid.teacher?.email || "",
+        teacherName: selectedBid.teacher?.full_name || "Tutor",
+        subject: form.subject,
+        level: form.level,
+        jitsiLink,
+        price: result.studentTotal,
+        teacherPayout: result.teacherPayout,
+      });
+    }
   };
 
   const handleDeclineBid=(bidId)=>{
@@ -865,6 +892,7 @@ export default function TutorApp() {
               <div style={{fontSize:24,marginBottom:6}}>📹</div>
               <div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:4}}>{t.confirm.jitsi}</div>
               <div style={{fontSize:12,color:"#6B7280"}}>{t.confirm.jitsiNote}</div>
+              <div style={{fontSize:12,color:"#0ABFA3",fontWeight:700,marginTop:6}}>📧 Sent to {user?.email}</div>
             </div>
             <button className="submit-btn" style={{maxWidth:300,margin:"0 auto"}} onClick={()=>{setAppTab("student-form");setSelectedBid(null);setCurrentRequestId(null);setRealBids([]);setPaymentResult(null);}}>{t.confirm.newReq}</button>
           </div>}
