@@ -698,8 +698,15 @@ export default function TutorApp() {
     });
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
       setUser(session?.user??null);
-      if(!session?.user){setUserProfile(null);setPage("home");}
-    });
+const {data:{subscription}}=supabase.auth.onAuthStateChange(async (_,session)=>{
+  setUser(session?.user??null);
+  if(!session?.user){setUserProfile(null);setPage("home");}
+  else {
+    const profile = await loadProfile(session.user.id);
+    if(profile?.role==="teacher"){setPage("app");setAppTab("teacher-dashboard");}
+    else if(profile?.role==="student"){setPage("app");setAppTab("student-form");}
+  }
+});    });
     return ()=>subscription.unsubscribe();
   },[]);
 
