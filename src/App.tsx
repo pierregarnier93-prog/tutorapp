@@ -12,7 +12,6 @@ const stripePromise = loadStripe("pk_live_51TagWA4l4Z2J0IZfYprxlISAh0FG5mY8jnpug
 const STUDENT_FEE = 0.06;
 const TEACHER_FEE = 0.06;
 
-// ─── API ──────────────────────────────────────────────────────
 async function postRequest({ subject, instrLang, curriculum, level, cycle, durationMin, message, countryCode }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -30,7 +29,7 @@ async function postRequest({ subject, instrLang, curriculum, level, cycle, durat
 async function getBidsForRequest(requestId) {
   const { data, error } = await supabase
     .from("bids")
-    .select(`*, teacher:profiles!teacher_id(full_name, country_code)`)
+    .select("*, teacher:profiles!teacher_id(full_name, country_code)")
     .eq("request_id", requestId).eq("status", "pending")
     .order("net_price_aed", { ascending: true });
   if (error) throw error;
@@ -60,10 +59,8 @@ async function acceptBid(bidId, requestId) {
   const { data: booking, error } = await supabase.from("bookings").insert({
     request_id: requestId, bid_id: bidId,
     poster_id: user.id, teacher_id: bid.teacher_id,
-    net_price_aed: netPrice,
-    gross_price_aed: grossPrice,
-    commission_aed: commission,
-    status: "pending_payment", country_code: "UAE",
+    net_price_aed: netPrice, gross_price_aed: grossPrice,
+    commission_aed: commission, status: "pending_payment", country_code: "UAE",
   }).select().single();
   if (error) throw error;
   await supabase.from("bids").update({ status: "accepted" }).eq("id", bidId);
@@ -73,7 +70,7 @@ async function acceptBid(bidId, requestId) {
 
 async function getOpenRequests(countryCode) {
   let query = supabase.from("requests")
-    .select(`*, poster:profiles!poster_id(full_name), bids(count)`)
+    .select("*, poster:profiles!poster_id(full_name), bids(count)")
     .eq("status", "open").order("created_at", { ascending: false });
   if (countryCode) query = query.eq("country_code", countryCode);
   const { data, error } = await query;
@@ -82,37 +79,21 @@ async function getOpenRequests(countryCode) {
 }
 
 async function getTeacherStats(userId) {
-  const { data: bookings } = await supabase
-    .from("bookings")
+  const { data: bookings } = await supabase.from("bookings")
     .select("net_price_aed, status, created_at")
-    .eq("teacher_id", userId)
-    .eq("status", "completed");
+    .eq("teacher_id", userId).eq("status", "completed");
   const now = new Date();
-  const thisMonth = bookings?.filter(b => {
+  const thisMonth = (bookings || []).filter(b => {
     const d = new Date(b.created_at);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }) || [];
+  });
   const totalRevenue = thisMonth.reduce((sum, b) => sum + Math.round(b.net_price_aed * (1 - TEACHER_FEE)), 0);
-  const { data: allBookings } = await supabase
-    .from("bookings")
-    .select("id")
-    .eq("teacher_id", userId)
-    .eq("status", "completed");
-  const { data: ratings } = await supabase
-    .from("ratings")
-    .select("score")
-    .eq("teacher_id", userId);
-  const avgRating = ratings?.length
-    ? (ratings.reduce((s, r) => s + r.score, 0) / ratings.length).toFixed(1)
-    : "—";
-  return {
-    revenue: totalRevenue,
-    courses: allBookings?.length || 0,
-    rating: avgRating,
-  };
+  const { data: allBookings } = await supabase.from("bookings").select("id").eq("teacher_id", userId).eq("status", "completed");
+  const { data: ratings } = await supabase.from("ratings").select("score").eq("teacher_id", userId);
+  const avgRating = ratings?.length ? (ratings.reduce((s, r) => s + r.score, 0) / ratings.length).toFixed(1) : "—";
+  return { revenue: totalRevenue, courses: allBookings?.length || 0, rating: avgRating };
 }
 
-// ─── DATA ─────────────────────────────────────────────────────
 const COUNTRIES = [
   { code:"UAE", flag:"🇦🇪", name:{en:"UAE",ar:"الإمارات",fr:"Émirats"}, currency:"AED", rate:1 },
   { code:"KSA", flag:"🇸🇦", name:{en:"Saudi Arabia",ar:"المملكة العربية السعودية",fr:"Arabie Saoudite"}, currency:"SAR", rate:1.02 },
@@ -127,12 +108,6 @@ const CURRICULA = {
   american: { label:{en:"American",ar:"الأمريكي",fr:"Américain"}, levels:{en:["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"],ar:["الصف 1","الصف 2","الصف 3","الصف 4","الصف 5","الصف 6","الصف 7","الصف 8","الصف 9","الصف 10","الصف 11","الصف 12"],fr:["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"]}, cycles:["Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)"] },
   emirati:  { label:{en:"Emirati (MOE)",ar:"الإماراتي",fr:"Émirati"}, levels:{en:["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"],ar:["الصف 1","الصف 2","الصف 3","الصف 4","الصف 5","الصف 6","الصف 7","الصف 8","الصف 9","الصف 10","الصف 11","الصف 12"],fr:["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"]}, cycles:["Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)"] },
   ib:       { label:{en:"IB",ar:"البكالوريا الدولية",fr:"IB"}, levels:{en:["PYP Y1","PYP Y2","PYP Y3","PYP Y4","PYP Y5","PYP Y6","MYP Y1","MYP Y2","MYP Y3","MYP Y4","MYP Y5","DP Y1","DP Y2"],ar:["PYP 1","PYP 2","PYP 3","PYP 4","PYP 5","PYP 6","MYP 1","MYP 2","MYP 3","MYP 4","MYP 5","DP 1","DP 2"],fr:["PYP 1","PYP 2","PYP 3","PYP 4","PYP 5","PYP 6","MYP 1","MYP 2","MYP 3","MYP 4","MYP 5","DP 1","DP 2"]}, cycles:["Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","High School (15-18)","High School (15-18)"] },
-};
-
-const getLevelsByCycle = (curriculum, cycle, lang) => {
-  if (!curriculum || !CURRICULA[curriculum]) return [];
-  const curric = CURRICULA[curriculum];
-  return curric.levels[lang].filter((_, i) => curric.cycles[i] === cycle);
 };
 
 const SUBJECTS = [
@@ -151,14 +126,13 @@ const SUBJECTS = [
 ];
 
 const TEACHER_RATES = [150,200,250,300,350,400];
-
 const UAE_REGIONS = [
   {code:"DXB",name:"Dubai"},{code:"AUH",name:"Abu Dhabi"},{code:"SHJ",name:"Sharjah"},
   {code:"AJM",name:"Ajman"},{code:"RAK",name:"Ras Al Khaimah"},{code:"FUJ",name:"Fujairah"},{code:"UAQ",name:"Umm Al Quwain"},
 ];
-
 const TEACHERS=[{initials:"سا",name:{en:"Sarah Al-Mansouri",ar:"سارة المنصوري",fr:"Sarah Al-Mansouri"},verified:true,subjects:["Mathematics","Arabic"],instrLangs:["English","Arabic"],rate:200,rating:4.9,reviews:47,bg:"#EEF0FF",color:"#5B4FE8",country:"UAE"},{initials:"كم",name:{en:"Karim Mansour",ar:"كريم منصور",fr:"Karim Mansour"},verified:true,subjects:["French","History & Geography"],instrLangs:["French","Arabic"],rate:150,rating:4.6,reviews:23,bg:"#E6FAF8",color:"#0ABFA3",country:"KSA"},{initials:"ند",name:{en:"Nadia Deschamps",ar:"ناديا دوشان",fr:"Nadia Deschamps"},verified:true,subjects:["Mathematics","Biology (SVT)"],instrLangs:["French","English"],rate:250,rating:5.0,reviews:11,bg:"#FEF6E4",color:"#B45309",country:"QAT"},{initials:"را",name:{en:"Rania Aziz",ar:"رانيا عزيز",fr:"Rania Aziz"},verified:false,subjects:["English","Spanish"],instrLangs:["English","Arabic","French"],rate:150,rating:4.4,reviews:8,bg:"#FEE2E2",color:"#B91C1C",country:"KWT"}];
-const SUGGESTIONS=[{icon:"➕",subject:{en:"Advanced Algebra",ar:"الجبر المتقدم",fr:"Algèbre avancée"},level:{en:"Grade 11",ar:"الصف الحادي عشر",fr:"1ère"},students:6,lang:{en:"in Arabic",ar:"بالعربية",fr:"en arabe"}},{icon:"🌙",subject:{en:"Arabic Language",ar:"اللغة العربية",fr:"Langue arabe"},level:{en:"Grade 7",ar:"الصف السابع",fr:"5ème"},students:9,lang:{en:"in Arabic",ar:"بالعربية",fr:"en arabe"}},{icon:"⚗️",subject:{en:"Chemistry",ar:"الكيمياء",fr:"Chimie"},level:{en:"A-Level",ar:"A-Level",fr:"Terminale"},students:4,lang:{en:"in English",ar:"بالإنجليزية",fr:"en anglais"}}];
+
+const fmtPrice=(price,countryCode)=>{const c=COUNTRIES.find(x=>x.code===countryCode)||COUNTRIES[0];if(c.currency==="KWD"||c.currency==="BHD")return`${(price*c.rate).toFixed(2)} ${c.currency}`;return`${Math.round(price*c.rate)} ${c.currency}`;};
 
 const T = {
   en: {
@@ -171,11 +145,11 @@ const T = {
     bids:{title:"Offers received",new:"offers",payAfter:"💳 Pay ONLY after the lesson — 6% service fee applies",accept:"Accept & Book →",decline:"Decline",noOffers:"Waiting for tutor offers...",noOffersDesc:"Tutors will submit their offers shortly."},
     payment:{title:"Confirm & Pay",sub:"Your card will be authorized but NOT charged until after the lesson.",lessonPrice:"Lesson price",serviceFee:"Service fee (6%)",total:"Total",teacherReceives:"Teacher receives",platformFee:"Platform fee",payBtn:"Confirm booking →",payNote:"💳 Your card will be charged AFTER the lesson is completed."},
     confirm:{title:"Booking confirmed! 🎉",sub1:"Your lesson with ",sub2:" is confirmed.",subject:"Subject",teacher:"Tutor",price:"You pay",teacherGets:"Teacher receives",jitsi:"Video link",jitsiNote:"Will be sent by email before the lesson.",pay:"Payment after lesson",secured:"✓ Secured by Stripe",newReq:"Post another request"},
-    teacher:{hello:"Welcome back",sub:"New requests matching your teaching levels.",revenue:"this month",courses:"Lessons",rating:"Rating",newAds:"Open requests",bid:"Make offer →",ignore:"Ignore",suggestions:"Suggested for you",profile:"My profile",yourRate:"Your rate",rateHint:"You receive 94% after 6% platform fee",dashboard:"Dashboard",requests:"Student requests"},
+    teacher:{hello:"Welcome back",sub:"New student requests matching your profile.",revenue:"this month",courses:"Lessons",rating:"Rating",newAds:"Student requests",bid:"Make offer →",ignore:"Ignore",profile:"My profile",yourRate:"Your rate",rateHint:"You receive 94% after 6% platform fee",dashboard:"Dashboard",requests:"Requests",verifiedBadge:"✓ Verified",pendingBadge:"⏳ Pending verification"},
     bidForm:{back:"← Back",price:"Your rate (AED/h)",msg:"Your message to the student",msgPh:"Introduce yourself, experience, availability...",send:"Send offer →",recv:"✓ You receive",afterC:"after 6% fee"},
-    onboard:{title:"Create tutor profile",sub:"Join 200+ verified tutors across the Gulf.",name:"Full name *",email:"Email *",bio:"Bio",bioPh:"Your background & teaching style...",cycle:"Teaching cycle *",subjects:"Subjects *",curriculum:"Curriculum(s) *",langTeach:"Teaching language(s) *",rate:"Your hourly rate (AED) *",eid:"Emirates ID / Iqama *",diploma:"Diploma(s) *",eidPh:"Upload ID document",diplomaPh:"Upload diploma(s)",submit:"Create profile →",withdrawal:"Payout frequency",wI:"Immediate",wW:"Weekly",wM:"Monthly",wInfo:"You can change this later in your profile settings."},
+    onboard:{title:"Create your tutor profile",sub:"Join 200+ verified tutors across the Gulf.",name:"Full name *",email:"Email *",bio:"Bio",bioPh:"Your background & teaching style...",cycle:"Teaching cycle *",subjects:"Subjects you teach *",curriculum:"Curriculum(s) *",langTeach:"Teaching language(s) *",rate:"Your hourly rate (AED) *",idDoc:"ID Document *",idDocHint:"Emirates ID, Qatar ID, Kuwait Civil ID, Iqama, etc.",diploma:"Diploma(s) *",idPh:"Upload your ID document",diplomaPh:"Upload your diploma(s)",submit:"Submit profile →",withdrawal:"Payout frequency *",wI:"Immediate",wW:"Weekly",wM:"Monthly",wInfo:"This can only be changed once per month from your profile.",banking:"Banking details for payouts",bankName:"Bank name *",bankIban:"IBAN *",bankHolder:"Account holder name *",bankHint:"Your payouts will be sent to this account. Encrypted and secure."},
     signup:{role:"You are *",student:"Student / Parent",teacher:"Teacher",name:"Full name *",country:"Country *",emirate:"Emirate *",lang:"Preferred language",curriculum:"Your curriculum *",instrLang:"Language of instruction *",level:"Your current level *",age:"Your age"},
-    profile:{title:"My Profile",name:"Full name",email:"Email",role:"Role",country:"Country",changePassword:"Change password",currentPassword:"Current password",newPassword:"New password",confirmPassword:"Confirm new password",savePassword:"Update password",saveProfile:"Save changes",passwordSuccess:"Password updated successfully!",profileSuccess:"Profile updated!"},
+    profile:{title:"My Profile",name:"Full name",email:"Email",role:"Role",changePassword:"Change password",newPassword:"New password",confirmPassword:"Confirm new password",savePassword:"Update password",saveProfile:"Save changes",passwordSuccess:"Password updated!",profileSuccess:"Profile updated!",banking:"Banking details",bankName:"Bank name",bankIban:"IBAN",bankHolder:"Account holder",payoutFreq:"Payout frequency",payoutNote:"Can only be changed once per month.",lastChanged:"Last changed"},
     cycles:["Primary (6-11)","Middle School (11-15)","High School (15-18)"],
     instrLangs:["English","Arabic","French"],
     durations:["30 min","1h","1h30","2h","2h30","3h"],
@@ -191,11 +165,11 @@ const T = {
     bids:{title:"العروض المستلمة",new:"عروض",payAfter:"💳 تدفع بعد الحصة — رسوم خدمة 6%",accept:"قبول وحجز ←",decline:"رفض",noOffers:"في انتظار عروض المدرسين...",noOffersDesc:"سيقدم المدرسون عروضهم قريباً."},
     payment:{title:"تأكيد والدفع",sub:"سيتم التحقق من بطاقتك فقط، لن يتم الخصم إلا بعد الحصة.",lessonPrice:"سعر الحصة",serviceFee:"رسوم الخدمة (6%)",total:"المجموع",teacherReceives:"يستلم المدرس",platformFee:"رسوم المنصة",payBtn:"تأكيد الحجز ←",payNote:"💳 ستُخصم من بطاقتك بعد انتهاء الحصة."},
     confirm:{title:"تم تأكيد الحجز! 🎉",sub1:"حصتك مع ",sub2:" مؤكدة.",subject:"المادة",teacher:"المدرس",price:"ستدفع",teacherGets:"يستلم المدرس",jitsi:"رابط الفيديو",jitsiNote:"سيُرسل بالبريد قبل الحصة.",pay:"الدفع بعد الحصة",secured:"✓ مؤمّن بـ Stripe",newReq:"نشر طلب جديد"},
-    teacher:{hello:"مرحباً بعودتك",sub:"طلبات جديدة تتناسب مع مستوياتك.",revenue:"هذا الشهر",courses:"الحصص",rating:"التقييم",newAds:"الطلبات المفتوحة",bid:"تقديم عرض ←",ignore:"تجاهل",suggestions:"مقترحات لك",profile:"ملفي",yourRate:"سعرك",rateHint:"تستلم 94% بعد رسوم 6%",dashboard:"لوحة التحكم",requests:"طلبات الطلاب"},
+    teacher:{hello:"مرحباً بعودتك",sub:"طلبات جديدة تتناسب مع ملفك.",revenue:"هذا الشهر",courses:"الحصص",rating:"التقييم",newAds:"طلبات الطلاب",bid:"تقديم عرض ←",ignore:"تجاهل",profile:"ملفي",yourRate:"سعرك",rateHint:"تستلم 94% بعد رسوم 6%",dashboard:"لوحة التحكم",requests:"الطلبات",verifiedBadge:"✓ موثّق",pendingBadge:"⏳ قيد المراجعة"},
     bidForm:{back:"← رجوع",price:"سعرك (AED/ساعة)",msg:"رسالتك للطالب",msgPh:"عرّف بنفسك وخبرتك...",send:"إرسال العرض ←",recv:"✓ ستحصل على",afterC:"بعد رسوم 6%"},
-    onboard:{title:"أنشئ ملف المدرس",sub:"انضم لأكثر من 200 مدرس موثّق.",name:"الاسم الكامل *",email:"البريد الإلكتروني *",bio:"نبذة عنك",bioPh:"خلفيتك وأسلوبك...",cycle:"المرحلة التعليمية *",subjects:"المواد *",curriculum:"المناهج *",langTeach:"لغة التدريس *",rate:"سعرك بالساعة (AED) *",eid:"الهوية / الإقامة *",diploma:"الشهادة *",eidPh:"رفع وثيقة الهوية",diplomaPh:"رفع الشهادة",submit:"إنشاء الملف ←",withdrawal:"تكرار الصرف",wI:"فوري",wW:"أسبوعي",wM:"شهري",wInfo:"يمكنك تغيير هذا لاحقاً في إعدادات ملفك."},
+    onboard:{title:"أنشئ ملف المدرس",sub:"انضم لأكثر من 200 مدرس موثّق.",name:"الاسم الكامل *",email:"البريد الإلكتروني *",bio:"نبذة عنك",bioPh:"خلفيتك وأسلوبك...",cycle:"المرحلة التعليمية *",subjects:"المواد التي تدرّسها *",curriculum:"المناهج *",langTeach:"لغة التدريس *",rate:"سعرك بالساعة (AED) *",idDoc:"وثيقة الهوية *",idDocHint:"الهوية الإماراتية، الهوية القطرية، البطاقة المدنية الكويتية، الإقامة، إلخ.",diploma:"الشهادة *",idPh:"رفع وثيقة الهوية",diplomaPh:"رفع الشهادة",submit:"إرسال الملف ←",withdrawal:"تكرار الصرف *",wI:"فوري",wW:"أسبوعي",wM:"شهري",wInfo:"لا يمكن تغيير هذا إلا مرة واحدة في الشهر.",banking:"بيانات الحساب البنكي",bankName:"اسم البنك *",bankIban:"IBAN *",bankHolder:"اسم صاحب الحساب *",bankHint:"سيتم تحويل أرباحك إلى هذا الحساب. مشفر وآمن."},
     signup:{role:"أنت *",student:"طالب / ولي أمر",teacher:"مدرس",name:"الاسم الكامل *",country:"الدولة *",emirate:"الإمارة *",lang:"اللغة المفضلة",curriculum:"منهجك الدراسي *",instrLang:"لغة التدريس *",level:"مستواك الحالي *",age:"عمرك"},
-    profile:{title:"ملفي الشخصي",name:"الاسم الكامل",email:"البريد الإلكتروني",role:"الدور",country:"الدولة",changePassword:"تغيير كلمة المرور",currentPassword:"كلمة المرور الحالية",newPassword:"كلمة المرور الجديدة",confirmPassword:"تأكيد كلمة المرور",savePassword:"تحديث كلمة المرور",saveProfile:"حفظ التغييرات",passwordSuccess:"تم تحديث كلمة المرور!",profileSuccess:"تم تحديث الملف!"},
+    profile:{title:"ملفي الشخصي",name:"الاسم الكامل",email:"البريد الإلكتروني",role:"الدور",changePassword:"تغيير كلمة المرور",newPassword:"كلمة المرور الجديدة",confirmPassword:"تأكيد كلمة المرور",savePassword:"تحديث",saveProfile:"حفظ",passwordSuccess:"تم التحديث!",profileSuccess:"تم الحفظ!",banking:"البيانات البنكية",bankName:"اسم البنك",bankIban:"IBAN",bankHolder:"اسم صاحب الحساب",payoutFreq:"تكرار الصرف",payoutNote:"لا يمكن التغيير إلا مرة في الشهر.",lastChanged:"آخر تغيير"},
     cycles:["الابتدائية (6-11)","المتوسطة (11-15)","الثانوية (15-18)"],
     instrLangs:["الإنجليزية","العربية","الفرنسية"],
     durations:["30 دقيقة","ساعة","ساعة ونصف","ساعتان","ساعتان ونصف","3 ساعات"],
@@ -211,19 +185,17 @@ const T = {
     bids:{title:"Offres reçues",new:"offres",payAfter:"💳 Paiement APRÈS le cours — frais de service 6%",accept:"Accepter & Réserver →",decline:"Refuser",noOffers:"En attente d'offres...",noOffersDesc:"Les enseignants vont soumettre leurs offres sous peu."},
     payment:{title:"Confirmer & Payer",sub:"Ta carte sera autorisée mais NON débitée avant le cours.",lessonPrice:"Prix du cours",serviceFee:"Frais de service (6%)",total:"Total",teacherReceives:"L'enseignant reçoit",platformFee:"Commission plateforme",payBtn:"Confirmer la réservation →",payNote:"💳 Ta carte sera débitée APRÈS le cours."},
     confirm:{title:"Réservation confirmée ! 🎉",sub1:"Ton cours avec ",sub2:" est confirmé.",subject:"Matière",teacher:"Enseignant",price:"Tu paieras",teacherGets:"L'enseignant reçoit",jitsi:"Lien visio",jitsiNote:"Sera envoyé par email avant le cours.",pay:"Paiement après le cours",secured:"✓ Sécurisé par Stripe",newReq:"Poster une nouvelle annonce"},
-    teacher:{hello:"Bon retour",sub:"Nouvelles annonces correspondant à tes niveaux.",revenue:"ce mois",courses:"Cours",rating:"Note",newAds:"Annonces ouvertes",bid:"Faire une offre →",ignore:"Ignorer",suggestions:"Suggestions pour toi",profile:"Mon profil",yourRate:"Ton tarif",rateHint:"Tu reçois 94% après 6% de frais plateforme",dashboard:"Tableau de bord",requests:"Annonces élèves"},
+    teacher:{hello:"Bon retour",sub:"Nouvelles annonces correspondant à ton profil.",revenue:"ce mois",courses:"Cours",rating:"Note",newAds:"Annonces élèves",bid:"Faire une offre →",ignore:"Ignorer",profile:"Mon profil",yourRate:"Ton tarif",rateHint:"Tu reçois 94% après 6% de frais plateforme",dashboard:"Tableau de bord",requests:"Annonces",verifiedBadge:"✓ Vérifié",pendingBadge:"⏳ En cours de vérification"},
     bidForm:{back:"← Retour",price:"Ton tarif (AED/h)",msg:"Ton message à l'élève",msgPh:"Présente-toi et ton expérience...",send:"Envoyer mon offre →",recv:"✓ Tu recevras",afterC:"après 6% de frais"},
-    onboard:{title:"Crée ton profil enseignant",sub:"Rejoins +200 enseignants vérifiés.",name:"Nom complet *",email:"Email *",bio:"Biographie",bioPh:"Ton parcours et ta pédagogie...",cycle:"Cycle enseigné *",subjects:"Matières *",curriculum:"Cursus *",langTeach:"Langue(s) d'enseignement *",rate:"Ton tarif horaire (AED) *",eid:"Emirates ID / Iqama *",diploma:"Diplôme(s) *",eidPh:"Uploader pièce d'identité",diplomaPh:"Uploader diplôme(s)",submit:"Créer mon profil →",withdrawal:"Fréquence de virement",wI:"Immédiat",wW:"Hebdomadaire",wM:"Mensuel",wInfo:"Tu pourras modifier ça plus tard dans ton profil."},
+    onboard:{title:"Crée ton profil enseignant",sub:"Rejoins +200 enseignants vérifiés.",name:"Nom complet *",email:"Email *",bio:"Biographie",bioPh:"Ton parcours et ta pédagogie...",cycle:"Cycle enseigné *",subjects:"Matières enseignées *",curriculum:"Cursus *",langTeach:"Langue(s) d'enseignement *",rate:"Ton tarif horaire (AED) *",idDoc:"Pièce d'identité *",idDocHint:"Emirates ID, Qatar ID, Kuwait Civil ID, titre de séjour, etc.",diploma:"Diplôme(s) *",idPh:"Uploader ta pièce d'identité",diplomaPh:"Uploader ton diplôme",submit:"Soumettre mon profil →",withdrawal:"Fréquence de virement *",wI:"Immédiat",wW:"Hebdomadaire",wM:"Mensuel",wInfo:"Modifiable une seule fois par mois depuis ton profil.",banking:"Coordonnées bancaires",bankName:"Nom de la banque *",bankIban:"IBAN *",bankHolder:"Titulaire du compte *",bankHint:"Tes virements seront envoyés sur ce compte. Informations chiffrées et sécurisées."},
     signup:{role:"Tu es *",student:"Élève / Parent",teacher:"Enseignant",name:"Nom complet *",country:"Pays *",emirate:"Émirat *",lang:"Langue préférée",curriculum:"Ton cursus *",instrLang:"Langue d'enseignement *",level:"Ton niveau actuel *",age:"Ton âge"},
-    profile:{title:"Mon Profil",name:"Nom complet",email:"Email",role:"Rôle",country:"Pays",changePassword:"Changer le mot de passe",currentPassword:"Mot de passe actuel",newPassword:"Nouveau mot de passe",confirmPassword:"Confirmer le mot de passe",savePassword:"Mettre à jour",saveProfile:"Enregistrer",passwordSuccess:"Mot de passe mis à jour !",profileSuccess:"Profil mis à jour !"},
+    profile:{title:"Mon Profil",name:"Nom complet",email:"Email",role:"Rôle",changePassword:"Changer le mot de passe",newPassword:"Nouveau mot de passe",confirmPassword:"Confirmer le mot de passe",savePassword:"Mettre à jour",saveProfile:"Enregistrer",passwordSuccess:"Mot de passe mis à jour !",profileSuccess:"Profil mis à jour !",banking:"Coordonnées bancaires",bankName:"Banque",bankIban:"IBAN",bankHolder:"Titulaire",payoutFreq:"Fréquence de virement",payoutNote:"Modifiable une fois par mois.",lastChanged:"Dernière modification"},
     cycles:["Élémentaire (6-11 ans)","Collège (11-15 ans)","Lycée (15-18 ans)"],
     instrLangs:["Anglais","Arabe","Français"],
     durations:["30 min","1h","1h30","2h","2h30","3h"],
     footer:"La marketplace de cours particuliers 100% en ligne pour le Golfe.",
   },
 };
-
-const fmtPrice=(price,countryCode)=>{const c=COUNTRIES.find(x=>x.code===countryCode)||COUNTRIES[0];if(c.currency==="KWD"||c.currency==="BHD")return`${(price*c.rate).toFixed(2)} ${c.currency}`;return`${Math.round(price*c.rate)} ${c.currency}`;};
 
 const css=`
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&display=swap');
@@ -240,8 +212,7 @@ body{background:#FAFBFF;color:#1A1A2E}
 .lang-btn{padding:5px 10px;cursor:pointer;transition:all .15s;color:#6B7280;background:transparent;border:none;font-size:12px;font-weight:800}.lang-btn.active{background:#5B4FE8;color:#fff}
 .nav-cta{background:#5B4FE8;color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:800;cursor:pointer;transition:background .2s;white-space:nowrap}.nav-cta:hover{background:#3D34C4}
 .nav-logout{background:#F4F5F7;color:#374151;border:none;border-radius:10px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}.nav-logout:hover{background:#E5E7EB}
-.user-badge{background:#EEF0FF;color:#5B4FE8;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-.user-badge:hover{background:#DDD9FF}
+.user-badge{background:#EEF0FF;color:#5B4FE8;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}.user-badge:hover{background:#DDD9FF}
 .hero{min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4rem 2rem;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 55% at 50% 0%,#EEEEFF 0%,transparent 70%);z-index:0}
 .hero-badge{display:inline-flex;align-items:center;gap:7px;background:#EEF0FF;color:#5B4FE8;border:1px solid #C7C2F8;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;margin-bottom:1.5rem;position:relative;z-index:1}
@@ -337,13 +308,10 @@ body{background:#FAFBFF;color:#1A1A2E}
 .stat-card{background:#FAFBFF;border:1.5px solid #E8EAF6;border-radius:16px;padding:1rem;text-align:center}
 .stat-val{font-family:'Fraunces',serif;font-size:24px;font-weight:900;color:#5B4FE8}
 .stat-lbl{font-size:11px;color:#6B7280;margin-top:4px;font-weight:600}
-.suggestions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:1.5rem}
-.suggestion-card{background:#FAFBFF;border:1.5px solid #E8EAF6;border-radius:14px;padding:1rem;cursor:pointer;transition:all .2s}
-.suggestion-card:hover{border-color:#5B4FE8;background:#EEF0FF}
 .req-card{border:1.5px solid #E8EAF6;border-radius:16px;padding:1.25rem;margin-bottom:12px;transition:border-color .2s}
 .req-card:hover{border-color:#0ABFA3}
 .req-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:#1A1A2E}
-.upload-zone{border:2px dashed #C7C2F8;border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;background:#FAFBFF}
+.upload-zone{border:2px dashed #C7C2F8;border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s;background:#FAFBFF}
 .upload-zone:hover{border-color:#5B4FE8;background:#EEF0FF}
 .btn-teal{flex:1;padding:9px;background:#0ABFA3;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;transition:background .2s}
 .btn-teal:hover{background:#089e87}
@@ -395,10 +363,15 @@ body{background:#FAFBFF;color:#1A1A2E}
 .teacher-subtabs{display:flex;gap:8px;margin-bottom:1.5rem}
 .teacher-subtab{flex:1;padding:10px;border:1.5px solid #E8EAF6;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;text-align:center;transition:all .2s;background:#fff;color:#6B7280}
 .teacher-subtab.active{background:#5B4FE8;color:#fff;border-color:#5B4FE8}
+.banking-card{background:#FEF6E4;border:1.5px solid #FCD34D;border-radius:16px;padding:1.25rem;margin-bottom:1.25rem}
+.verified-banner{background:#E6FAF8;border:1.5px solid #0ABFA3;border-radius:12px;padding:12px 16px;font-size:13px;font-weight:700;color:#0F6E56;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.pending-banner{background:#FEF6E4;border:1.5px solid #FCD34D;border-radius:12px;padding:12px 16px;font-size:13px;font-weight:700;color:#92400E;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.payout-info{background:#E6FAF8;border:1.5px solid #0ABFA3;border-radius:12px;padding:12px 16px;margin-bottom:1.25rem;font-size:13px;font-weight:700;color:#0F6E56}
+.missing-bank{background:#FEF6E4;border:1.5px solid #FCD34D;border-radius:12px;padding:12px 16px;margin-bottom:1.25rem;cursor:pointer}
+.missing-bank:hover{background:#FEF3C7}
 @media(max-width:700px){.float-card{display:none}.hero-stats{gap:1.5rem}.form-row{grid-template-columns:1fr}.nav-links{display:none}}
 `;
 
-// ─── AUTH ─────────────────────────────────────────────────────
 function Auth({ onClose, onSuccess, lang: appLang }) {
   const t = T[appLang] || T.en;
   const [tab, setTab] = useState("login");
@@ -418,7 +391,6 @@ function Auth({ onClose, onSuccess, lang: appLang }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
   const studentLevels = curriculum && CURRICULA[curriculum] ? CURRICULA[curriculum].levels[appLang] || CURRICULA[curriculum].levels.en : [];
 
   const handleLogin = async () => {
@@ -434,25 +406,19 @@ function Auth({ onClose, onSuccess, lang: appLang }) {
     if (!email || !password || !fullName) { setError("Please fill in all required fields."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true); setError("");
-    const { data, error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: fullName, role } }
-    });
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, role } } });
     if (error) { setLoading(false); setError(error.message); return; }
     if (data.user) {
       await supabase.from("profiles").update({
-        role, full_name: fullName, language: prefLang,
-        country_code: country,
+        role, full_name: fullName, language: prefLang, country_code: country,
         region_code: country === "UAE" ? region : null,
       }).eq("id", data.user.id);
       if (role === "student" && curriculum && level) {
         await supabase.from("student_profiles").insert({
-          owner_id: data.user.id, full_name: fullName,
-          age: age ? parseInt(age) : null,
+          owner_id: data.user.id, full_name: fullName, age: age ? parseInt(age) : null,
           curriculum, level,
           default_lang: instrLang.toLowerCase().includes("english") || instrLang.includes("الإنجليزية") || instrLang.includes("Anglais") ? "en" : instrLang.toLowerCase().includes("arabic") || instrLang.includes("العربية") || instrLang.includes("Arabe") ? "ar" : "fr",
-          country_code: country,
-          region_code: country === "UAE" ? region : null,
+          country_code: country, region_code: country === "UAE" ? region : null,
         }).then(() => {});
       }
     }
@@ -485,146 +451,145 @@ function Auth({ onClose, onSuccess, lang: appLang }) {
         </>}
         <div className="auth-group"><label className="auth-label">Email *</label><input className="auth-input" type="email" placeholder="sarah@email.com" value={email} onChange={e=>setEmail(e.target.value)} /></div>
         <div className="auth-group"><label className="auth-label">Password *</label><input className="auth-input" type="password" placeholder="Min. 6 characters" value={password} onChange={e=>setPassword(e.target.value)} /></div>
-        {tab==="login" && (
-          <label className="auth-remember">
-            <input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)} />
-            Remember me
-          </label>
-        )}
+        {tab==="login" && <label className="auth-remember"><input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)} />Remember me</label>}
         {tab==="signup" && <>
-          <div className="auth-group"><label className="auth-label">{t.signup.country}</label>
-            <select className="auth-select" value={country} onChange={e=>setCountry(e.target.value)}>
-              {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name[appLang]||c.name.en}</option>)}
-            </select>
-          </div>
+          <div className="auth-group"><label className="auth-label">{t.signup.country}</label><select className="auth-select" value={country} onChange={e=>setCountry(e.target.value)}>{COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name[appLang]||c.name.en}</option>)}</select></div>
           {country==="UAE" && <div className="auth-group"><label className="auth-label">{t.signup.emirate}</label><select className="auth-select" value={region} onChange={e=>setRegion(e.target.value)}>{UAE_REGIONS.map(r=><option key={r.code} value={r.code}>{r.name}</option>)}</select></div>}
           <div className="auth-group"><label className="auth-label">{t.signup.lang}</label><select className="auth-select" value={prefLang} onChange={e=>setPrefLang(e.target.value)}><option value="en">🇬🇧 English</option><option value="ar">🇸🇦 العربية</option><option value="fr">🇫🇷 Français</option></select></div>
           {role==="student" && <>
             <div className="section-divider">📚 Your learning profile</div>
             <div className="form-row" style={{marginBottom:0}}>
-              <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.curriculum}</label>
-                <select className="auth-select" value={curriculum} onChange={e=>{setCurriculum(e.target.value);setLevel("");}}>
-                  <option value="">Choose...</option>
-                  {Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[appLang]||v.label.en}</option>)}
-                </select>
-              </div>
-              <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.instrLang}</label>
-                <select className="auth-select" value={instrLang} onChange={e=>setInstrLang(e.target.value)}>
-                  <option value="">Choose...</option>
-                  {t.instrLangs.map(l=><option key={l}>{l}</option>)}
-                </select>
-              </div>
+              <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.curriculum}</label><select className="auth-select" value={curriculum} onChange={e=>{setCurriculum(e.target.value);setLevel("");}}><option value="">Choose...</option>{Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[appLang]||v.label.en}</option>)}</select></div>
+              <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.instrLang}</label><select className="auth-select" value={instrLang} onChange={e=>setInstrLang(e.target.value)}><option value="">Choose...</option>{t.instrLangs.map(l=><option key={l}>{l}</option>)}</select></div>
             </div>
             <div className="form-row" style={{marginBottom:0}}>
-              <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.level}</label>
-                <select className="auth-select" value={level} onChange={e=>setLevel(e.target.value)} disabled={!studentLevels.length}>
-                  <option value="">{studentLevels.length?"Choose...":"Select curriculum first"}</option>
-                  {studentLevels.map(l=><option key={l}>{l}</option>)}
-                </select>
-              </div>
+              <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.level}</label><select className="auth-select" value={level} onChange={e=>setLevel(e.target.value)} disabled={!studentLevels.length}><option value="">{studentLevels.length?"Choose...":"Select curriculum first"}</option>{studentLevels.map(l=><option key={l}>{l}</option>)}</select></div>
               <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.age}</label><input className="auth-input" type="number" min="6" max="18" placeholder="ex: 14" value={age} onChange={e=>setAge(e.target.value)} /></div>
             </div>
           </>}
           {role==="teacher" && <>
             <div className="section-divider">🎓 Your teaching profile</div>
-            <div className="auth-group"><label className="auth-label">{t.onboard.cycle}</label>
-              <div className="auth-chips">
-                {t.cycles.map(c=><div key={c} className={`auth-chip${teachCycle===c?" selected":""}`} onClick={()=>setTeachCycle(c)}>{c}</div>)}
-              </div>
-            </div>
+            <div className="auth-group"><label className="auth-label">{t.onboard.cycle}</label><div className="auth-chips">{t.cycles.map(c=><div key={c} className={`auth-chip${teachCycle===c?" selected":""}`} onClick={()=>setTeachCycle(c)}>{c}</div>)}</div></div>
           </>}
         </>}
-        <button className="auth-btn" onClick={tab==="login"?handleLogin:handleSignup} disabled={loading}>
-          {loading?"⏳ Loading...":tab==="login"?"Sign in →":"Create account →"}
-        </button>
+        <button className="auth-btn" onClick={tab==="login"?handleLogin:handleSignup} disabled={loading}>{loading?"⏳ Loading...":tab==="login"?"Sign in →":"Create account →"}</button>
       </div>
     </div>
   );
 }
 
-// ─── PROFILE PAGE ─────────────────────────────────────────────
 function ProfilePage({ user, userProfile, lang, onSaved }) {
   const t = T[lang] || T.en;
+  const isTeacher = userProfile?.role === "teacher";
   const [fullName, setFullName] = useState(userProfile?.full_name || user?.user_metadata?.full_name || "");
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [bankName, setBankName] = useState(userProfile?.bank_name || "");
+  const [bankIban, setBankIban] = useState(userProfile?.bank_iban || "");
+  const [bankHolder, setBankHolder] = useState(userProfile?.bank_holder || "");
+  const [payoutFreq, setPayoutFreq] = useState(userProfile?.withdrawal_frequency || "wW");
   const [saving, setSaving] = useState(false);
   const [savingPwd, setSavingPwd] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
   const [msg, setMsg] = useState("");
 
   const initials = fullName ? fullName.split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2) : "?";
+
+  const canChangeFreq = () => {
+    if (!userProfile?.withdrawal_changed_at) return true;
+    const diffDays = (new Date() - new Date(userProfile.withdrawal_changed_at)) / (1000*60*60*24);
+    return diffDays >= 30;
+  };
 
   const handleSaveProfile = async () => {
     setSaving(true);
     await supabase.from("profiles").update({ full_name: fullName }).eq("id", user.id);
     await supabase.auth.updateUser({ data: { full_name: fullName } });
-    setSaving(false);
-    setMsg(t.profile.profileSuccess);
-    onSaved(fullName);
-    setTimeout(() => setMsg(""), 3000);
+    setSaving(false); setMsg(t.profile.profileSuccess);
+    onSaved(fullName); setTimeout(() => setMsg(""), 3000);
   };
 
   const handleChangePassword = async () => {
     if (!newPassword || newPassword !== confirmPassword) { setMsg("⚠️ Passwords don't match"); return; }
-    if (newPassword.length < 6) { setMsg("⚠️ Password must be at least 6 characters"); return; }
+    if (newPassword.length < 6) { setMsg("⚠️ Min. 6 characters"); return; }
     setSavingPwd(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setSavingPwd(false);
     if (error) { setMsg("❌ " + error.message); return; }
-    setMsg(t.profile.passwordSuccess);
-    setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+    setMsg(t.profile.passwordSuccess); setNewPassword(""); setConfirmPassword("");
+    setTimeout(() => setMsg(""), 3000);
+  };
+
+  const handleSaveBank = async () => {
+    if (!bankName || !bankIban || !bankHolder) { setMsg("⚠️ Please fill all banking fields"); return; }
+    setSavingBank(true);
+    const updateData = { bank_name: bankName, bank_iban: bankIban, bank_holder: bankHolder };
+    if (payoutFreq !== userProfile?.withdrawal_frequency && canChangeFreq()) {
+      updateData.withdrawal_frequency = payoutFreq;
+      updateData.withdrawal_changed_at = new Date().toISOString();
+    }
+    await supabase.from("profiles").update(updateData).eq("id", user.id);
+    setSavingBank(false); setMsg("✅ Banking details saved!");
     setTimeout(() => setMsg(""), 3000);
   };
 
   return (
     <div style={{maxWidth:500,margin:"0 auto"}}>
       <div className="page-title">{t.profile.title}</div>
-      <div style={{height:"1.5rem"}}/>
-      {msg && <div className="auth-success">✅ {msg}</div>}
-
+      <div style={{height:"1rem"}}/>
+      {msg && <div className="auth-success">{msg}</div>}
       <div className="profile-card">
         <div className="profile-avatar">{initials}</div>
-        <div className="form-group">
-          <label className="form-label">{t.profile.name}</label>
-          <input className="form-input" value={fullName} onChange={e=>setFullName(e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t.profile.email}</label>
-          <input className="form-input" value={user?.email || ""} disabled style={{opacity:.6}} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t.profile.role}</label>
-          <input className="form-input" value={userProfile?.role || "student"} disabled style={{opacity:.6}} />
-        </div>
-        <button className="submit-btn" onClick={handleSaveProfile} disabled={saving} style={{marginTop:"1rem"}}>
-          {saving ? "⏳ Saving..." : t.profile.saveProfile}
-        </button>
+        {isTeacher && (userProfile?.verified
+          ? <div className="verified-banner">✅ {t.teacher.verifiedBadge}</div>
+          : <div className="pending-banner">⏳ {t.teacher.pendingBadge} — {lang==="fr"?"Vos documents sont en cours de vérification (24h)":lang==="ar"?"جاري مراجعة وثائقك (24 ساعة)":"Your documents are under review (24h)"}</div>
+        )}
+        <div className="form-group"><label className="form-label">{t.profile.name}</label><input className="form-input" value={fullName} onChange={e=>setFullName(e.target.value)} /></div>
+        <div className="form-group"><label className="form-label">{t.profile.email}</label><input className="form-input" value={user?.email||""} disabled style={{opacity:.6}} /></div>
+        <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacher?(lang==="fr"?"Enseignant":lang==="ar"?"مدرس":"Teacher"):(lang==="fr"?"Élève / Parent":lang==="ar"?"طالب / ولي أمر":"Student / Parent")} disabled style={{opacity:.6}} /></div>
+        <button className="submit-btn" onClick={handleSaveProfile} disabled={saving} style={{marginTop:"1rem"}}>{saving?"⏳ Saving...":t.profile.saveProfile}</button>
       </div>
-
+      {isTeacher && (
+        <div className="profile-card">
+          <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🏦 {t.profile.banking}</div>
+          <div className="banking-card">
+            <div style={{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:"1rem"}}>🔒 {t.onboard.bankHint}</div>
+            <div className="form-group"><label className="form-label">{t.profile.bankName}</label><input className="form-input" placeholder="Wio Bank, Emirates NBD, QNB..." value={bankName} onChange={e=>setBankName(e.target.value)} /></div>
+            <div className="form-group"><label className="form-label">{t.profile.bankIban}</label><input className="form-input" placeholder="AE07 0331 2345 6789 0123 456" value={bankIban} onChange={e=>setBankIban(e.target.value)} /></div>
+            <div className="form-group"><label className="form-label">{t.profile.bankHolder}</label><input className="form-input" placeholder="Sarah Al-Mansouri" value={bankHolder} onChange={e=>setBankHolder(e.target.value)} /></div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">💳 {t.profile.payoutFreq}</label>
+            <div className="chips-row">
+              {[["wI",t.onboard.wI],["wW",t.onboard.wW],["wM",t.onboard.wM]].map(([k,v])=>(
+                <div key={k}
+                  className={`chip${payoutFreq===k?" selected":""}`}
+                  onClick={()=>{ if(canChangeFreq()||payoutFreq===k) setPayoutFreq(k); }}
+                  style={{opacity:!canChangeFreq()&&payoutFreq!==k?0.5:1,cursor:!canChangeFreq()&&payoutFreq!==k?"not-allowed":"pointer"}}
+                >{v}</div>
+              ))}
+            </div>
+            <div style={{fontSize:11,color:"#9CA3AF",marginTop:6,fontWeight:600}}>
+              ⚠️ {t.profile.payoutNote}
+              {userProfile?.withdrawal_changed_at && ` ${t.profile.lastChanged}: ${new Date(userProfile.withdrawal_changed_at).toLocaleDateString()}`}
+            </div>
+          </div>
+          <button className="submit-btn" onClick={handleSaveBank} disabled={savingBank} style={{marginTop:"1rem"}}>{savingBank?"⏳ Saving...":t.profile.saveProfile}</button>
+        </div>
+      )}
       <div className="profile-card">
         <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🔒 {t.profile.changePassword}</div>
-        <div className="form-group">
-          <label className="form-label">{t.profile.newPassword}</label>
-          <input className="form-input" type="password" placeholder="Min. 6 characters" value={newPassword} onChange={e=>setNewPassword(e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t.profile.confirmPassword}</label>
-          <input className="form-input" type="password" placeholder="Repeat new password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} />
-        </div>
-        <button className="submit-btn" onClick={handleChangePassword} disabled={savingPwd} style={{marginTop:"0.5rem"}}>
-          {savingPwd ? "⏳ Updating..." : t.profile.savePassword}
-        </button>
+        <div className="form-group"><label className="form-label">{t.profile.newPassword}</label><input className="form-input" type="password" placeholder="Min. 6 characters" value={newPassword} onChange={e=>setNewPassword(e.target.value)} /></div>
+        <div className="form-group"><label className="form-label">{t.profile.confirmPassword}</label><input className="form-input" type="password" placeholder="Repeat new password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} /></div>
+        <button className="submit-btn" onClick={handleChangePassword} disabled={savingPwd} style={{marginTop:"0.5rem"}}>{savingPwd?"⏳ Updating...":t.profile.savePassword}</button>
       </div>
     </div>
   );
 }
 
-// ─── PAYMENT SCREEN ───────────────────────────────────────────
 function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack }) {
   const t = T[lang] || T.en;
   const [paying, setPaying] = useState(false);
-
   const lessonPrice = bid.net_price_aed;
   const studentFee = Math.round(lessonPrice * STUDENT_FEE);
   const studentTotal = lessonPrice + studentFee;
@@ -633,17 +598,11 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
   const handlePay = async () => {
     setPaying(true);
     try {
-      const response = await fetch(
-        "https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/create-payment-intent",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingId: booking.id,
-            amount: studentTotal,
-          }),
-        }
-      );
+      const response = await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/create-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id, amount: studentTotal }),
+      });
       const { clientSecret, error } = await response.json();
       if (error) throw new Error(error);
       const stripe = await stripePromise;
@@ -663,45 +622,25 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
       <div className="page-title">{t.payment.title}</div>
       <div className="page-sub">{t.payment.sub}</div>
       <div className="payment-card">
-        <div className="payment-row">
-          <span style={{color:"#6B7280"}}>{t.payment.lessonPrice}</span>
-          <span style={{fontWeight:700}}>{fmtPrice(lessonPrice, country)}</span>
-        </div>
-        <div className="payment-row">
-          <span style={{color:"#6B7280"}}>{t.payment.serviceFee}</span>
-          <span style={{fontWeight:700,color:"#9CA3AF"}}>+ {fmtPrice(studentFee, country)}</span>
-        </div>
+        <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.lessonPrice}</span><span style={{fontWeight:700}}>{fmtPrice(lessonPrice,country)}</span></div>
+        <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.serviceFee}</span><span style={{fontWeight:700,color:"#9CA3AF"}}>+ {fmtPrice(studentFee,country)}</span></div>
         <div className="payment-row" style={{borderTop:"2px solid #E8EAF6",paddingTop:12,marginTop:4}}>
           <span style={{fontWeight:800,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
-          <span className="payment-total">{fmtPrice(studentTotal, country)}</span>
+          <span className="payment-total">{fmtPrice(studentTotal,country)}</span>
         </div>
       </div>
       <div style={{background:"#FAFBFF",border:"1.5px solid #E8EAF6",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-          <span style={{color:"#6B7280"}}>{t.payment.teacherReceives}</span>
-          <span style={{fontWeight:700,color:"#0ABFA3"}}>{fmtPrice(teacherPayout, country)}</span>
-        </div>
-        <div style={{display:"flex",justifyContent:"space-between"}}>
-          <span style={{color:"#6B7280"}}>{t.payment.platformFee}</span>
-          <span style={{fontWeight:700,color:"#9CA3AF"}}>{fmtPrice(studentFee + (lessonPrice - teacherPayout), country)}</span>
-        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#6B7280"}}>{t.payment.teacherReceives}</span><span style={{fontWeight:700,color:"#0ABFA3"}}>{fmtPrice(teacherPayout,country)}</span></div>
+        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#6B7280"}}>{t.payment.platformFee}</span><span style={{fontWeight:700,color:"#9CA3AF"}}>{fmtPrice(studentFee+(lessonPrice-teacherPayout),country)}</span></div>
       </div>
       <div className="payment-note">⚠️ {t.payment.payNote}</div>
-      <button className="submit-btn" onClick={handlePay} disabled={paying}>
-        {paying ? "⏳ Processing..." : t.payment.payBtn}
-      </button>
-      <div className="stripe-badge">
-        <svg width="40" height="16" viewBox="0 0 40 16"><path fill="#635BFF" d="M5.5 5.5C5.5 3.6 6.9 2.7 9.1 2.7c2.9 0 5.8 1.3 5.8 1.3V.4S12.4 0 9 0C3.8 0 .8 2.9.8 6.1c0 5.9 7.7 5 7.7 8.3 0 2.2-1.8 3-4.2 3C1.5 17.4 0 16.6 0 16.6v3.7s1.7.7 4.3.7c5.4 0 8.5-2.8 8.5-6.3C12.8 8.4 5.5 9.3 5.5 5.5z"/></svg>
-        Secured by Stripe
-      </div>
-      <div style={{textAlign:"center",marginTop:"1rem"}}>
-        <button className="btn-ghost" onClick={onBack}>← Back to offers</button>
-      </div>
+      <button className="submit-btn" onClick={handlePay} disabled={paying}>{paying?"⏳ Processing...":t.payment.payBtn}</button>
+      <div className="stripe-badge"><svg width="40" height="16" viewBox="0 0 40 16"><path fill="#635BFF" d="M5.5 5.5C5.5 3.6 6.9 2.7 9.1 2.7c2.9 0 5.8 1.3 5.8 1.3V.4S12.4 0 9 0C3.8 0 .8 2.9.8 6.1c0 5.9 7.7 5 7.7 8.3 0 2.2-1.8 3-4.2 3C1.5 17.4 0 16.6 0 16.6v3.7s1.7.7 4.3.7c5.4 0 8.5-2.8 8.5-6.3C12.8 8.4 5.5 9.3 5.5 5.5z"/></svg>Secured by Stripe</div>
+      <div style={{textAlign:"center",marginTop:"1rem"}}><button className="btn-ghost" onClick={onBack}>← Back to offers</button></div>
     </div>
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────
 export default function TutorApp() {
   const [lang,setLang]=useState("en");
   const [country]=useState("UAE");
@@ -727,47 +666,39 @@ export default function TutorApp() {
   const [selectedRate,setSelectedRate]=useState(150);
   const [teacherStats,setTeacherStats]=useState({revenue:0,courses:0,rating:"—"});
   const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:""});
-  const [teacherForm,setTeacherForm]=useState({name:"",email:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,eidFile:null,diplomaFile:null,withdrawal:"wW"});
+  const [teacherForm,setTeacherForm]=useState({name:"",email:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:""});
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
 
   const loadProfile = async (userId) => {
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single();
     if (profile) setUserProfile(profile);
-    const { data: studentProf } = await supabase
-      .from("student_profiles").select("*").eq("owner_id", userId).limit(1).maybeSingle();
+    const { data: studentProf } = await supabase.from("student_profiles").select("*").eq("owner_id", userId).limit(1).maybeSingle();
     if (studentProf) {
       const instrLangMap = { en: T.en.instrLangs[0], ar: T.ar.instrLangs[0], fr: T.fr.instrLangs[0] };
-      setForm(f => ({
-        ...f,
-        curriculum: studentProf.curriculum || "",
-        instrLang: instrLangMap[studentProf.default_lang] || "",
-        level: studentProf.level || "",
-      }));
+      setForm(f => ({ ...f, curriculum: studentProf.curriculum||"", instrLang: instrLangMap[studentProf.default_lang]||"", level: studentProf.level||"" }));
       if (studentProf.curriculum) setCurriculum(studentProf.curriculum);
     }
+    return profile;
   };
 
   useEffect(()=>{
     supabase.auth.getSession().then(async ({data:{session}})=>{
       if (session?.user) {
         setUser(session.user);
-        await loadProfile(session.user.id);
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.user.id).single();
+        const profile = await loadProfile(session.user.id);
         if (profile?.role === "teacher") {
-          setPage("app");
-          setAppTab("teacher-dashboard");
+          setPage("app"); setAppTab("teacher-dashboard");
           const stats = await getTeacherStats(session.user.id);
           setTeacherStats(stats);
         } else if (profile?.role === "student") {
-          setPage("app");
-          setAppTab("student-form");
+          setPage("app"); setAppTab("student-form");
         }
       }
     });
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
       setUser(session?.user??null);
-      if(!session?.user) { setUserProfile(null); setPage("home"); }
+      if(!session?.user){setUserProfile(null);setPage("home");}
     });
     return ()=>subscription.unsubscribe();
   },[]);
@@ -796,16 +727,13 @@ export default function TutorApp() {
   const currLevels=curriculum&&CURRICULA[curriculum]?CURRICULA[curriculum].levels[lang]||CURRICULA[curriculum].levels["en"]:[];
   const currentCountry=COUNTRIES.find(c=>c.code===country)||COUNTRIES[0];
   const go=(tab)=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab(tab);setShowOnboard(false);};
-
-  const displayName = userProfile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
+  const displayName=userProfile?.full_name||user?.user_metadata?.full_name||user?.email?.split("@")[0]||"";
   const isProfilePrefilled=!!(form.curriculum&&form.instrLang&&form.level);
+  const isTeacher=userProfile?.role==="teacher";
 
-  const handleLogout = async () => {
+  const handleLogout=async()=>{
     await supabase.auth.signOut();
-    setPage("home");
-    setAppTab("student-form");
-    setUser(null);
-    setUserProfile(null);
+    setPage("home");setAppTab("student-form");setUser(null);setUserProfile(null);
     showToast("👋 See you soon!");
   };
 
@@ -814,14 +742,8 @@ export default function TutorApp() {
     setPublishing(true);
     try{
       const durationMap={"30 min":30,"1h":60,"1h30":90,"2h":120,"2h30":150,"3h":180};
-      const req=await postRequest({
-        subject:form.subject, instrLang:form.instrLang||"English",
-        curriculum:form.curriculum||"british", level:form.level,
-        cycle:form.cycle, durationMin:durationMap[form.duration]||60,
-        message:form.message, countryCode:country,
-      });
-      setCurrentRequestId(req.id);
-      setAppTab("student-bids");
+      const req=await postRequest({subject:form.subject,instrLang:form.instrLang||"English",curriculum:form.curriculum||"british",level:form.level,cycle:form.cycle,durationMin:durationMap[form.duration]||60,message:form.message,countryCode:country});
+      setCurrentRequestId(req.id);setAppTab("student-bids");
       showToast("✅ Request posted! Waiting for tutor offers...");
     }catch(e){showToast("❌ "+e.message);}
     finally{setPublishing(false);}
@@ -833,8 +755,8 @@ export default function TutorApp() {
     setSubmittingBid(true);
     try{
       await submitBid({requestId:selectedRequest.id,netPriceAed:selectedRate,message:bidForm.message});
-      showToast("✅ Offer sent!");
-      setBidForm({message:""});setSelectedRequest(null);setAppTab("teacher-dashboard");
+      showToast("✅ Offer sent!");setBidForm({message:""});setSelectedRequest(null);
+      setAppTab("teacher-dashboard");setTeacherSubTab("requests");
     }catch(e){showToast("❌ "+e.message);}
     finally{setSubmittingBid(false);}
   };
@@ -842,60 +764,46 @@ export default function TutorApp() {
   const handleAcceptBid=async(bid)=>{
     try{
       const booking=await acceptBid(bid.id,currentRequestId);
-      setSelectedBid(bid);
-      setCurrentBooking(booking);
-      setAppTab("student-payment");
+      setSelectedBid(bid);setCurrentBooking(booking);setAppTab("student-payment");
     }catch(e){showToast("❌ "+e.message);}
   };
 
-  const handlePaymentSuccess=(result)=>{
-    setPaymentResult(result);
-    setAppTab("student-confirm");
-    showToast("🎉 Booking confirmed!");
-  };
-
-  const handleDeclineBid=(bidId)=>{
-    setRealBids(prev=>prev.filter(b=>b.id!==bidId));
-    showToast("Offer declined.");
-  };
+  const handlePaymentSuccess=(result)=>{setPaymentResult(result);setAppTab("student-confirm");showToast("🎉 Booking confirmed!");};
+  const handleDeclineBid=(bidId)=>{setRealBids(prev=>prev.filter(b=>b.id!==bidId));showToast("Offer declined.");};
 
   const handleTeacherSubmit=async()=>{
-    if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.eidFile||!teacherForm.diplomaFile){
-      showToast("⚠️ Complete all fields and upload documents");return;
+    if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.idFile||!teacherForm.diplomaFile||!teacherForm.bankIban||!teacherForm.bankName||!teacherForm.bankHolder){
+      showToast("⚠️ Please complete all fields including banking details");return;
     }
     if(user){
       await supabase.from("profiles").update({
-        full_name: teacherForm.name,
-        withdrawal_frequency: teacherForm.withdrawal,
-      }).eq("id", user.id);
+        full_name:teacherForm.name,withdrawal_frequency:teacherForm.withdrawal,
+        bank_name:teacherForm.bankName,bank_iban:teacherForm.bankIban,bank_holder:teacherForm.bankHolder,
+        withdrawal_changed_at:new Date().toISOString(),
+      }).eq("id",user.id);
     }
     setShowOnboard(false);setAppTab("teacher-dashboard");
-    showToast("🎉 Profile created! Under review.");
+    showToast("🎉 Profile submitted! We will review within 24h.");
   };
 
-  const handleLoginSuccess = async () => {
+  const handleLoginSuccess=async()=>{
     setShowAuth(false);
-    const { data: { user: u } } = await supabase.auth.getUser();
-    if (u) {
+    const {data:{user:u}}=await supabase.auth.getUser();
+    if(u){
       setUser(u);
-      await loadProfile(u.id);
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", u.id).single();
-      const role = profile?.role || "student";
-      const name = profile?.full_name || u.user_metadata?.full_name || u.email?.split("@")[0];
-      showToast(role === "teacher" ? `👋 ${t.teacher.hello}, ${name}!` : `👋 ${t.teacher.hello}, ${name}!`);
+      const profile=await loadProfile(u.id);
+      const role=profile?.role||"student";
+      const name=profile?.full_name||u.user_metadata?.full_name||u.email?.split("@")[0];
+      showToast(`👋 ${t.teacher.hello}, ${name}!`);
       setPage("app");
-      setAppTab(role === "teacher" ? "teacher-dashboard" : "student-form");
-      if (role === "teacher") {
-        const stats = await getTeacherStats(u.id);
-        setTeacherStats(stats);
-      }
+      setAppTab(role==="teacher"?"teacher-dashboard":"student-form");
+      if(role==="teacher"){const stats=await getTeacherStats(u.id);setTeacherStats(stats);}
     }
   };
 
   return (
     <div className={`app-root${isRTL?" rtl":""}`}>
       <style>{css}</style>
-
       <nav className="nav">
         <div className="nav-logo" onClick={()=>setPage("home")}>TutorApp</div>
         <div className="nav-links">
@@ -932,20 +840,25 @@ export default function TutorApp() {
         </section>
         <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",borderBottom:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.how.label}</div><div className="section-title">{t.how.title}<span>{t.how.titleSpan}</span></div><div className="steps-grid">{t.how.steps.map((s,i)=><div className="step-card" key={i}><div className="step-num-bg">{i+1}</div><div className="step-icon">{s.icon}</div><h3>{s.t}</h3><p>{s.d}</p></div>)}</div></div></div>
         <div className="section"><div className="section-label">{t.subjects.label}</div><div className="section-title">{t.subjects.title}<span>{t.subjects.titleSpan}</span></div><div className="subj-grid">{SUBJECTS.map(s=><div className="subj-card" key={s.en} onClick={()=>go("student-form")}><span style={{fontSize:20}}>{s.icon}</span><span>{s[lang]}</span></div>)}</div></div>
-        <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.nav.teachers}</div><div className="section-title" style={{marginBottom:"2rem"}}>{lang==="ar"?"جميعهم موثّقون":lang==="fr"?"Tous vérifiés":"All verified, all passionate"}</div><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en} onClick={()=>setPage("teachers")}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}<div style={{fontSize:11,color:"#6B7280",marginTop:2}}>{COUNTRIES.find(c=>c.code===tc.country)?.flag} {COUNTRIES.find(c=>c.code===tc.country)?.name[lang]}</div></div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.slice(0,2).map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}<span style={{fontSize:12,fontWeight:500,color:"#6B7280"}}>/h</span></div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div></div>)}</div></div></div>
+        <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.nav.teachers}</div><div className="section-title" style={{marginBottom:"2rem"}}>{lang==="ar"?"جميعهم موثّقون":lang==="fr"?"Tous vérifiés":"All verified, all passionate"}</div><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en} onClick={()=>setPage("teachers")}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.slice(0,2).map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}<span style={{fontSize:12,fontWeight:500,color:"#6B7280"}}>/h</span></div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div></div>)}</div></div></div>
       </>}
 
-      {page==="teachers"&&<div className="section"><div className="section-label">{t.nav.teachers}</div><div className="section-title" style={{marginBottom:"2rem"}}>{lang==="ar"?"جميعهم موثّقون":lang==="fr"?"Tous vérifiés":"All verified"}</div><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified Emirates ID</div>}<div style={{fontSize:11,color:"#6B7280",marginTop:2}}>{COUNTRIES.find(c=>c.code===tc.country)?.flag} {COUNTRIES.find(c=>c.code===tc.country)?.name[lang]}</div></div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}<span style={{fontSize:12,fontWeight:500,color:"#6B7280"}}>/h</span></div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div><button className="submit-btn" style={{marginTop:0,padding:"10px"}} onClick={()=>go("student-form")}>{lang==="ar"?"احجز ←":lang==="fr"?"Réserver →":"Book →"}</button></div>)}</div></div>}
+      {page==="teachers"&&<div className="section"><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}/h</div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div><button className="submit-btn" style={{marginTop:0,padding:"10px"}} onClick={()=>go("student-form")}>{lang==="ar"?"احجز ←":lang==="fr"?"Réserver →":"Book →"}</button></div>)}</div></div>}
 
       {page==="app"&&<div className="section"><div className="app-container">
         <div className="app-topbar"><div className="app-dot-row"><div className="app-dot" style={{background:"#E24B4A"}}></div><div className="app-dot" style={{background:"#F5A623"}}></div><div className="app-dot" style={{background:"#0ABFA3"}}></div></div><div className="app-url">tutorapp.online · 🔒 {currentCountry.flag} {currentCountry.name[lang]}</div></div>
-        <div className="app-tabs">
-          <div className={`app-tab${["student-form","student-bids","student-payment","student-confirm"].includes(appTab)?" active":""}`} onClick={()=>{setAppTab("student-form");setShowOnboard(false);}}>🎓 {t.nav.search}</div>
-          <div className={`app-tab${["teacher-dashboard"].includes(appTab)?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setShowOnboard(false);}}>📚 {t.nav.teach}</div>
-          <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {t.teacher.profile}</div>
-        </div>
-        <div className="app-body">
 
+        <div className="app-tabs">
+          {isTeacher ? <>
+            <div className={`app-tab${appTab==="teacher-dashboard"||appTab==="teacher-bid"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setShowOnboard(false);}}>📚 {t.nav.teach}</div>
+            <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {t.teacher.profile}</div>
+          </> : <>
+            <div className={`app-tab${["student-form","student-bids","student-payment","student-confirm"].includes(appTab)?" active":""}`} onClick={()=>{setAppTab("student-form");setShowOnboard(false);}}>🎓 {t.nav.search}</div>
+            <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {t.teacher.profile}</div>
+          </>}
+        </div>
+
+        <div className="app-body">
           {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} lang={lang} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} />}
 
           {appTab==="student-form"&&<>
@@ -988,9 +901,7 @@ export default function TutorApp() {
             <div style={{textAlign:"center",marginTop:"1rem"}}><button className="btn-ghost" onClick={()=>setAppTab("student-form")}>← Back</button></div>
           </>}
 
-          {appTab==="student-payment"&&selectedBid&&(
-            <PaymentScreen bid={selectedBid} booking={currentBooking} form={form} country={country} lang={lang} onSuccess={handlePaymentSuccess} onBack={()=>setAppTab("student-bids")} />
-          )}
+          {appTab==="student-payment"&&selectedBid&&<PaymentScreen bid={selectedBid} booking={currentBooking} form={form} country={country} lang={lang} onSuccess={handlePaymentSuccess} onBack={()=>setAppTab("student-bids")} />}
 
           {appTab==="student-confirm"&&<div className="success-screen">
             <div style={{fontSize:56,marginBottom:"1rem"}}>🎉</div>
@@ -1008,8 +919,12 @@ export default function TutorApp() {
           </div>}
 
           {appTab==="teacher-dashboard"&&showOnboard&&<>
-            <div className="page-title">{t.onboard.title}</div><div className="page-sub">{t.onboard.sub}</div>
-            <div className="form-row"><div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.name}</label><input className="form-input" placeholder="Sarah Al-Mansouri" value={teacherForm.name} onChange={e=>setTeacherForm({...teacherForm,name:e.target.value})} /></div><div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.email}</label><input className="form-input" type="email" placeholder="sarah@email.com" value={teacherForm.email} onChange={e=>setTeacherForm({...teacherForm,email:e.target.value})} /></div></div>
+            <div className="page-title">{t.onboard.title}</div>
+            <div className="page-sub">{t.onboard.sub}</div>
+            <div className="form-row">
+              <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.name}</label><input className="form-input" placeholder="Sarah Al-Mansouri" value={teacherForm.name} onChange={e=>setTeacherForm({...teacherForm,name:e.target.value})} /></div>
+              <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.email}</label><input className="form-input" type="email" placeholder="sarah@email.com" value={teacherForm.email} onChange={e=>setTeacherForm({...teacherForm,email:e.target.value})} /></div>
+            </div>
             <div className="form-group"><label className="form-label">{t.onboard.cycle}</label><div className="chips-row">{t.cycles.map(c=><div key={c} className={`chip${teacherForm.cycles.includes(c)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,cycles:[c]})}>{c}</div>)}</div></div>
             <div className="form-group"><label className="form-label">{t.onboard.curriculum}</label><div className="chips-row">{Object.entries(CURRICULA).map(([k,v])=><div key={k} className={`chip chip-teal${teacherForm.curricula.includes(k)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,curricula:toggleArr(teacherForm.curricula,k)})}>{v.label[lang]}</div>)}</div></div>
             <div className="form-group"><label className="form-label">{t.onboard.subjects}</label><div className="chips-row">{SUBJECTS.map(s=><div key={s.en} className={`chip${teacherForm.subjects.includes(s.en)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,subjects:toggleArr(teacherForm.subjects,s.en)})}>{s[lang]}</div>)}</div></div>
@@ -1020,28 +935,38 @@ export default function TutorApp() {
               <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>{t.teacher.rateHint} → {fmtPrice(Math.round(teacherForm.rate*(1-TEACHER_FEE)),country)}/h</div>
             </div>
             <div className="form-group"><label className="form-label">{t.onboard.bio}</label><textarea className="form-textarea" placeholder={t.onboard.bioPh} /></div>
-            <div className="form-group">
-              <label className="form-label">💳 {t.onboard.withdrawal}</label>
-              <div className="chips-row">
-                {[["wI",t.onboard.wI],["wW",t.onboard.wW],["wM",t.onboard.wM]].map(([k,v])=><div key={k} className={`chip${teacherForm.withdrawal===k?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,withdrawal:k})}>{v}</div>)}
-              </div>
-              <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>{t.onboard.wInfo}</div>
-            </div>
+
+            <div className="section-divider">🪪 {t.onboard.idDoc}</div>
+            <div style={{fontSize:12,color:"#6B7280",marginBottom:12,fontWeight:600}}>ℹ️ {t.onboard.idDocHint}</div>
             <div className="form-row">
               <div className="form-group" style={{marginBottom:0}}>
-                <label className="form-label">{t.onboard.eid} 🔒</label>
-                <div className="upload-zone" onClick={()=>document.getElementById('eid-upload').click()}>
-                  {teacherForm.eidFile?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:13,fontWeight:700,color:"#0ABFA3"}}>{teacherForm.eidFile.name}</div></>:<><div style={{fontSize:28}}>🪪</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8"}}>{t.onboard.eidPh}</div></>}
+                <label className="form-label">{t.onboard.idDoc}</label>
+                <div className="upload-zone" onClick={()=>document.getElementById('id-upload').click()}>
+                  {teacherForm.idFile?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{teacherForm.idFile.name}</div></>:<><div style={{fontSize:28}}>🪪</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{t.onboard.idPh}</div></>}
                 </div>
-                <input id="eid-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,eidFile:e.target.files[0]})} />
+                <input id="id-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,idFile:e.target.files[0]})} />
               </div>
               <div className="form-group" style={{marginBottom:0}}>
-                <label className="form-label">{t.onboard.diploma} 🎓</label>
+                <label className="form-label">{t.onboard.diploma}</label>
                 <div className="upload-zone" onClick={()=>document.getElementById('diploma-upload').click()}>
-                  {teacherForm.diplomaFile?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:13,fontWeight:700,color:"#0ABFA3"}}>{teacherForm.diplomaFile.name}</div></>:<><div style={{fontSize:28}}>📜</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8"}}>{t.onboard.diplomaPh}</div></>}
+                  {teacherForm.diplomaFile?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{teacherForm.diplomaFile.name}</div></>:<><div style={{fontSize:28}}>📜</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{t.onboard.diplomaPh}</div></>}
                 </div>
                 <input id="diploma-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,diplomaFile:e.target.files[0]})} />
               </div>
+            </div>
+
+            <div className="section-divider">🏦 {t.onboard.banking}</div>
+            <div className="banking-card">
+              <div style={{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:"1rem"}}>🔒 {t.onboard.bankHint}</div>
+              <div className="form-group"><label className="form-label">{t.onboard.bankName}</label><input className="form-input" placeholder="Wio Bank, Emirates NBD, QNB, ADCB..." value={teacherForm.bankName} onChange={e=>setTeacherForm({...teacherForm,bankName:e.target.value})} /></div>
+              <div className="form-group"><label className="form-label">{t.onboard.bankIban}</label><input className="form-input" placeholder="AE07 0331 2345 6789 0123 456" value={teacherForm.bankIban} onChange={e=>setTeacherForm({...teacherForm,bankIban:e.target.value})} /></div>
+              <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.bankHolder}</label><input className="form-input" placeholder="Sarah Al-Mansouri" value={teacherForm.bankHolder} onChange={e=>setTeacherForm({...teacherForm,bankHolder:e.target.value})} /></div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">💳 {t.onboard.withdrawal}</label>
+              <div className="chips-row">{[["wI",t.onboard.wI],["wW",t.onboard.wW],["wM",t.onboard.wM]].map(([k,v])=><div key={k} className={`chip${teacherForm.withdrawal===k?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,withdrawal:k})}>{v}</div>)}</div>
+              <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>⚠️ {t.onboard.wInfo}</div>
             </div>
             <button className="submit-btn" onClick={handleTeacherSubmit}>{t.onboard.submit}</button>
           </>}
@@ -1052,7 +977,7 @@ export default function TutorApp() {
                 <div className="page-title">{t.teacher.hello}, {displayName} 👋</div>
                 <div className="page-sub" style={{marginBottom:0}}>{t.teacher.sub}</div>
               </div>
-              <button className="btn-ghost" onClick={()=>setShowOnboard(true)}>{t.teacher.profile}</button>
+              <button className="btn-ghost" onClick={()=>setShowOnboard(true)}>✏️ {lang==="fr"?"Modifier":lang==="ar"?"تعديل":"Edit profile"}</button>
             </div>
 
             <div className="teacher-subtabs">
@@ -1064,10 +989,17 @@ export default function TutorApp() {
               <div className="teacher-stats">
                 <div className="stat-card"><div className="stat-val">{fmtPrice(teacherStats.revenue,country)}</div><div className="stat-lbl">{t.teacher.revenue}</div></div>
                 <div className="stat-card"><div className="stat-val">{teacherStats.courses}</div><div className="stat-lbl">{t.teacher.courses}</div></div>
-                <div className="stat-card"><div className="stat-val">{teacherStats.rating}★</div><div className="stat-lbl">{t.teacher.rating}</div></div>
+                <div className="stat-card"><div className="stat-val">{teacherStats.rating==="—"?"—":`${teacherStats.rating}★`}</div><div className="stat-lbl">{t.teacher.rating}</div></div>
               </div>
-              <div style={{fontWeight:800,fontSize:16,marginBottom:"1rem",color:"#1A1A2E"}}>💡 {t.teacher.suggestions}</div>
-              <div className="suggestions-grid">{SUGGESTIONS.map((s,i)=><div className="suggestion-card" key={i}><div style={{fontSize:22,marginBottom:6}}>{s.icon}</div><div style={{fontWeight:800,fontSize:13,color:"#1A1A2E"}}>{s.subject[lang]}</div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>{s.level[lang]} · {s.lang[lang]}</div><div style={{fontSize:11,color:"#0ABFA3",fontWeight:700,marginTop:4}}>🔥 {s.students} students</div></div>)}</div>
+              {!userProfile?.bank_iban
+                ? <div className="missing-bank" onClick={()=>setAppTab("profile")}>
+                    <div style={{fontWeight:800,fontSize:14,color:"#92400E",marginBottom:4}}>⚠️ {lang==="fr"?"Coordonnées bancaires manquantes":lang==="ar"?"بيانات بنكية مفقودة":"Banking details missing"}</div>
+                    <div style={{fontSize:13,color:"#92400E"}}>{lang==="fr"?"Ajoutez votre IBAN pour recevoir vos paiements →":lang==="ar"?"أضف IBAN لاستلام مدفوعاتك →":"Add your IBAN to receive payouts →"}</div>
+                  </div>
+                : <div className="payout-info">
+                    💳 {lang==="fr"?"Virement":lang==="ar"?"تحويل":"Payout"}: {userProfile.bank_name} · ****{userProfile.bank_iban?.slice(-4)} · {userProfile.withdrawal_frequency==="wI"?t.onboard.wI:userProfile.withdrawal_frequency==="wW"?t.onboard.wW:t.onboard.wM}
+                  </div>
+              }
             </>}
 
             {teacherSubTab==="requests"&&<>
@@ -1075,17 +1007,32 @@ export default function TutorApp() {
               {!requestsLoading&&realRequests.length===0&&<div className="empty-state"><div className="empty-icon">📋</div><div style={{fontWeight:700,fontSize:15,marginBottom:6}}>No open requests yet</div><div style={{fontSize:13,color:"#9CA3AF"}}>Student requests will appear here in real time.</div></div>}
               {!requestsLoading&&realRequests.map((r,i)=>(
                 <div className="req-card" key={r.id||i}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,flexWrap:"wrap",gap:6}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:20}}>📋</span><div className="req-title">{r.subject}</div></div><span style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>{new Date(r.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span></div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:r.message?8:12}}><span className="badge badge-purple">{r.level}</span><span className="badge badge-blue">🗣 {r.instr_lang}</span><span className="badge badge-amber">{r.duration_min} min</span><span className="badge badge-green">📹 Online</span><span className="badge badge-gray">{r.curriculum}</span></div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,flexWrap:"wrap",gap:6}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:20}}>📋</span><div className="req-title">{r.subject}</div></div>
+                    <span style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>{new Date(r.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span>
+                  </div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:r.message?8:12}}>
+                    <span className="badge badge-purple">{r.level}</span>
+                    <span className="badge badge-blue">🗣 {r.instr_lang}</span>
+                    <span className="badge badge-amber">{r.duration_min} min</span>
+                    <span className="badge badge-green">📹 Online</span>
+                    <span className="badge badge-gray">{r.curriculum}</span>
+                  </div>
                   {r.message&&<div style={{fontSize:13,color:"#6B7280",marginBottom:12,fontStyle:"italic",background:"#FAFBFF",borderRadius:8,padding:"8px 12px"}}>"{r.message}"</div>}
-                  <div style={{display:"flex",gap:8}}><button className="btn-teal" onClick={()=>{setSelectedRequest(r);setAppTab("teacher-bid");}}>{t.teacher.bid}</button><button className="btn-ghost">{t.teacher.ignore}</button></div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button className="btn-teal" onClick={()=>{setSelectedRequest(r);setAppTab("teacher-bid");}}>{t.teacher.bid}</button>
+                    <button className="btn-ghost">{t.teacher.ignore}</button>
+                  </div>
                 </div>
               ))}
             </>}
           </>}
 
           {appTab==="teacher-bid"&&selectedRequest&&<>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1.5rem",flexWrap:"wrap"}}><button className="btn-ghost" onClick={()=>{setAppTab("teacher-dashboard");setSelectedRequest(null);setTeacherSubTab("requests");}}>{t.bidForm.back}</button><div><div className="page-title" style={{marginBottom:0}}>{selectedRequest.subject}</div><div className="page-sub" style={{marginBottom:0}}>{selectedRequest.level} · {selectedRequest.instr_lang} · {selectedRequest.duration_min} min · 📹</div></div></div>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1.5rem",flexWrap:"wrap"}}>
+              <button className="btn-ghost" onClick={()=>{setAppTab("teacher-dashboard");setSelectedRequest(null);setTeacherSubTab("requests");}}>{t.bidForm.back}</button>
+              <div><div className="page-title" style={{marginBottom:0}}>{selectedRequest.subject}</div><div className="page-sub" style={{marginBottom:0}}>{selectedRequest.level} · {selectedRequest.instr_lang} · {selectedRequest.duration_min} min · 📹</div></div>
+            </div>
             {selectedRequest.message&&<div style={{background:"#FAFBFF",border:"1.5px solid #E8EAF6",borderRadius:12,padding:"12px 16px",marginBottom:"1.5rem",fontSize:13,color:"#6B7280",fontStyle:"italic"}}>Student: "{selectedRequest.message}"</div>}
             <div className="form-group">
               <label className="form-label">{t.bidForm.price}</label>
