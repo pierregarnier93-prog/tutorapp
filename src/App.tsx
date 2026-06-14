@@ -807,10 +807,15 @@ export default function TutorApp() {
       <nav className="nav">
         <div className="nav-logo" onClick={()=>setPage("home")}>TutorApp</div>
         <div className="nav-links">
-          <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
-          <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
-          <span className="nav-link" onClick={()=>setPage("teachers")}>{t.nav.teachers}</span>
-          <div className="lang-switch">{["en","ar","fr"].map(l=><button key={l} className={`lang-btn${lang===l?" active":""}`} onClick={()=>setLang(l)}>{l.toUpperCase()}</button>)}</div>
+          {user ? (isTeacher ? (
+  <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
+) : (
+  <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
+)) : <>
+  <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
+  <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
+</>}
+<span className="nav-link" onClick={()=>setPage("teachers")}>{t.nav.teachers}</span>
         </div>
         {user?(
           <div style={{display:"flex",alignItems:"center",gap:8}}>
