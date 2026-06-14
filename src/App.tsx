@@ -941,8 +941,17 @@ export default function TutorApp() {
         <div style={{marginTop:"1.5rem",fontSize:12,color:"#4B5563"}}>© 2025 TutorApp · {COUNTRIES.map(c=>`${c.flag} ${c.name[lang]}`).join(" · ")}</div>
       </footer>
 
-      {showAuth&&<Auth onClose={()=>setShowAuth(false)} onSuccess={()=>{setShowAuth(false);showToast("🎉 Welcome to TutorApp!");}} lang={lang} />}
-      {toast&&<div className="toast">{toast}</div>}
+{showAuth&&<Auth onClose={()=>setShowAuth(false)} onSuccess={async ()=>{
+  setShowAuth(false);
+  const { data: { user: u } } = await supabase.auth.getUser();
+  if (u) {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", u.id).single();
+    const role = profile?.role || "student";
+    showToast(role === "teacher" ? "👋 Welcome back, Teacher!" : "👋 Welcome back!");
+    setPage("app");
+    setAppTab(role === "teacher" ? "teacher-dashboard" : "student-form");
+  }
+}} lang={lang} />}      {toast&&<div className="toast">{toast}</div>}
     </div>
   );
 }
