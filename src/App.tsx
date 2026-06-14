@@ -666,7 +666,7 @@ export default function TutorApp() {
   const [selectedRate,setSelectedRate]=useState(150);
   const [teacherStats,setTeacherStats]=useState({revenue:0,courses:0,rating:"—"});
   const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:""});
-  const [teacherForm,setTeacherForm]=useState({name:"",email:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:""});
+  const [teacherForm,setTeacherForm]=useState({name:"",email:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",cguAccepted:false,childProtectionAccepted:false});
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
 
@@ -688,7 +688,13 @@ export default function TutorApp() {
         setUser(session.user);
         const profile = await loadProfile(session.user.id);
         if (profile?.role === "teacher") {
-          setPage("app"); setAppTab("teacher-dashboard");
+          setPage("app");
+          if (!profile?.bank_iban) {
+            setAppTab("teacher-dashboard");
+            setShowOnboard(true);
+          } else {
+            setAppTab("teacher-dashboard");
+          }
           const stats = await getTeacherStats(session.user.id);
           setTeacherStats(stats);
         } else if (profile?.role === "student") {
@@ -698,15 +704,8 @@ export default function TutorApp() {
     });
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
       setUser(session?.user??null);
-const {data:{subscription}}=supabase.auth.onAuthStateChange(async (_,session)=>{
-  setUser(session?.user??null);
-  if(!session?.user){setUserProfile(null);setPage("home");}
-  else {
-    const profile = await loadProfile(session.user.id);
-    if(profile?.role==="teacher"){setPage("app");setAppTab("teacher-dashboard");}
-    else if(profile?.role==="student"){setPage("app");setAppTab("student-form");}
-  }
-});    });
+      if(!session?.user){setUserProfile(null);setPage("home");}
+    });
     return ()=>subscription.unsubscribe();
   },[]);
 
@@ -736,7 +735,8 @@ const {data:{subscription}}=supabase.auth.onAuthStateChange(async (_,session)=>{
   const go=(tab)=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab(tab);setShowOnboard(false);};
   const displayName=userProfile?.full_name||user?.user_metadata?.full_name||user?.email?.split("@")[0]||"";
   const isProfilePrefilled=!!(form.curriculum&&form.instrLang&&form.level);
-const isTeacher=userProfile?.role==="teacher" || user?.user_metadata?.role==="teacher";
+  const isTeacher=userProfile?.role==="teacher";
+
   const handleLogout=async()=>{
     await supabase.auth.signOut();
     setPage("home");setAppTab("student-form");setUser(null);setUserProfile(null);
@@ -781,6 +781,9 @@ const isTeacher=userProfile?.role==="teacher" || user?.user_metadata?.role==="te
     if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.idFile||!teacherForm.diplomaFile||!teacherForm.bankIban||!teacherForm.bankName||!teacherForm.bankHolder){
       showToast("⚠️ Please complete all fields including banking details");return;
     }
+    if(!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted){
+      showToast("⚠️ Please accept the Terms of Service and Child Protection Charter");return;
+    }
     if(user){
       await supabase.from("profiles").update({
         full_name:teacherForm.name,withdrawal_frequency:teacherForm.withdrawal,
@@ -802,8 +805,13 @@ const isTeacher=userProfile?.role==="teacher" || user?.user_metadata?.role==="te
       const name=profile?.full_name||u.user_metadata?.full_name||u.email?.split("@")[0];
       showToast(`👋 ${t.teacher.hello}, ${name}!`);
       setPage("app");
-      setAppTab(role==="teacher"?"teacher-dashboard":"student-form");
-      if(role==="teacher"){const stats=await getTeacherStats(u.id);setTeacherStats(stats);}
+      if(role==="teacher"){
+        if(!profile?.bank_iban){setAppTab("teacher-dashboard");setShowOnboard(true);}
+        else{setAppTab("teacher-dashboard");}
+        const stats=await getTeacherStats(u.id);setTeacherStats(stats);
+      } else {
+        setAppTab("student-form");
+      }
     }
   };
 
@@ -813,15 +821,10 @@ const isTeacher=userProfile?.role==="teacher" || user?.user_metadata?.role==="te
       <nav className="nav">
         <div className="nav-logo" onClick={()=>setPage("home")}>TutorApp</div>
         <div className="nav-links">
-          {user ? (isTeacher ? (
-  <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
-) : (
-  <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
-)) : <>
-  <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
-  <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
-</>}
-<span className="nav-link" onClick={()=>setPage("teachers")}>{t.nav.teachers}</span>
+          <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
+          <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
+          <span className="nav-link" onClick={()=>setPage("teachers")}>{t.nav.teachers}</span>
+          <div className="lang-switch">{["en","ar","fr"].map(l=><button key={l} className={`lang-btn${lang===l?" active":""}`} onClick={()=>setLang(l)}>{l.toUpperCase()}</button>)}</div>
         </div>
         {user?(
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -979,7 +982,36 @@ const isTeacher=userProfile?.role==="teacher" || user?.user_metadata?.role==="te
               <div className="chips-row">{[["wI",t.onboard.wI],["wW",t.onboard.wW],["wM",t.onboard.wM]].map(([k,v])=><div key={k} className={`chip${teacherForm.withdrawal===k?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,withdrawal:k})}>{v}</div>)}</div>
               <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>⚠️ {t.onboard.wInfo}</div>
             </div>
-            <button className="submit-btn" onClick={handleTeacherSubmit}>{t.onboard.submit}</button>
+            <div className="section-divider">📄 {lang==="fr"?"Conditions générales":lang==="ar"?"الشروط والأحكام":"Terms & Conditions"}</div>
+            <div style={{background:"#FAFBFF",border:"1.5px solid #E8EAF6",borderRadius:14,padding:"1.25rem",marginBottom:"1rem"}}>
+              <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",marginBottom:12}}>
+                <input type="checkbox" checked={teacherForm.cguAccepted} onChange={e=>setTeacherForm({...teacherForm,cguAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
+                <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
+                  {lang==="fr"?"J'ai lu et j'accepte les ":lang==="ar"?"لقد قرأت وأوافق على ":"I have read and accept the "}
+                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setPage("legal");}}>
+                    {lang==="fr"?"Conditions Générales d'Utilisation":lang==="ar"?"شروط الخدمة":"Terms of Service"}
+                  </span>
+                  {lang==="fr"?" et la ":" and the "}
+                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setPage("legal");}}>
+                    {lang==="fr"?"Politique de Confidentialité":lang==="ar"?"سياسة الخصوصية":"Privacy Policy"}
+                  </span>
+                </span>
+              </label>
+              <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer"}}>
+                <input type="checkbox" checked={teacherForm.childProtectionAccepted} onChange={e=>setTeacherForm({...teacherForm,childProtectionAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
+                <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
+                  {lang==="fr"?"J'accepte la ":lang==="ar"?"أوافق على ":"I accept the "}
+                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setPage("legal");}}>
+                    {lang==="fr"?"Charte de Protection des Mineurs":lang==="ar"?"ميثاق حماية الأطفال":"Child Protection Charter"}
+                  </span>
+                  {lang==="fr"?" et l'":"  and the "}
+                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setPage("legal");}}>
+                    {lang==="fr"?"Accord Enseignant":"Tutor Agreement"}
+                  </span>
+                </span>
+              </label>
+            </div>
+            <button className="submit-btn" onClick={handleTeacherSubmit} disabled={!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted} style={{opacity:(!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted)?0.5:1}}>{t.onboard.submit}</button>
           </>}
 
           {appTab==="teacher-dashboard"&&!showOnboard&&<>
