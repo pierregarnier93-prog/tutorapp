@@ -539,14 +539,32 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
   const handlePay = async () => {
     setPaying(true);
     try {
-      // Mode test — simulation du paiement
-      await new Promise(r => setTimeout(r, 1500));
+      const response = await fetch(
+        "https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/create-payment-intent",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId: booking.id,
+            amount: studentTotal,
+          }),
+        }
+      );
+      const { clientSecret, error } = await response.json();
+      if (error) throw new Error(error);
+
+      const stripe = await stripePromise;
+      const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card: { token: "tok_visa" } },
+      });
+      if (stripeError) throw new Error(stripeError.message);
+
       onSuccess({ lessonPrice, studentFee, studentTotal, teacherPayout });
     } catch(e) {
+      alert("❌ " + e.message);
       setPaying(false);
     }
   };
-
   return (
     <div className="payment-screen">
       <div className="page-title">{t.payment.title}</div>
