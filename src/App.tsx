@@ -481,7 +481,7 @@ function Auth({ onClose, onSuccess, lang: appLang }) {
 
 function ProfilePage({ user, userProfile, lang, onSaved }) {
   const t = T[lang] || T.en;
-  const isTeacher = user?.user_metadata?.role === "teacher" || userProfile?.role === "teacher";
+  const isTeacher = !profileLoading && userProfile?.role === "teacher";
   const [fullName, setFullName] = useState(userProfile?.full_name || user?.user_metadata?.full_name || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -670,8 +670,10 @@ export default function TutorApp() {
   const [teacherForm,setTeacherForm]=useState({name:"",email:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",cguAccepted:false,childProtectionAccepted:false});
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
+  const [profileLoading,setProfileLoading]=useState(true);
 
   const loadProfile = async (userId) => {
+    setProfileLoading(true);
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single();
     if (profile) setUserProfile(profile);
     const { data: studentProf } = await supabase.from("student_profiles").select("*").eq("owner_id", userId).limit(1).maybeSingle();
@@ -680,6 +682,7 @@ export default function TutorApp() {
       setForm(f => ({ ...f, curriculum: studentProf.curriculum||"", instrLang: instrLangMap[studentProf.default_lang]||"", level: studentProf.level||"" }));
       if (studentProf.curriculum) setCurriculum(studentProf.curriculum);
     }
+    setProfileLoading(false);
     return profile;
   };
 
@@ -822,7 +825,7 @@ export default function TutorApp() {
       <nav className="nav">
         <div className="nav-logo" onClick={()=>setPage("home")}>TutorApp</div>
         <div className="nav-links">
-          {user ? (isTeacher ? (
+          {user ? (!profileLoading && isTeacher ? (
             <span className="nav-link" onClick={()=>{setPage("app");setAppTab("teacher-dashboard");}}>{t.nav.teach}</span>
           ) : (
             <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
@@ -870,7 +873,7 @@ export default function TutorApp() {
         <div className="app-topbar"><div className="app-dot-row"><div className="app-dot" style={{background:"#E24B4A"}}></div><div className="app-dot" style={{background:"#F5A623"}}></div><div className="app-dot" style={{background:"#0ABFA3"}}></div></div><div className="app-url">tutorapp.online · 🔒 {currentCountry.flag} {currentCountry.name[lang]}</div></div>
 
         <div className="app-tabs">
-          {isTeacher ? <>
+          {profileLoading ? <div style={{padding:"14px 22px",fontSize:13,color:"#9CA3AF"}}>Loading...</div> : isTeacher ? <>
             <div className={`app-tab${teacherSubTab==="requests"&&appTab==="teacher-dashboard"||appTab==="teacher-bid"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setTeacherSubTab("requests");setShowOnboard(false);}}>📋 {t.teacher.requests}</div>
             <div className={`app-tab${teacherSubTab==="dashboard"&&appTab==="teacher-dashboard"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setTeacherSubTab("dashboard");setShowOnboard(false);}}>📊 {t.teacher.dashboard}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {t.teacher.profile}</div>
