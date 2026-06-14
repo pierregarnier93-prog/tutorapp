@@ -729,8 +729,7 @@ export default function TutorApp() {
   const go=(tab)=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab(tab);setShowOnboard(false);};
   const displayName=userProfile?.full_name||user?.user_metadata?.full_name||user?.email?.split("@")[0]||"";
   const isProfilePrefilled=!!(form.curriculum&&form.instrLang&&form.level);
-  const isTeacher=userProfile?.role==="teacher";
-
+const isTeacher=userProfile?.role==="teacher" || user?.user_metadata?.role==="teacher";
   const handleLogout=async()=>{
     await supabase.auth.signOut();
     setPage("home");setAppTab("student-form");setUser(null);setUserProfile(null);
