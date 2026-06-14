@@ -413,6 +413,7 @@ function Auth({ onClose, onSuccess, lang: appLang }) {
         role, full_name: fullName, language: prefLang, country_code: country,
         region_code: country === "UAE" ? region : null,
       }).eq("id", data.user.id);
+      await supabase.auth.updateUser({ data: { role, full_name: fullName } });
       if (role === "student" && curriculum && level) {
         await supabase.from("student_profiles").insert({
           owner_id: data.user.id, full_name: fullName, age: age ? parseInt(age) : null,
@@ -480,7 +481,7 @@ function Auth({ onClose, onSuccess, lang: appLang }) {
 
 function ProfilePage({ user, userProfile, lang, onSaved }) {
   const t = T[lang] || T.en;
-  const isTeacher = userProfile?.role === "teacher";
+  const isTeacher = user?.user_metadata?.role === "teacher" || userProfile?.role === "teacher";
   const [fullName, setFullName] = useState(userProfile?.full_name || user?.user_metadata?.full_name || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -546,7 +547,7 @@ function ProfilePage({ user, userProfile, lang, onSaved }) {
         )}
         <div className="form-group"><label className="form-label">{t.profile.name}</label><input className="form-input" value={fullName} onChange={e=>setFullName(e.target.value)} /></div>
         <div className="form-group"><label className="form-label">{t.profile.email}</label><input className="form-input" value={user?.email||""} disabled style={{opacity:.6}} /></div>
-        <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacher?(lang==="fr"?"Enseignant":lang==="ar"?"مدرس":"Teacher"):(lang==="fr"?"Élève / Parent":lang==="ar"?"طالب / ولي أمر":"Student / Parent")} disabled style={{opacity:.6}} /></div>
+        <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacher?(lang==="fr"?"Enseignant ✓":lang==="ar"?"مدرس ✓":"Teacher ✓"):(lang==="fr"?"Élève / Parent":lang==="ar"?"طالب / ولي أمر":"Student / Parent")} disabled style={{opacity:.6,background:isTeacher?"#E6FAF8":"#FAFBFF",color:isTeacher?"#0F6E56":"#1A1A2E",fontWeight:700}} /></div>
         <button className="submit-btn" onClick={handleSaveProfile} disabled={saving} style={{marginTop:"1rem"}}>{saving?"⏳ Saving...":t.profile.saveProfile}</button>
       </div>
       {isTeacher && (
@@ -821,8 +822,14 @@ export default function TutorApp() {
       <nav className="nav">
         <div className="nav-logo" onClick={()=>setPage("home")}>TutorApp</div>
         <div className="nav-links">
-          <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
-          <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
+          {user ? (isTeacher ? (
+            <span className="nav-link" onClick={()=>{setPage("app");setAppTab("teacher-dashboard");}}>{t.nav.teach}</span>
+          ) : (
+            <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
+          )) : <>
+            <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
+            <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
+          </>}
           <span className="nav-link" onClick={()=>setPage("teachers")}>{t.nav.teachers}</span>
           <div className="lang-switch">{["en","ar","fr"].map(l=><button key={l} className={`lang-btn${lang===l?" active":""}`} onClick={()=>setLang(l)}>{l.toUpperCase()}</button>)}</div>
         </div>
@@ -864,7 +871,8 @@ export default function TutorApp() {
 
         <div className="app-tabs">
           {isTeacher ? <>
-            <div className={`app-tab${appTab==="teacher-dashboard"||appTab==="teacher-bid"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setShowOnboard(false);}}>📚 {t.nav.teach}</div>
+            <div className={`app-tab${teacherSubTab==="requests"&&appTab==="teacher-dashboard"||appTab==="teacher-bid"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setTeacherSubTab("requests");setShowOnboard(false);}}>📋 {t.teacher.requests}</div>
+            <div className={`app-tab${teacherSubTab==="dashboard"&&appTab==="teacher-dashboard"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setTeacherSubTab("dashboard");setShowOnboard(false);}}>📊 {t.teacher.dashboard}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {t.teacher.profile}</div>
           </> : <>
             <div className={`app-tab${["student-form","student-bids","student-payment","student-confirm"].includes(appTab)?" active":""}`} onClick={()=>{setAppTab("student-form");setShowOnboard(false);}}>🎓 {t.nav.search}</div>
@@ -1021,11 +1029,6 @@ export default function TutorApp() {
                 <div className="page-sub" style={{marginBottom:0}}>{t.teacher.sub}</div>
               </div>
               <button className="btn-ghost" onClick={()=>setShowOnboard(true)}>✏️ {lang==="fr"?"Modifier":lang==="ar"?"تعديل":"Edit profile"}</button>
-            </div>
-
-            <div className="teacher-subtabs">
-              <div className={`teacher-subtab${teacherSubTab==="dashboard"?" active":""}`} onClick={()=>setTeacherSubTab("dashboard")}>📊 {t.teacher.dashboard}</div>
-              <div className={`teacher-subtab${teacherSubTab==="requests"?" active":""}`} onClick={()=>setTeacherSubTab("requests")}>📋 {t.teacher.requests} {!requestsLoading&&`(${realRequests.length})`}</div>
             </div>
 
             {teacherSubTab==="dashboard"&&<>
