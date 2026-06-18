@@ -497,9 +497,9 @@ function Auth({ onClose, onSuccess, lang }) {
 
 function ProfilePage({ user, userProfile, profileLoading, lang, onSaved }) {
   const t = T[lang] || T.en;
-  if (profileLoading) return <div className="loading-spinner">Loading...</div>;
-  if (!userProfile) return <div className="loading-spinner">Loading...</div>;
-  const isTeacher = userProfile?.role === "teacher";
+  if (profileLoading) return <div className="loading-spinner">⏳ Loading...</div>;
+  if (!userProfile) return <div className="loading-spinner">⏳ Loading profile...</div>;
+  const isTeacherProfile = userProfile?.role === "teacher";
   const [fullName, setFullName] = useState(userProfile?.full_name || user?.user_metadata?.full_name || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -512,7 +512,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved }) {
   const [savingBank, setSavingBank] = useState(false);
   const [msg, setMsg] = useState("");
 
-  const initials = fullName ? fullName.split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2) : "?";
+  const initials = (fullName || "?").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2);
 
   const canChangeFreq = () => {
     if (!userProfile?.withdrawal_changed_at) return true;
@@ -559,16 +559,16 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved }) {
       {msg && <div className="auth-success">{msg}</div>}
       <div className="profile-card">
         <div className="profile-avatar">{initials}</div>
-        {isTeacher && (userProfile?.verified
+        {isTeacherProfile && (userProfile?.verified
           ? <div className="verified-banner">✅ {t.teacher.verifiedBadge}</div>
           : <div className="pending-banner">⏳ {t.teacher.pendingBadge} — {lang==="fr"?"Vos documents sont en cours de vérification (24h)":lang==="ar"?"جاري مراجعة وثائقك (24 ساعة)":"Your documents are under review (24h)"}</div>
         )}
         <div className="form-group"><label className="form-label">{t.profile.name}</label><input className="form-input" value={fullName} onChange={e=>setFullName(e.target.value)} /></div>
         <div className="form-group"><label className="form-label">{t.profile.email}</label><input className="form-input" value={user?.email||""} disabled style={{opacity:.6}} /></div>
-        <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacher?(lang==="fr"?"Enseignant ✓":lang==="ar"?"مدرس ✓":"Teacher ✓"):(lang==="fr"?"Élève / Parent":lang==="ar"?"طالب / ولي أمر":"Student / Parent")} disabled style={{opacity:.6,background:isTeacher?"#E6FAF8":"#FAFBFF",color:isTeacher?"#0F6E56":"#1A1A2E",fontWeight:700}} /></div>
+        <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacherProfile?(lang==="fr"?"Enseignant ✓":lang==="ar"?"مدرس ✓":"Teacher ✓"):(lang==="fr"?"Élève / Parent":lang==="ar"?"طالب / ولي أمر":"Student / Parent")} disabled style={{opacity:.6,background:isTeacherProfile?"#E6FAF8":"#FAFBFF",color:isTeacherProfile?"#0F6E56":"#1A1A2E",fontWeight:700}} /></div>
         <button className="submit-btn" onClick={handleSaveProfile} disabled={saving} style={{marginTop:"1rem"}}>{saving?"⏳ Saving...":t.profile.saveProfile}</button>
       </div>
-      {isTeacher && (
+      {isTeacherProfile && (
         <div className="profile-card">
           <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🏦 {t.profile.banking}</div>
           <div className="banking-card">
@@ -609,7 +609,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved }) {
 function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack }) {
   const t = T[lang] || T.en;
   const [paying, setPaying] = useState(false);
-  const lessonPrice = bid.net_price_aed;
+  const lessonPrice = bid?.net_price_aed || 0;
   const studentFee = Math.round(lessonPrice * STUDENT_FEE);
   const studentTotal = lessonPrice + studentFee;
   const teacherPayout = Math.round(lessonPrice * (1 - TEACHER_FEE));
@@ -620,7 +620,7 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
       const response = await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id, amount: studentTotal }),
+        body: JSON.stringify({ bookingId: booking?.id, amount: studentTotal }),
       });
       const { clientSecret, error } = await response.json();
       if (error) throw new Error(error);
@@ -654,7 +654,7 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
       </div>
       <div className="payment-note">⚠️ {t.payment.payNote}</div>
       <button className="submit-btn" onClick={handlePay} disabled={paying}>{paying?"⏳ Processing...":t.payment.payBtn}</button>
-      <div className="stripe-badge"><svg width="40" height="16" viewBox="0 0 40 16"><path fill="#635BFF" d="M5.5 5.5C5.5 3.6 6.9 2.7 9.1 2.7c2.9 0 5.8 1.3 5.8 1.3V.4S12.4 0 9 0C3.8 0 .8 2.9.8 6.1c0 5.9 7.7 5 7.7 8.3 0 2.2-1.8 3-4.2 3C1.5 17.4 0 16.6 0 16.6v3.7s1.7.7 4.3.7c5.4 0 8.5-2.8 8.5-6.3C12.8 8.4 5.5 9.3 5.5 5.5z"/></svg>Secured by Stripe</div>
+      <div className="stripe-badge">🔒 Secured by Stripe</div>
       <div style={{textAlign:"center",marginTop:"1rem"}}><button className="btn-ghost" onClick={onBack}>← Back to offers</button></div>
     </div>
   );
@@ -690,32 +690,46 @@ export default function TutorApp() {
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [profileLoading,setProfileLoading]=useState(true);
 
-  const loadProfile = async (userId) => {
+  // ✅ FIX DÉFINITIF : toujours charger avec l'ID auth réel
+  const loadProfile = async (userId: string) => {
     setProfileLoading(true);
-    const fetchProfile = async (id) => {
-      const { data: profile } = await supabase.from("profiles").select("*").eq("id", id).single();
-      return profile ?? null;
-    };
-
-    let profile = await fetchProfile(userId);
-    if ((!profile?.role || profile.role === "student") && userId) {
+    try {
+      // On récupère TOUJOURS l'ID auth réel depuis Supabase
       const { data: authData } = await supabase.auth.getUser();
-      const authUserId = authData?.user?.id;
-      if (authUserId && authUserId !== userId) {
-        const retryProfile = await fetchProfile(authUserId);
-        if (retryProfile) profile = retryProfile;
-      }
-    }
+      const realUserId = authData?.user?.id || userId;
 
-    setUserProfile(profile);
-    const { data: studentProf } = await supabase.from("student_profiles").select("*").eq("owner_id", userId).limit(1).maybeSingle();
-    if (studentProf) {
-      const instrLangMap = { en: T.en.instrLangs[0], ar: T.ar.instrLangs[0], fr: T.fr.instrLangs[0] };
-      setForm(f => ({ ...f, curriculum: studentProf.curriculum||"", instrLang: instrLangMap[studentProf.default_lang]||"", level: studentProf.level||"" }));
-      if (studentProf.curriculum) setCurriculum(studentProf.curriculum);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", realUserId)
+        .single();
+
+      if (profile) setUserProfile(profile);
+
+      const { data: studentProf } = await supabase
+        .from("student_profiles")
+        .select("*")
+        .eq("owner_id", realUserId)
+        .limit(1)
+        .maybeSingle();
+
+      if (studentProf) {
+        const instrLangMap = { en: T.en.instrLangs[0], ar: T.ar.instrLangs[0], fr: T.fr.instrLangs[0] };
+        setForm(f => ({
+          ...f,
+          curriculum: studentProf.curriculum || "",
+          instrLang: instrLangMap[studentProf.default_lang] || "",
+          level: studentProf.level || ""
+        }));
+        if (studentProf.curriculum) setCurriculum(studentProf.curriculum);
+      }
+
+      setProfileLoading(false);
+      return profile;
+    } catch (e) {
+      setProfileLoading(false);
+      return null;
     }
-    setProfileLoading(false);
-    return profile;
   };
 
   useEffect(()=>{
@@ -736,11 +750,13 @@ export default function TutorApp() {
         } else if (profile?.role === "student") {
           setPage("app"); setAppTab("student-form");
         }
+      } else {
+        setProfileLoading(false);
       }
     });
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
       setUser(session?.user??null);
-      if(!session?.user){setUserProfile(null);setPage("home");}
+      if(!session?.user){setUserProfile(null);setPage("home");setProfileLoading(false);}
     });
     return ()=>subscription.unsubscribe();
   },[]);
@@ -771,11 +787,13 @@ export default function TutorApp() {
   const go=(tab)=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab(tab);setShowOnboard(false);};
   const displayName=userProfile?.full_name||user?.user_metadata?.full_name||user?.email?.split("@")[0]||"";
   const isProfilePrefilled=!!(form.curriculum&&form.instrLang&&form.level);
-  const isTeacher=!profileLoading && userProfile?.role==="teacher";
+
+  // ✅ FIX : isTeacher calculé SEULEMENT après chargement complet
+  const isTeacher = !profileLoading && userProfile?.role === "teacher";
 
   const handleLogout=async()=>{
     await supabase.auth.signOut();
-    setPage("home");setAppTab("student-form");setUser(null);setUserProfile(null);
+    setPage("home");setAppTab("student-form");setUser(null);setUserProfile(null);setProfileLoading(false);
     showToast("👋 See you soon!");
   };
 
@@ -857,11 +875,14 @@ export default function TutorApp() {
       <nav className="nav">
         <div className="nav-logo" onClick={()=>setPage("home")}>TutorApp</div>
         <div className="nav-links">
-          {user ? (!profileLoading && isTeacher ? (
-            <span className="nav-link" onClick={()=>{setPage("app");setAppTab("teacher-dashboard");}}>{t.nav.teach}</span>
-          ) : (
-            <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
-          )) : <>
+          {user ? (
+            // ✅ FIX NAV : on attend la fin du chargement avant d'afficher
+            profileLoading ? null : isTeacher ? (
+              <span className="nav-link" onClick={()=>{setPage("app");setAppTab("teacher-dashboard");}}>{t.nav.teach}</span>
+            ) : (
+              <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
+            )
+          ) : <>
             <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
             <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
           </>}
@@ -905,7 +926,9 @@ export default function TutorApp() {
         <div className="app-topbar"><div className="app-dot-row"><div className="app-dot" style={{background:"#E24B4A"}}></div><div className="app-dot" style={{background:"#F5A623"}}></div><div className="app-dot" style={{background:"#0ABFA3"}}></div></div><div className="app-url">tutorapp.online · 🔒 {currentCountry.flag} {currentCountry.name[lang]}</div></div>
 
         <div className="app-tabs">
-          {profileLoading ? <div style={{padding:"14px 22px",fontSize:13,color:"#9CA3AF"}}>Loading...</div> : isTeacher ? <>
+          {profileLoading ? (
+            <div style={{padding:"14px 22px",fontSize:13,color:"#9CA3AF"}}>⏳ Loading...</div>
+          ) : isTeacher ? <>
             <div className={`app-tab${teacherSubTab==="requests"&&appTab==="teacher-dashboard"||appTab==="teacher-bid"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setTeacherSubTab("requests");setShowOnboard(false);}}>📋 {t.teacher.requests}</div>
             <div className={`app-tab${teacherSubTab==="dashboard"&&appTab==="teacher-dashboard"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setTeacherSubTab("dashboard");setShowOnboard(false);}}>📊 {t.teacher.dashboard}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {t.teacher.profile}</div>
@@ -983,7 +1006,7 @@ export default function TutorApp() {
               <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.email}</label><input className="form-input" type="email" placeholder="sarah@email.com" value={teacherForm.email} onChange={e=>setTeacherForm({...teacherForm,email:e.target.value})} /></div>
             </div>
             <div className="form-group"><label className="form-label">{t.onboard.cycle}</label><div className="chips-row">{t.cycles.map(c=><div key={c} className={`chip${teacherForm.cycles.includes(c)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,cycles:[c]})}>{c}</div>)}</div></div>
-            <div className="form-group"><label className="form-label">{t.onboard.curriculum}</label><div className="chips-row">{Object.entries(CURRICULA).map(([k,v])=><div key={k} className={`chip chip-teal${teacherForm.curricula.includes(k)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,curricula:toggleArr(teacherForm.curricula,k)})}>{v.label[lang]}</div>)}</div></div>
+            <div className="form-group"><label className="form-label">{t.onboard.curriculum}</label><div className="chips-row">{Object.entries(CURRICULA).map(([k,v])=><div key={k} className={`chip${teacherForm.curricula.includes(k)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,curricula:toggleArr(teacherForm.curricula,k)})}>{v.label[lang]}</div>)}</div></div>
             <div className="form-group"><label className="form-label">{t.onboard.subjects}</label><div className="chips-row">{SUBJECTS.map(s=><div key={s.en} className={`chip${teacherForm.subjects.includes(s.en)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,subjects:toggleArr(teacherForm.subjects,s.en)})}>{s[lang]}</div>)}</div></div>
             <div className="form-group"><label className="form-label">{t.onboard.langTeach}</label><div className="chips-row">{t.instrLangs.map(l=><div key={l} className={`chip${teacherForm.instrLangs.includes(l)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,instrLangs:toggleArr(teacherForm.instrLangs,l)})}>{l}</div>)}</div></div>
             <div className="form-group">
@@ -1031,11 +1054,11 @@ export default function TutorApp() {
                 <input type="checkbox" checked={teacherForm.cguAccepted} onChange={e=>setTeacherForm({...teacherForm,cguAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
                 <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
                   {lang==="fr"?"J'ai lu et j'accepte les ":lang==="ar"?"لقد قرأت وأوافق على ":"I have read and accept the "}
-                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setPage("legal");}}>
+                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
                     {lang==="fr"?"Conditions Générales d'Utilisation":lang==="ar"?"شروط الخدمة":"Terms of Service"}
                   </span>
                   {lang==="fr"?" et la ":" and the "}
-                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setPage("legal");}}>
+                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
                     {lang==="fr"?"Politique de Confidentialité":lang==="ar"?"سياسة الخصوصية":"Privacy Policy"}
                   </span>
                 </span>
@@ -1044,11 +1067,11 @@ export default function TutorApp() {
                 <input type="checkbox" checked={teacherForm.childProtectionAccepted} onChange={e=>setTeacherForm({...teacherForm,childProtectionAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
                 <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
                   {lang==="fr"?"J'accepte la ":lang==="ar"?"أوافق على ":"I accept the "}
-                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setPage("legal");}}>
+                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
                     {lang==="fr"?"Charte de Protection des Mineurs":lang==="ar"?"ميثاق حماية الأطفال":"Child Protection Charter"}
                   </span>
                   {lang==="fr"?" et l'":"  and the "}
-                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setPage("legal");}}>
+                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
                     {lang==="fr"?"Accord Enseignant":"Tutor Agreement"}
                   </span>
                 </span>
@@ -1130,7 +1153,7 @@ export default function TutorApp() {
       <footer className="footer">
         <div className="footer-logo">TutorApp</div>
         <div style={{fontSize:13,lineHeight:1.65,maxWidth:500,margin:"0 auto"}}>{t.footer}</div>
-        <div style={{marginTop:"1.5rem",fontSize:12,color:"#4B5563"}}>© 2025 TutorApp · {COUNTRIES.map(c=>`${c.flag} ${c.name[lang]}`).join(" · ")}</div>
+        <div style={{marginTop:"1.5rem",fontSize:12,color:"#4B5563"}}>© 2026 TutorApp · {COUNTRIES.map(c=>`${c.flag} ${c.name[lang]}`).join(" · ")}</div>
       </footer>
 
       {showAuth&&<Auth onClose={()=>setShowAuth(false)} onSuccess={handleLoginSuccess} lang={lang} />}
