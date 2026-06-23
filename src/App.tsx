@@ -497,9 +497,6 @@ function Auth({ onClose, onSuccess, lang }) {
 
 function ProfilePage({ user, userProfile, profileLoading, lang, onSaved }) {
   const t = T[lang] || T.en;
-  if (profileLoading) return <div className="loading-spinner">⏳ Loading...</div>;
-  if (!userProfile) return <div className="loading-spinner">⏳ Loading profile...</div>;
-  const isTeacherProfile = userProfile?.role === "teacher";
   const [fullName, setFullName] = useState(userProfile?.full_name || user?.user_metadata?.full_name || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -511,6 +508,10 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved }) {
   const [savingPwd, setSavingPwd] = useState(false);
   const [savingBank, setSavingBank] = useState(false);
   const [msg, setMsg] = useState("");
+
+  if (profileLoading) return <div className="loading-spinner">⏳ Loading...</div>;
+  if (!userProfile) return <div className="loading-spinner">⏳ Loading profile...</div>;
+  const isTeacherProfile = userProfile?.role === "teacher";
 
   const initials = (fullName || "?").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2);
 
