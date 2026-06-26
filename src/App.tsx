@@ -699,13 +699,15 @@ export default function TutorApp() {
       const { data: authData } = await supabase.auth.getUser();
       const realUserId = authData?.user?.id || userId;
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", realUserId)
-        .single();
+        .maybeSingle();
 
+      if (profileError) console.error("loadProfile: failed to fetch profile", profileError);
       if (profile) setUserProfile(profile);
+      else console.warn("loadProfile: no profile row found for id", realUserId);
 
       const { data: studentProf } = await supabase
         .from("student_profiles")
@@ -728,6 +730,7 @@ export default function TutorApp() {
       setProfileLoading(false);
       return profile;
     } catch (e) {
+      console.error("loadProfile: unexpected error", e);
       setProfileLoading(false);
       return null;
     }
