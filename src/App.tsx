@@ -495,7 +495,7 @@ function Auth({ onClose, onSuccess, lang }) {
   );
 }
 
-function ProfilePage({ user, userProfile, profileLoading, lang, onSaved }) {
+function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country }) {
   const t = T[lang] || T.en;
   const [fullName, setFullName] = useState(userProfile?.full_name || user?.user_metadata?.full_name || "");
   const [newPassword, setNewPassword] = useState("");
@@ -569,6 +569,36 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved }) {
         <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacherProfile?(lang==="fr"?"Enseignant ✓":lang==="ar"?"مدرس ✓":"Teacher ✓"):(lang==="fr"?"Élève / Parent":lang==="ar"?"طالب / ولي أمر":"Student / Parent")} disabled style={{opacity:.6,background:isTeacherProfile?"#E6FAF8":"#FAFBFF",color:isTeacherProfile?"#0F6E56":"#1A1A2E",fontWeight:700}} /></div>
         <button className="submit-btn" onClick={handleSaveProfile} disabled={saving} style={{marginTop:"1rem"}}>{saving?"⏳ Saving...":t.profile.saveProfile}</button>
       </div>
+      {isTeacherProfile && userProfile?.teaching_subjects?.length > 0 && (
+        <div className="profile-card">
+          <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🎓 {lang==="fr"?"Profil pédagogique":lang==="ar"?"الملف التربوي":"Teaching profile"}</div>
+          {userProfile.teaching_cycles?.length > 0 && (
+            <div className="form-group">
+              <label className="form-label">{t.onboard.cycle}</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{userProfile.teaching_cycles.map(c=><span key={c} className="badge badge-purple">{c}</span>)}</div>
+            </div>
+          )}
+          <div className="form-group">
+            <label className="form-label">{t.onboard.subjects}</label>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{userProfile.teaching_subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return <span key={s} className="badge badge-blue">{subj?subj[lang]:s}</span>;})}</div>
+          </div>
+          {userProfile.teaching_langs?.length > 0 && (
+            <div className="form-group">
+              <label className="form-label">{t.onboard.langTeach}</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{userProfile.teaching_langs.map(l=><span key={l} className="badge badge-green">{l}</span>)}</div>
+            </div>
+          )}
+          {userProfile.teaching_rate && (
+            <div className="form-group" style={{marginBottom:0}}>
+              <label className="form-label">{t.teacher.yourRate}</label>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#5B4FE8"}}>
+                {fmtPrice(userProfile.teaching_rate,country)}/h
+                <span style={{fontSize:13,fontWeight:500,color:"#6B7280",marginInlineStart:8}}>→ {fmtPrice(Math.round(userProfile.teaching_rate*(1-TEACHER_FEE)),country)}/h ({t.teacher.rateHint})</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {isTeacherProfile && (
         <div className="profile-card">
           <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🏦 {t.profile.banking}</div>
@@ -686,7 +716,7 @@ export default function TutorApp() {
   const [selectedRate,setSelectedRate]=useState(150);
   const [teacherStats,setTeacherStats]=useState({revenue:0,courses:0,rating:"—"});
   const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:""});
-  const [teacherForm,setTeacherForm]=useState({name:"",email:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",cguAccepted:false,childProtectionAccepted:false});
+  const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",cguAccepted:false,childProtectionAccepted:false});
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [profileLoading,setProfileLoading]=useState(true);
@@ -706,8 +736,26 @@ export default function TutorApp() {
         .maybeSingle();
 
       if (profileError) console.error("loadProfile: failed to fetch profile", profileError);
-      if (profile) setUserProfile(profile);
-      else console.warn("loadProfile: no profile row found for id", realUserId);
+      if (profile) {
+        setUserProfile(profile);
+        if (profile.role === "teacher") {
+          setTeacherForm(f => ({
+            ...f,
+            name: profile.full_name || "",
+            email: authData?.user?.email || "",
+            bio: profile.teaching_bio || "",
+            cycles: profile.teaching_cycles || [],
+            subjects: profile.teaching_subjects || [],
+            instrLangs: profile.teaching_langs || [],
+            rate: profile.teaching_rate || 150,
+            curricula: profile.teaching_curricula || [],
+            bankName: profile.bank_name || "",
+            bankIban: profile.bank_iban || "",
+            bankHolder: profile.bank_holder || "",
+            withdrawal: profile.withdrawal_frequency || "wW",
+          }));
+        }
+      } else console.warn("loadProfile: no profile row found for id", realUserId);
 
       const { data: studentProf } = await supabase
         .from("student_profiles")
@@ -847,6 +895,9 @@ export default function TutorApp() {
         full_name:teacherForm.name,withdrawal_frequency:teacherForm.withdrawal,
         bank_name:teacherForm.bankName,bank_iban:teacherForm.bankIban,bank_holder:teacherForm.bankHolder,
         withdrawal_changed_at:new Date().toISOString(),
+        teaching_cycles:teacherForm.cycles,teaching_subjects:teacherForm.subjects,
+        teaching_langs:teacherForm.instrLangs,teaching_rate:teacherForm.rate,
+        teaching_bio:teacherForm.bio||"",teaching_curricula:teacherForm.curricula,
       }).eq("id",user.id);
     }
     setShowOnboard(false);setAppTab("teacher-dashboard");
@@ -943,7 +994,7 @@ export default function TutorApp() {
         </div>
 
         <div className="app-body">
-          {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} />}
+          {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} country={country} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} />}
 
           {appTab==="student-form"&&<>
             <div className="page-title">{t.form.title}</div>
@@ -1018,7 +1069,7 @@ export default function TutorApp() {
               <div className="rate-chips">{TEACHER_RATES.map(r=><div key={r} className={`rate-chip${teacherForm.rate===r?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,rate:r})}>{fmtPrice(r,country)}/h</div>)}</div>
               <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>{t.teacher.rateHint} → {fmtPrice(Math.round(teacherForm.rate*(1-TEACHER_FEE)),country)}/h</div>
             </div>
-            <div className="form-group"><label className="form-label">{t.onboard.bio}</label><textarea className="form-textarea" placeholder={t.onboard.bioPh} /></div>
+            <div className="form-group"><label className="form-label">{t.onboard.bio}</label><textarea className="form-textarea" placeholder={t.onboard.bioPh} value={teacherForm.bio} onChange={e=>setTeacherForm({...teacherForm,bio:e.target.value})} /></div>
 
             <div className="section-divider">🪪 {t.onboard.idDoc}</div>
             <div style={{fontSize:12,color:"#6B7280",marginBottom:12,fontWeight:600}}>ℹ️ {t.onboard.idDocHint}</div>
