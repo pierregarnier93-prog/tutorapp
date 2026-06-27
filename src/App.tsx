@@ -495,7 +495,7 @@ function Auth({ onClose, onSuccess, lang }) {
   );
 }
 
-function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country }) {
+function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country, onEditTeachingProfile }) {
   const t = T[lang] || T.en;
   const [fullName, setFullName] = useState(userProfile?.full_name || user?.user_metadata?.full_name || "");
   const [newPassword, setNewPassword] = useState("");
@@ -571,7 +571,10 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
       </div>
       {isTeacherProfile && userProfile?.teaching_subjects?.length > 0 && (
         <div className="profile-card">
-          <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🎓 {lang==="fr"?"Profil pédagogique":lang==="ar"?"الملف التربوي":"Teaching profile"}</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}>
+            <div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>🎓 {lang==="fr"?"Profil pédagogique":lang==="ar"?"الملف التربوي":"Teaching profile"}</div>
+            {onEditTeachingProfile && <button className="btn-ghost" onClick={onEditTeachingProfile}>✏️ {lang==="fr"?"Modifier":lang==="ar"?"تعديل":"Edit"}</button>}
+          </div>
           {userProfile.teaching_cycles?.length > 0 && (
             <div className="form-group">
               <label className="form-label">{t.onboard.cycle}</label>
@@ -994,7 +997,7 @@ export default function TutorApp() {
         </div>
 
         <div className="app-body">
-          {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} country={country} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} />}
+          {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} country={country} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} onEditTeachingProfile={()=>{setAppTab("teacher-dashboard");setShowOnboard(true);}} />}
 
           {appTab==="student-form"&&<>
             <div className="page-title">{t.form.title}</div>
