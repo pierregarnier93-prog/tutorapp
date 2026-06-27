@@ -694,6 +694,136 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
   );
 }
 
+function AdminPage({ user, lang, onBack }) {
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("pending");
+
+  const loadTeachers = async () => {
+    setLoading(true);
+    let query = supabase.from("profiles").select("*").eq("role", "teacher").order("created_at", { ascending: false });
+    if (filter === "pending") query = query.eq("verified", false);
+    if (filter === "verified") query = query.eq("verified", true);
+    const { data, error } = await query;
+    if (error) console.error("AdminPage: failed to load teachers", error);
+    setTeachers(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadTeachers(); }, [filter]);
+
+  const notify = async (payload) => {
+    try {
+      await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      console.error("AdminPage: notification email failed", e);
+    }
+  };
+
+  const handleVerify = async (teacher) => {
+    const { error } = await supabase.from("profiles").update({ verified: true }).eq("id", teacher.id);
+    if (error) { console.error("AdminPage: verify failed", error); alert("❌ " + error.message); return; }
+    if (teacher.email) notify({ type: "teacher_verified", teacherEmail: teacher.email, teacherName: teacher.full_name });
+    loadTeachers();
+    alert(`✅ ${teacher.full_name || "Teacher"} vérifié !`);
+  };
+
+  const handleReject = async (teacher) => {
+    if (!confirm(`Refuser ${teacher.full_name || "ce profil"} ?`)) return;
+    const { error } = await supabase.from("profiles").update({ verified: false, role: "rejected" }).eq("id", teacher.id);
+    if (error) { console.error("AdminPage: reject failed", error); alert("❌ " + error.message); return; }
+    loadTeachers();
+  };
+
+  return (
+    <div style={{maxWidth:900, margin:"0 auto", padding:"2rem"}}>
+      <div style={{display:"flex", alignItems:"center", gap:16, marginBottom:"2rem"}}>
+        <button onClick={onBack} className="btn-ghost">← Retour</button>
+        <div>
+          <div className="page-title">⚙️ Interface Admin</div>
+          <div className="page-sub" style={{marginBottom:0}}>Gestion des enseignants TutorApp</div>
+        </div>
+      </div>
+
+      <div style={{display:"flex", gap:10, marginBottom:"1.5rem"}}>
+        {[["pending","⏳ En attente"],["verified","✅ Vérifiés"],["all","Tous"]].map(([k,v]) => (
+          <div key={k} className={`chip${filter===k?" selected":""}`} onClick={() => setFilter(k)}>{v}</div>
+        ))}
+      </div>
+
+      <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:"1.5rem"}}>
+        <div className="stat-card"><div className="stat-val" style={{color:"#E24B4A"}}>{teachers.filter(t => !t.verified).length}</div><div className="stat-lbl">En attente</div></div>
+        <div className="stat-card"><div className="stat-val">{teachers.filter(t => t.verified).length}</div><div className="stat-lbl">Vérifiés</div></div>
+        <div className="stat-card"><div className="stat-val">{teachers.length}</div><div className="stat-lbl">Total enseignants</div></div>
+      </div>
+
+      {loading && <div className="loading-spinner">⏳ Chargement...</div>}
+
+      {!loading && teachers.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">👨‍🏫</div>
+          <div style={{fontWeight:700}}>Aucun enseignant {filter === "pending" ? "en attente" : ""}</div>
+        </div>
+      )}
+
+      {!loading && teachers.map(teacher => (
+        <div key={teacher.id} className="req-card" style={{marginBottom:16}}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12}}>
+            <div style={{flex:1}}>
+              <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:8}}>
+                <div style={{width:44, height:44, borderRadius:"50%", background:"#EEF0FF", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:16, color:"#5B4FE8", flexShrink:0}}>
+                  {(teacher.full_name||"?").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2)}
+                </div>
+                <div>
+                  <div style={{fontWeight:800, fontSize:16}}>{teacher.full_name || "Sans nom"}</div>
+                  <div style={{fontSize:12, color:"#6B7280"}}>{teacher.email || teacher.id}</div>
+                </div>
+                {teacher.verified ? <span className="badge badge-green">✅ Vérifié</span> : <span className="badge badge-amber">⏳ En attente</span>}
+              </div>
+
+              {teacher.teaching_subjects?.length > 0 && (
+                <div style={{display:"flex", flexWrap:"wrap", gap:6, marginBottom:8}}>
+                  {teacher.teaching_subjects.map(s => <span key={s} className="badge badge-purple">{s}</span>)}
+                </div>
+              )}
+
+              <div style={{display:"flex", flexWrap:"wrap", gap:8, fontSize:12, color:"#6B7280", fontWeight:600}}>
+                {teacher.teaching_cycles?.length > 0 && <span>📚 {teacher.teaching_cycles.join(", ")}</span>}
+                {teacher.teaching_langs?.length > 0 && <span>🗣 {teacher.teaching_langs.join(", ")}</span>}
+                {teacher.teaching_rate && <span>💰 {teacher.teaching_rate} AED/h</span>}
+                {teacher.country_code && <span>📍 {teacher.country_code}</span>}
+              </div>
+
+              {teacher.bank_iban && (
+                <div style={{marginTop:8, fontSize:12, color:"#6B7280", fontWeight:600}}>
+                  🏦 {teacher.bank_name} · ****{teacher.bank_iban.slice(-4)} · {teacher.bank_holder}
+                </div>
+              )}
+
+              {teacher.teaching_bio && (
+                <div style={{marginTop:8, fontSize:13, color:"#374151", fontStyle:"italic", background:"#FAFBFF", borderRadius:8, padding:"8px 12px"}}>
+                  "{teacher.teaching_bio}"
+                </div>
+              )}
+            </div>
+
+            {!teacher.verified && (
+              <div style={{display:"flex", flexDirection:"column", gap:8, flexShrink:0}}>
+                <button className="btn-teal" onClick={() => handleVerify(teacher)} style={{padding:"10px 20px", fontSize:13}}>✅ Valider</button>
+                <button className="btn-ghost" onClick={() => handleReject(teacher)} style={{color:"#EF4444", borderColor:"#EF4444"}}>❌ Refuser</button>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TutorApp() {
   const [lang,setLang]=useState("en");
   const [country]=useState("UAE");
@@ -895,13 +1025,29 @@ export default function TutorApp() {
     }
     if(user){
       await supabase.from("profiles").update({
-        full_name:teacherForm.name,withdrawal_frequency:teacherForm.withdrawal,
+        full_name:teacherForm.name,email:teacherForm.email,withdrawal_frequency:teacherForm.withdrawal,
         bank_name:teacherForm.bankName,bank_iban:teacherForm.bankIban,bank_holder:teacherForm.bankHolder,
         withdrawal_changed_at:new Date().toISOString(),
         teaching_cycles:teacherForm.cycles,teaching_subjects:teacherForm.subjects,
         teaching_langs:teacherForm.instrLangs,teaching_rate:teacherForm.rate,
         teaching_bio:teacherForm.bio||"",teaching_curricula:teacherForm.curricula,
       }).eq("id",user.id);
+
+      try{
+        await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            type:"new_teacher_pending",
+            teacherName:teacherForm.name,
+            teacherEmail:teacherForm.email,
+            subjects:teacherForm.subjects,
+            cycles:teacherForm.cycles,
+            rate:teacherForm.rate,
+            adminEmail:"pierre.garnier93@gmail.com",
+          }),
+        });
+      }catch(e){console.error("handleTeacherSubmit: admin notification failed",e);}
     }
     setShowOnboard(false);setAppTab("teacher-dashboard");
     showToast("🎉 Profile submitted! We will review within 24h.");
@@ -945,6 +1091,9 @@ export default function TutorApp() {
             <span className="nav-link" onClick={()=>go("teacher-dashboard")}>{t.nav.teach}</span>
           </>}
           <span className="nav-link" onClick={()=>setPage("teachers")}>{t.nav.teachers}</span>
+          {user?.email==="pierre.garnier93@gmail.com" && (
+            <span className="nav-link" onClick={()=>setPage("admin")} style={{color:"#E24B4A",fontWeight:900}}>⚙️ Admin</span>
+          )}
           <div className="lang-switch">{["en","ar","fr"].map(l=><button key={l} className={`lang-btn${lang===l?" active":""}`} onClick={()=>setLang(l)}>{l.toUpperCase()}</button>)}</div>
         </div>
         {user?(
@@ -979,6 +1128,8 @@ export default function TutorApp() {
       </>}
 
       {page==="teachers"&&<div className="section"><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}/h</div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div><button className="submit-btn" style={{marginTop:0,padding:"10px"}} onClick={()=>go("student-form")}>{lang==="ar"?"احجز ←":lang==="fr"?"Réserver →":"Book →"}</button></div>)}</div></div>}
+
+      {page==="admin"&&user?.email==="pierre.garnier93@gmail.com"&&<AdminPage user={user} lang={lang} onBack={()=>setPage("home")} />}
 
       {page==="app"&&<div className="section"><div className="app-container">
         <div className="app-topbar"><div className="app-dot-row"><div className="app-dot" style={{background:"#E24B4A"}}></div><div className="app-dot" style={{background:"#F5A623"}}></div><div className="app-dot" style={{background:"#0ABFA3"}}></div></div><div className="app-url">tutorapp.online · 🔒 {currentCountry.flag} {currentCountry.name[lang]}</div></div>
