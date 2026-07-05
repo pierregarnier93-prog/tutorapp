@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 const supabase = createClient(
   "https://ihtcmemyrwejeetybepg.supabase.co",
@@ -640,35 +641,78 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
   );
 }
 
-function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack }) {
+function CheckoutForm({ booking, totalAmount, onSuccess, onBack, lang }) {
+  const stripe = useStripe();
+  const elements = useElements();
   const t = T[lang] || T.en;
   const [paying, setPaying] = useState(false);
-  const lessonPrice = bid?.net_price_aed || 0;
-  const studentFee = Math.round(lessonPrice * STUDENT_FEE);
-  const studentTotal = lessonPrice + studentFee;
-  const teacherPayout = Math.round(lessonPrice * (1 - TEACHER_FEE));
+  const [cardError, setCardError] = useState("");
 
   const handlePay = async () => {
+    if (!stripe || !elements) return;
     setPaying(true);
+    setCardError("");
     try {
       const response = await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking?.id, amount: studentTotal }),
+        body: JSON.stringify({ bookingId: booking?.id, amount: totalAmount }),
       });
-      const { clientSecret, error } = await response.json();
-      if (error) throw new Error(error);
-      const stripe = await stripePromise;
-      const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: { token: "tok_visa" } },
+      const { clientSecret, error: serverError } = await response.json();
+      if (serverError) throw new Error(serverError);
+
+      const cardElement = elements.getElement(CardElement);
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card: cardElement },
       });
-      if (stripeError) throw new Error(stripeError.message);
-      onSuccess({ lessonPrice, studentFee, studentTotal, teacherPayout });
+
+      if (stripeError) { setCardError(stripeError.message); setPaying(false); return; }
+
+      if (paymentIntent.status === "requires_capture" || paymentIntent.status === "succeeded") {
+        onSuccess();
+      }
     } catch(e) {
-      alert("❌ " + e.message);
+      setCardError("❌ " + e.message);
       setPaying(false);
     }
   };
+
+  const cardStyle = {
+    style: {
+      base: { fontSize:"16px", color:"#1A1A2E", fontFamily:"'Nunito', sans-serif", fontWeight:"600", "::placeholder":{color:"#9CA3AF"} },
+      invalid: { color:"#EF4444" },
+    },
+  };
+
+  return (
+    <div>
+      <div style={{border:"1.5px solid #E8EAF6",borderRadius:12,padding:"14px 16px",background:"#FAFBFF",marginBottom:16}}>
+        <CardElement options={cardStyle} />
+      </div>
+      {cardError && (
+        <div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#B91C1C",marginBottom:12,fontWeight:600}}>
+          {cardError}
+        </div>
+      )}
+      <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#9CA3AF",marginBottom:16,fontWeight:600}}>
+        🔒 Secured by Stripe · SSL encrypted · PCI compliant
+      </div>
+      <button className="submit-btn" onClick={handlePay} disabled={paying || !stripe}>
+        {paying ? "⏳ Processing..." : t.payment.payBtn}
+      </button>
+      <div style={{textAlign:"center",marginTop:"1rem"}}>
+        <button className="btn-ghost" onClick={onBack}>← Back to offers</button>
+      </div>
+    </div>
+  );
+}
+
+function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack }) {
+  const t = T[lang] || T.en;
+  const lessonPrice = bid?.net_price_aed || 0;
+  const studentFee = Math.round(lessonPrice * STUDENT_FEE);
+  const studentTotal = lessonPrice + studentFee;
+  const teacherPayout = Math.round(lessonPrice * (1 - TEACHER_FEE));
 
   return (
     <div className="payment-screen">
@@ -687,9 +731,15 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
         <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#6B7280"}}>{t.payment.platformFee}</span><span style={{fontWeight:700,color:"#9CA3AF"}}>{fmtPrice(studentFee+(lessonPrice-teacherPayout),country)}</span></div>
       </div>
       <div className="payment-note">⚠️ {t.payment.payNote}</div>
-      <button className="submit-btn" onClick={handlePay} disabled={paying}>{paying?"⏳ Processing...":t.payment.payBtn}</button>
-      <div className="stripe-badge">🔒 Secured by Stripe</div>
-      <div style={{textAlign:"center",marginTop:"1rem"}}><button className="btn-ghost" onClick={onBack}>← Back to offers</button></div>
+      <Elements stripe={stripePromise}>
+        <CheckoutForm
+          booking={booking}
+          totalAmount={studentTotal}
+          onSuccess={() => onSuccess({ lessonPrice, studentFee, studentTotal, teacherPayout })}
+          onBack={onBack}
+          lang={lang}
+        />
+      </Elements>
     </div>
   );
 }
