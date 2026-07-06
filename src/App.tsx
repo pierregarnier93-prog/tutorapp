@@ -386,7 +386,21 @@ img,svg{max-width:100%;display:block}
 .missing-bank{background:#FEF3C7;border:1.5px solid #FBBF24;border-radius:16px;padding:14px 18px;margin-bottom:1.25rem;cursor:pointer}
 .missing-bank:hover{background:#FEEAB7}
 @media(max-width:900px){.app-body{padding:1.5rem}.section{padding:4rem 1.25rem}.hero{padding:3.5rem 1.25rem}.app-topbar{flex-direction:column;align-items:flex-start;padding:18px 20px}.app-tabs{flex-wrap:wrap}.app-tab{flex:1;justify-content:center}.nav{padding:0 1rem;gap:10px;row-gap:8px;column-gap:8px}.hero-stats{gap:1.5rem}.form-row{grid-template-columns:1fr}.submit-btn{padding:14px}.hero h1{font-size:clamp(2.2rem,8vw,3.6rem)}}
-@media(max-width:700px){.nav-links{display:none}.nav{justify-content:space-between}.hero{min-height:auto;padding:3rem 1rem}.section{padding:3rem 1rem}.app-body{padding:1rem}.app-container{border-radius:22px}.teacher-card,.offer-card,.payment-card,.profile-card{padding:1.25rem}.app-tab{padding:12px 14px;font-size:12px}.page-title{font-size:1.5rem}.hero-btns{flex-direction:column;gap:12px}.hero-stat-val{font-size:1.4rem}.hero p{max-width:100%}}`;
+@media(max-width:700px){.nav-links{display:none}.nav{justify-content:space-between}.hero{min-height:auto;padding:3rem 1rem}.section{padding:3rem 1rem}.app-body{padding:1rem}.app-container{border-radius:22px}.teacher-card,.offer-card,.payment-card,.profile-card{padding:1.25rem}.app-tab{padding:12px 14px;font-size:12px}.page-title{font-size:1.5rem}.hero-btns{flex-direction:column;gap:12px}.hero-stat-val{font-size:1.4rem}.hero p{max-width:100%}}
+.btn-full{width:100%;padding:15px;background:#5B4FE8;color:#fff;border:none;border-radius:18px;font-size:15px;font-weight:800;cursor:pointer;transition:background .25s,transform .25s;box-shadow:0 18px 36px rgba(91,79,232,.16)}
+.btn-full:hover{background:#3D34C4;transform:translateY(-1px)}
+.btn-full:disabled{background:#C7D2FA;cursor:not-allowed;box-shadow:none;transform:none}
+.banner{display:flex;align-items:center;gap:10px;border-radius:16px;padding:14px 18px;font-size:13px;font-weight:700;margin-bottom:1.25rem}
+.banner-blue{background:#EEF2FF;border:1.5px solid #D8DBFE;color:#3730A3}
+.banner-green{background:#ECFDF5;border:1.5px solid #86EFAC;color:#0F766E}
+.banner-teal{background:#ECFDF5;border:1.5px solid #A7F3D0;color:#0F766E}
+.banner-amber{background:#FEF3C7;border:1.5px solid #FDE68A;color:#92400E}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.empty{text-align:center;padding:3rem 1rem;color:#64748B}
+.empty-icon{font-size:48px;margin-bottom:1rem}
+.loading{text-align:center;padding:3rem;color:#64748B;font-size:14px;font-weight:700}
+.profile-section{background:#fff;border:1.5px solid #E2E8F0;border-radius:22px;padding:1.75rem;margin-bottom:1.5rem;box-shadow:0 20px 50px rgba(91,79,232,.07)}
+.profile-section-title{font-weight:800;font-size:15px;margin-bottom:.75rem;color:#1A1A2E}`;
 
 function Auth({ onClose, onSuccess, lang }) {
   const appLang = lang || "en";
@@ -509,6 +523,20 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
   const [savingPwd, setSavingPwd] = useState(false);
   const [savingBank, setSavingBank] = useState(false);
   const [msg, setMsg] = useState("");
+  const [childName, setChildName] = useState(userProfile?.child_name || "");
+  const [childCurriculum, setChildCurriculum] = useState(userProfile?.child_curriculum || "");
+  const [childLevel, setChildLevel] = useState(userProfile?.child_level || "");
+  const [childLang, setChildLang] = useState(userProfile?.child_lang || "");
+  const [childSubjects, setChildSubjects] = useState<string[]>(userProfile?.child_subjects || []);
+  const [savingChild, setSavingChild] = useState(false);
+  const childLevels = childCurriculum && CURRICULA[childCurriculum] ? CURRICULA[childCurriculum].levels[lang] || CURRICULA[childCurriculum].levels.en : [];
+
+  const saveChildProfile = async () => {
+    setSavingChild(true);
+    await supabase.from("profiles").update({child_name:childName,child_curriculum:childCurriculum,child_level:childLevel,child_lang:childLang,child_subjects:childSubjects}).eq("id",user.id);
+    setSavingChild(false);setMsg("✅ "+(lang==="fr"?"Profil enfant enregistré !":lang==="ar"?"تم حفظ ملف الطفل!":"Child profile saved!"));
+    setTimeout(()=>setMsg(""),3000);
+  };
 
   if (profileLoading) return <div className="loading-spinner">⏳ Loading...</div>;
   if (!userProfile) return <div className="loading-spinner">⏳ Loading profile...</div>;
@@ -631,6 +659,21 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
           <button className="submit-btn" onClick={handleSaveBank} disabled={savingBank} style={{marginTop:"1rem"}}>{savingBank?"⏳ Saving...":t.profile.saveProfile}</button>
         </div>
       )}
+      {!isTeacherProfile && (
+        <div className="profile-section">
+          <div className="profile-section-title">🎓 {lang==="fr"?"Profil de l'enfant":lang==="ar"?"ملف الطفل":"Child's profile"}</div>
+          <div style={{fontSize:12,color:"#64748B",marginBottom:"1rem",fontWeight:600}}>{lang==="fr"?"Ces infos pré-remplissent automatiquement tes annonces.":lang==="ar"?"هذه المعلومات تُعبئ إعلاناتك تلقائياً.":"This info pre-fills your requests automatically."}</div>
+          <div className="form-group"><label className="form-label">{lang==="fr"?"Prénom de l'enfant":lang==="ar"?"اسم الطفل":"Child's first name"}</label><input className="form-input" placeholder="Emma" value={childName} onChange={e=>setChildName(e.target.value)} /></div>
+          <div className="form-row">
+            <div className="form-group" style={{marginBottom:0}}><label className="form-label">{lang==="fr"?"Cursus":lang==="ar"?"المنهج":"Curriculum"}</label><select className="form-select" value={childCurriculum} onChange={e=>{setChildCurriculum(e.target.value);setChildLevel("");}}><option value="">{lang==="fr"?"Choisir...":"Choose..."}</option>{Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[lang]||v.label.en}</option>)}</select></div>
+            <div className="form-group" style={{marginBottom:0}}><label className="form-label">{lang==="fr"?"Niveau":"Level"}</label><select className="form-select" value={childLevel} onChange={e=>setChildLevel(e.target.value)} disabled={!childLevels.length}><option value="">{childLevels.length?(lang==="fr"?"Choisir...":"Choose..."):(lang==="fr"?"Sélectionne un cursus":"Select curriculum")}</option>{childLevels.map(l=><option key={l}>{l}</option>)}</select></div>
+          </div>
+          <div className="form-group"><label className="form-label">{lang==="fr"?"Langue d'enseignement préférée":lang==="ar"?"لغة التدريس المفضلة":"Preferred language"}</label><div className="chips">{t.instrLangs.map(l=><div key={l} className={`chip${childLang===l?" selected":""}`} onClick={()=>setChildLang(l)}>{l}</div>)}</div></div>
+          <div className="form-group" style={{marginBottom:"1.25rem"}}><label className="form-label">{lang==="fr"?"Matières en difficulté":lang==="ar"?"المواد الصعبة":"Subjects needing help"}</label><div className="chips">{SUBJECTS.map(s=><div key={s.en} className={`chip${childSubjects.includes(s.en)?" selected":""}`} onClick={()=>setChildSubjects(prev=>prev.includes(s.en)?prev.filter(x=>x!==s.en):[...prev,s.en])}>{s[lang]}</div>)}</div></div>
+          <button className="btn-full" onClick={saveChildProfile} disabled={savingChild}>{savingChild?"⏳ Saving...":lang==="fr"?"Enregistrer":lang==="ar"?"حفظ":"Save"}</button>
+        </div>
+      )}
+
       <div className="profile-card">
         <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🔒 {t.profile.changePassword}</div>
         <div className="form-group"><label className="form-label">{t.profile.newPassword}</label><input className="form-input" type="password" placeholder="Min. 6 characters" value={newPassword} onChange={e=>setNewPassword(e.target.value)} /></div>
@@ -874,6 +917,65 @@ function AdminPage({ user, lang, onBack }) {
   );
 }
 
+function StudentHistory({ userId, lang }) {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalSpent, setTotalSpent] = useState(0);
+
+  useEffect(()=>{
+    if(!userId) return;
+    supabase.from("bookings")
+      .select("*, teacher:profiles!teacher_id(full_name)")
+      .eq("poster_id", userId)
+      .order("created_at", {ascending:false})
+      .then(({data})=>{
+        setBookings(data||[]);
+        const spent = (data||[]).filter(b=>b.status==="completed").reduce((s,b)=>s+(b.gross_price_aed||0),0);
+        setTotalSpent(spent);
+        setLoading(false);
+      });
+  },[userId]);
+
+  if(loading) return <div className="loading">⏳ {lang==="fr"?"Chargement...":lang==="ar"?"جار التحميل...":"Loading..."}</div>;
+
+  return (
+    <div>
+      {totalSpent > 0 && (
+        <div style={{background:"#EEF2FF",border:"1.5px solid #D8DBFE",borderRadius:14,padding:"1rem",marginBottom:"1.5rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontWeight:700,color:"#5B4FE8"}}>{lang==="fr"?"Total dépensé":lang==="ar"?"إجمالي المصروف":"Total spent"}</span>
+          <span style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,color:"#5B4FE8"}}>{totalSpent} AED</span>
+        </div>
+      )}
+      {bookings.length === 0 && (
+        <div className="empty">
+          <div className="empty-icon">📚</div>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>{lang==="fr"?"Aucun cours pour l'instant":lang==="ar"?"لا توجد دروس بعد":"No lessons yet"}</div>
+          <div style={{fontSize:13,color:"#9CA3AF"}}>{lang==="fr"?"Poste ta première annonce pour trouver un prof":lang==="ar"?"انشر إعلانك الأول للعثور على مدرس":"Post your first request to find a tutor"}</div>
+        </div>
+      )}
+      {bookings.map((b,i)=>(
+        <div key={b.id||i} style={{border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+            <div>
+              <div style={{fontWeight:800,fontSize:15}}>{b.subject||"Cours"}</div>
+              <div style={{fontSize:13,color:"#64748B",marginTop:3}}>{b.teacher?.full_name}</div>
+            </div>
+            <div style={{textAlign:"end"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900,color:"#5B4FE8"}}>{b.gross_price_aed} AED</div>
+              <span className={`badge ${b.status==="completed"?"badge-green":b.status==="pending_payment"?"badge-amber":"badge-gray"}`} style={{marginTop:4,display:"inline-flex"}}>
+                {b.status==="completed"?(lang==="fr"?"Confirmé":lang==="ar"?"مكتمل":"Completed"):b.status==="pending_payment"?(lang==="fr"?"En attente":lang==="ar"?"في الانتظار":"Pending"):b.status}
+              </span>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>
+            {new Date(b.created_at).toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{day:"numeric",month:"long",year:"numeric"})}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TutorApp() {
   const [lang,setLang]=useState("en");
   const [country]=useState("UAE");
@@ -903,6 +1005,11 @@ export default function TutorApp() {
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [profileLoading,setProfileLoading]=useState(true);
+  const [studentState,setStudentState]=useState<"idle"|"waiting"|"offers"|"booked"|"rate">("idle");
+  const [activeRequest,setActiveRequest]=useState(null);
+  const [activeBooking,setActiveBooking]=useState(null);
+  const [activeOffers,setActiveOffers]=useState([]);
+  const [studentStats,setStudentStats]=useState({totalLessons:0,totalSpent:0,avgRating:null});
 
   // ✅ FIX DÉFINITIF : toujours charger avec l'ID auth réel
   const loadProfile = async (userId: string) => {
@@ -958,6 +1065,25 @@ export default function TutorApp() {
         if (studentProf.curriculum) setCurriculum(studentProf.curriculum);
       }
 
+      // Charger l'état actif élève
+      if (profile?.role === "student") {
+        const { data: openReq } = await supabase.from("requests").select("*").eq("poster_id", realUserId).eq("status","open").limit(1).maybeSingle();
+        if (openReq) {
+          setActiveRequest(openReq);
+          setCurrentRequestId(openReq.id);
+          const offers = await getBidsForRequest(openReq.id).catch(()=>[]);
+          if (offers.length > 0) { setActiveOffers(offers); setStudentState("offers"); }
+          else { setStudentState("waiting"); }
+        } else {
+          const { data: bk } = await supabase.from("bookings").select("*, teacher:profiles!teacher_id(full_name,teaching_rate)").eq("poster_id", realUserId).eq("status","pending_payment").limit(1).maybeSingle();
+          if (bk) { setActiveBooking(bk); setStudentState("booked"); }
+          else { setStudentState("idle"); }
+        }
+        const { data: completedBks } = await supabase.from("bookings").select("gross_price_aed").eq("poster_id", realUserId).eq("status","completed");
+        const totalSpent = (completedBks||[]).reduce((s,b)=>s+(b.gross_price_aed||0),0);
+        setStudentStats({totalLessons:(completedBks||[]).length, totalSpent, avgRating:null});
+      }
+
       setProfileLoading(false);
       return profile;
     } catch (e) {
@@ -983,7 +1109,7 @@ export default function TutorApp() {
           const stats = await getTeacherStats(session.user.id);
           setTeacherStats(stats);
         } else if (profile?.role === "student") {
-          setPage("app"); setAppTab("student-form");
+          setPage("app"); setAppTab("student-home");
         }
       } else {
         setProfileLoading(false);
@@ -1005,13 +1131,18 @@ export default function TutorApp() {
   },[appTab,user,country]);
 
   useEffect(()=>{
-    if(appTab==="student-bids"&&currentRequestId){
-      setBidsLoading(true);
-      getBidsForRequest(currentRequestId).then(data=>{setRealBids(data);setBidsLoading(false);}).catch(()=>setBidsLoading(false));
-      const interval=setInterval(()=>getBidsForRequest(currentRequestId).then(setRealBids).catch(()=>{}),10000);
-      return ()=>clearInterval(interval);
-    }
-  },[appTab,currentRequestId]);
+    if(studentState !== "waiting" && studentState !== "offers") return;
+    if(!activeRequest?.id) return;
+    const poll = async () => {
+      try {
+        const offers = await getBidsForRequest(activeRequest.id);
+        if(offers.length > 0) { setActiveOffers(offers); setStudentState("offers"); }
+      } catch(e) {}
+    };
+    poll();
+    const interval = setInterval(poll, 10000);
+    return () => clearInterval(interval);
+  },[studentState, activeRequest?.id]);
 
   const t=T[lang];
   const isRTL=lang==="ar";
@@ -1038,7 +1169,10 @@ export default function TutorApp() {
     try{
       const durationMap={"30 min":30,"1h":60,"1h30":90,"2h":120,"2h30":150,"3h":180};
       const req=await postRequest({subject:form.subject,instrLang:form.instrLang||"English",curriculum:form.curriculum||"british",level:form.level,cycle:form.cycle,durationMin:durationMap[form.duration]||60,message:form.message,countryCode:country});
-      setCurrentRequestId(req.id);setAppTab("student-bids");
+      setCurrentRequestId(req.id);
+      setActiveRequest(req);
+      setStudentState("waiting");
+      setAppTab("student-home");
       showToast("✅ Request posted! Waiting for tutor offers...");
     }catch(e){showToast("❌ "+e.message);}
     finally{setPublishing(false);}
@@ -1057,13 +1191,20 @@ export default function TutorApp() {
   };
 
   const handleAcceptBid=async(bid)=>{
+    const reqId = currentRequestId || activeRequest?.id;
     try{
-      const booking=await acceptBid(bid.id,currentRequestId);
+      const booking=await acceptBid(bid.id,reqId);
       setSelectedBid(bid);setCurrentBooking(booking);setAppTab("student-payment");
     }catch(e){showToast("❌ "+e.message);}
   };
 
-  const handlePaymentSuccess=(result)=>{setPaymentResult(result);setAppTab("student-confirm");showToast("🎉 Booking confirmed!");};
+  const handlePaymentSuccess=(result)=>{
+    setPaymentResult(result);
+    setActiveBooking({...currentBooking, teacher: selectedBid?.teacher});
+    setStudentState("booked");
+    setAppTab("student-home");
+    showToast("🎉 Booking confirmed!");
+  };
   const handleDeclineBid=(bidId)=>{setRealBids(prev=>prev.filter(b=>b.id!==bidId));showToast("Offer declined.");};
 
   const handleTeacherSubmit=async()=>{
@@ -1118,7 +1259,7 @@ export default function TutorApp() {
         else{setAppTab("teacher-dashboard");}
         const stats=await getTeacherStats(u.id);setTeacherStats(stats);
       } else {
-        setAppTab("student-form");
+        setAppTab("student-home");
       }
     }
   };
@@ -1193,55 +1334,169 @@ export default function TutorApp() {
             <div className={`app-tab${teacherSubTab==="dashboard"&&appTab==="teacher-dashboard"?" active":""}`} onClick={()=>{setAppTab("teacher-dashboard");setTeacherSubTab("dashboard");setShowOnboard(false);}}>📊 {t.teacher.dashboard}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {t.teacher.profile}</div>
           </> : <>
-            <div className={`app-tab${["student-form","student-bids","student-payment","student-confirm"].includes(appTab)?" active":""}`} onClick={()=>{setAppTab("student-form");setShowOnboard(false);}}>🎓 {t.nav.search}</div>
-            <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {t.teacher.profile}</div>
+            <div className={`app-tab${appTab==="student-home"||appTab==="student-payment"?" active":""}`} onClick={()=>setAppTab("student-home")}>🏠 {lang==="fr"?"Accueil":lang==="ar"?"الرئيسية":"Home"}</div>
+            <div className={`app-tab${appTab==="student-history"?" active":""}`} onClick={()=>setAppTab("student-history")}>📅 {lang==="fr"?"Mes cours":lang==="ar"?"دروسي":"My lessons"}</div>
+            <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {lang==="fr"?"Mon profil":lang==="ar"?"ملفي":"My profile"}</div>
           </>}
         </div>
 
         <div className="app-body">
           {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} country={country} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} onEditTeachingProfile={()=>{setAppTab("teacher-dashboard");setShowOnboard(true);}} />}
 
-          {appTab==="student-form"&&<>
-            <div className="page-title">{t.form.title}</div>
-            <div className="page-sub">{t.form.sub}</div>
-            <div className="online-banner">📹 {t.form.onlineBanner}</div>
-            {isProfilePrefilled&&<div className="prefilled-banner">✅ Your profile is pre-filled. Just select a subject and post!</div>}
-            <div className="form-group"><label className="form-label">{t.form.subject}</label><select className="form-select" value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})}><option value="">Choose...</option>{SUBJECTS.map(s=><option key={s.en} value={s.en}>{s[lang]}</option>)}</select></div>
-            <div className="form-row">
-              <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.form.lang}</label><select className={`form-select${isProfilePrefilled&&form.instrLang?" prefilled":""}`} value={form.instrLang} onChange={e=>setForm({...form,instrLang:e.target.value})}><option value="">Choose...</option>{t.instrLangs.map(l=><option key={l}>{l}</option>)}</select></div>
-              <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.form.curriculum}</label><select className={`form-select${isProfilePrefilled&&form.curriculum?" prefilled":""}`} value={form.curriculum} onChange={e=>{setForm({...form,curriculum:e.target.value,level:""});setCurriculum(e.target.value);}}><option value="">Choose...</option>{Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[lang]}</option>)}</select></div>
-            </div>
-            <div className="form-group"><label className="form-label">{t.form.level}</label><select className={`form-select${isProfilePrefilled&&form.level?" prefilled":""}`} value={form.level} onChange={e=>setForm({...form,level:e.target.value})} disabled={!currLevels.length}><option value="">{currLevels.length?"Choose...":"Select curriculum first"}</option>{currLevels.map(l=><option key={l}>{l}</option>)}</select></div>
-            <div className="form-group"><label className="form-label">{t.form.duration}</label><div className="chips-row">{t.durations.map(d=><div key={d} className={`chip${form.duration===d?" selected":""}`} onClick={()=>setForm({...form,duration:d})}>{d}</div>)}</div></div>
-            <div className="form-group"><label className="form-label">{t.form.msg}</label><textarea className="form-textarea" placeholder={t.form.msgPh} value={form.message} onChange={e=>setForm({...form,message:e.target.value})} /></div>
-            <button className="submit-btn" onClick={handlePublish} disabled={publishing}>{publishing?"⏳ Posting...":t.form.publish}</button>
-          </>}
+          {appTab==="student-home"&&<div style={{maxWidth:560,margin:"0 auto"}}>
 
-          {appTab==="student-bids"&&<>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem",flexWrap:"wrap",gap:8}}>
-              <div><div className="page-title">{t.bids.title}</div><div className="page-sub" style={{marginBottom:0}}>{form.subject} · {form.level} · {form.duration}</div></div>
-              <span className="badge badge-amber">{bidsLoading?"...":realBids.length} {t.bids.new}</span>
-            </div>
-            <div className="pay-banner">{t.bids.payAfter}</div>
-            {bidsLoading&&<div className="loading-spinner">⏳ Loading offers...</div>}
-            {!bidsLoading&&realBids.length===0&&<div className="empty-state"><div className="empty-icon">⏳</div><div style={{fontWeight:700,fontSize:16,marginBottom:8}}>{t.bids.noOffers}</div><div style={{fontSize:13,color:"#9CA3AF"}}>{t.bids.noOffersDesc}</div></div>}
-            {!bidsLoading&&realBids.map((bid,i)=>(
-              <div key={bid.id||i} className="offer-card">
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                  <div><div className="offer-teacher">{bid.teacher?.full_name||"Tutor"}</div><div style={{fontSize:12,color:"#6B7280"}}>📹 Online</div></div>
-                  <div style={{textAlign:"right"}}><div className="offer-price">{fmtPrice(bid.net_price_aed,country)}</div><div style={{fontSize:11,color:"#9CA3AF"}}>/hour</div></div>
+            {/* ÉTAT 1 — idle */}
+            {studentState==="idle"&&<>
+              {studentStats.totalLessons > 0 && (
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:"2rem"}}>
+                  <div className="stat-card"><div className="stat-val">{studentStats.totalLessons}</div><div className="stat-lbl">{lang==="fr"?"Cours effectués":lang==="ar"?"دروس مكتملة":"Lessons done"}</div></div>
+                  <div className="stat-card"><div className="stat-val">{studentStats.totalSpent}</div><div className="stat-lbl">AED {lang==="fr"?"dépensés":lang==="ar"?"مصروف":"spent"}</div></div>
+                  <div className="stat-card"><div className="stat-val">4.9★</div><div className="stat-lbl">{lang==="fr"?"Note profs":lang==="ar"?"تقييم":"Avg rating"}</div></div>
                 </div>
-                <div className="offer-msg">{bid.message}</div>
-                <div className="offer-actions">
-                  <button className="btn-accept" onClick={()=>handleAcceptBid(bid)}>{t.bids.accept}</button>
-                  <button className="btn-decline" onClick={()=>handleDeclineBid(bid.id)}>{t.bids.decline}</button>
+              )}
+              <div style={{marginBottom:"1.5rem"}}>
+                <div className="page-title">{lang==="fr"?"Bonjour":lang==="ar"?"مرحباً":"Hello"}, {displayName} 👋</div>
+                <div className="page-sub">{lang==="fr"?"Trouve un prof en 5 minutes — paiement après le cours.":lang==="ar"?"ابحث عن مدرس في 5 دقائق — الدفع بعد الحصة.":"Find a tutor in 5 minutes — pay after the lesson."}</div>
+              </div>
+              <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:20,padding:"1.75rem"}}>
+                <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:"1.25rem",color:"#111827"}}>📋 {lang==="fr"?"Nouvelle annonce":lang==="ar"?"إعلان جديد":"Post a request"}</div>
+                <div className="banner banner-blue">📹 {lang==="fr"?"Cours en visioconférence — lien envoyé automatiquement":lang==="ar"?"الحصة عبر الفيديو — يُرسل الرابط تلقائياً":"Online lesson — video link sent automatically"}</div>
+                {isProfilePrefilled&&<div className="banner banner-green">✅ {lang==="fr"?"Profil pré-rempli — choisis juste une matière !":lang==="ar"?"ملفك مُعبأ مسبقاً — اختر المادة فقط !":"Profile pre-filled — just pick a subject!"}</div>}
+                <div className="form-group"><label className="form-label">{t.form.subject}</label><select className="form-select" value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})}><option value="">{lang==="fr"?"Choisir...":lang==="ar"?"اختر...":"Choose..."}</option>{SUBJECTS.map(s=><option key={s.en} value={s.en}>{s[lang]}</option>)}</select></div>
+                <div className="form-row">
+                  <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.form.lang}</label><select className={`form-select${form.instrLang?" prefilled":""}`} value={form.instrLang} onChange={e=>setForm({...form,instrLang:e.target.value})}><option value="">{lang==="fr"?"Choisir...":"Choose..."}</option>{t.instrLangs.map(l=><option key={l}>{l}</option>)}</select></div>
+                  <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.form.curriculum}</label><select className={`form-select${form.curriculum?" prefilled":""}`} value={form.curriculum} onChange={e=>{setForm({...form,curriculum:e.target.value,level:""});setCurriculum(e.target.value);}}><option value="">{lang==="fr"?"Choisir...":"Choose..."}</option>{Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[lang]||v.label.en}</option>)}</select></div>
+                </div>
+                <div className="form-group"><label className="form-label">{t.form.level}</label><select className={`form-select${form.level?" prefilled":""}`} value={form.level} onChange={e=>setForm({...form,level:e.target.value})} disabled={!currLevels.length}><option value="">{currLevels.length?(lang==="fr"?"Choisir...":"Choose..."):(lang==="fr"?"Sélectionne un cursus":"Select curriculum first")}</option>{currLevels.map(l=><option key={l}>{l}</option>)}</select></div>
+                <div className="form-group"><label className="form-label">{t.form.duration}</label><div className="chips-row">{t.durations.map(d=><div key={d} className={`chip${form.duration===d?" selected":""}`} onClick={()=>setForm({...form,duration:d})}>{d}</div>)}</div></div>
+                <div className="form-group"><label className="form-label">{t.form.msg}</label><textarea className="form-textarea" placeholder={t.form.msgPh} value={form.message} onChange={e=>setForm({...form,message:e.target.value})} /></div>
+                <button className="btn-full" onClick={handlePublish} disabled={publishing}>{publishing?"⏳ Posting...":t.form.publish}</button>
+              </div>
+            </>}
+
+            {/* ÉTAT 2 — waiting */}
+            {studentState==="waiting"&&<div style={{textAlign:"center",padding:"2rem 0"}}>
+              <div style={{fontSize:56,marginBottom:"1rem",animation:"pulse 2s infinite"}}>🔍</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Recherche en cours...":lang==="ar"?"البحث جارٍ...":"Searching for tutors..."}</div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:"2rem"}}>{lang==="fr"?"Les enseignants vont voir ton annonce et proposer leurs tarifs. En général moins de 15 minutes.":lang==="ar"?"سيرى المدرسون إعلانك ويقترحون أسعارهم. عادةً أقل من 15 دقيقة.":"Tutors will see your request and propose their rates. Usually under 15 minutes."}</div>
+              <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
+                <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>{activeRequest?.subject} · {activeRequest?.level}</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <span className="badge badge-purple">{activeRequest?.curriculum}</span>
+                  <span className="badge badge-blue">🗣 {activeRequest?.instr_lang}</span>
+                  <span className="badge badge-amber">{activeRequest?.duration_min} min</span>
+                  <span className="badge badge-green">📹 Online</span>
                 </div>
               </div>
-            ))}
-            <div style={{textAlign:"center",marginTop:"1rem"}}><button className="btn-ghost" onClick={()=>setAppTab("student-form")}>← Back</button></div>
-          </>}
+              <div style={{fontSize:12,color:"#9CA3AF",marginBottom:"2rem",fontWeight:600}}>🔄 {lang==="fr"?"Mise à jour automatique toutes les 10 secondes":lang==="ar"?"تحديث تلقائي كل 10 ثوانٍ":"Auto-refreshing every 10 seconds"}</div>
+              <button className="btn-ghost" onClick={async()=>{
+                await supabase.from("requests").update({status:"cancelled"}).eq("id",activeRequest?.id);
+                setStudentState("idle");setActiveRequest(null);setCurrentRequestId(null);
+              }}>{lang==="fr"?"Annuler l'annonce":lang==="ar"?"إلغاء الإعلان":"Cancel request"}</button>
+            </div>}
 
-          {appTab==="student-payment"&&selectedBid&&<PaymentScreen bid={selectedBid} booking={currentBooking} form={form} country={country} lang={lang} onSuccess={handlePaymentSuccess} onBack={()=>setAppTab("student-bids")} />}
+            {/* ÉTAT 3 — offers */}
+            {studentState==="offers"&&<>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem",flexWrap:"wrap",gap:8}}>
+                <div>
+                  <div className="page-title">{lang==="fr"?"Offres reçues":lang==="ar"?"العروض المستلمة":"Offers received"} 🎉</div>
+                  <div style={{fontSize:13,color:"#64748B"}}>{activeRequest?.subject} · {activeRequest?.level} · {activeRequest?.duration_min} min</div>
+                </div>
+                <span className="badge badge-amber">{activeOffers.length} {lang==="fr"?"offres":lang==="ar"?"عروض":"offers"}</span>
+              </div>
+              <div className="banner banner-teal">💳 {lang==="fr"?"Tu paies UNIQUEMENT après le cours — 6% de frais de service":lang==="ar"?"تدفع فقط بعد الحصة — رسوم خدمة 6٪":"Pay ONLY after the lesson — 6% service fee"}</div>
+              {activeOffers.map((offer,i)=>(
+                <div key={offer.id||i} className="offer-card">
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{width:46,height:46,borderRadius:"50%",background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:16,color:"#5B4FE8",flexShrink:0}}>
+                        {(offer.teacher?.full_name||"T").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2)}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:800,fontSize:15}}>{offer.teacher?.full_name||"Tutor"}</div>
+                        <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700,marginTop:3}}>✅ {lang==="fr"?"Vérifié":lang==="ar"?"موثّق":"Verified"}</div>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"end"}}>
+                      <div style={{fontFamily:"Fraunces,serif",fontSize:26,fontWeight:900,color:"#5B4FE8"}}>{offer.net_price_aed} AED</div>
+                      <div style={{fontSize:11,color:"#9CA3AF"}}>/heure</div>
+                    </div>
+                  </div>
+                  <div style={{fontSize:13,color:"#64748B",lineHeight:1.65,margin:"10px 0 12px",fontStyle:"italic",background:"#F8FAFF",borderRadius:10,padding:"10px 14px",borderLeft:"3px solid #D8DBFE"}}>"{offer.message}"</div>
+                  <div style={{background:"#F8FAFF",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#64748B",fontWeight:600}}>
+                    {lang==="fr"?"Tu paieras":lang==="ar"?"ستدفع":"You'll pay"}{" "}
+                    <strong style={{color:"#5B4FE8",fontFamily:"Fraunces,serif",fontSize:15}}>{Math.round(offer.net_price_aed*1.06)} AED</strong>
+                    {" "}{lang==="fr"?"(frais 6% inclus)":lang==="ar"?"(شاملة رسوم 6٪)":"(incl. 6% fee)"}
+                    {" · "}{lang==="fr"?"L'enseignant reçoit":lang==="ar"?"يستلم المدرس":"Tutor receives"}{" "}
+                    <strong style={{color:"#0ABFA3"}}>{Math.round(offer.net_price_aed*0.94)} AED</strong>
+                  </div>
+                  <div style={{display:"flex",gap:10}}>
+                    <button className="btn-accept" style={{flex:2}} onClick={()=>handleAcceptBid(offer)}>{lang==="fr"?"Accepter & Réserver →":lang==="ar"?"قبول وحجز ←":"Accept & Book →"}</button>
+                    <button className="btn-decline" style={{flex:1}} onClick={()=>setActiveOffers(prev=>prev.filter(o=>o.id!==offer.id))}>{lang==="fr"?"Refuser":lang==="ar"?"رفض":"Decline"}</button>
+                  </div>
+                </div>
+              ))}
+            </>}
+
+            {/* ÉTAT 4 — booked */}
+            {studentState==="booked"&&<div style={{textAlign:"center"}}>
+              <div style={{fontSize:56,marginBottom:"1rem"}}>📅</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Cours réservé !":lang==="ar"?"تم حجز الدرس !":"Lesson booked!"}</div>
+              <div style={{fontSize:14,color:"#64748B",marginBottom:"1.5rem"}}>{lang==="fr"?"Ton cours avec":lang==="ar"?"درسك مع":"Your lesson with"} <strong>{activeBooking?.teacher?.full_name}</strong> {lang==="fr"?"est confirmé.":lang==="ar"?"مؤكد.":"is confirmed."}</div>
+              <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #E2E8F0",fontSize:14}}><span style={{color:"#64748B"}}>{lang==="fr"?"Matière":lang==="ar"?"المادة":"Subject"}</span><span style={{fontWeight:700}}>{activeRequest?.subject}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #E2E8F0",fontSize:14}}><span style={{color:"#64748B"}}>{lang==="fr"?"Enseignant":lang==="ar"?"المدرس":"Tutor"}</span><span style={{fontWeight:700}}>{activeBooking?.teacher?.full_name}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #E2E8F0",fontSize:14}}><span style={{color:"#64748B"}}>{lang==="fr"?"Prix autorisé":lang==="ar"?"السعر المعتمد":"Authorized"}</span><span style={{fontWeight:900,color:"#5B4FE8",fontFamily:"Fraunces,serif",fontSize:17}}>{activeBooking?.gross_price_aed} AED</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:14}}><span style={{color:"#64748B"}}>{lang==="fr"?"Paiement":lang==="ar"?"الدفع":"Payment"}</span><span style={{fontWeight:700,color:"#0ABFA3"}}>✓ {lang==="fr"?"Après le cours":lang==="ar"?"بعد الحصة":"After lesson"}</span></div>
+              </div>
+              <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem"}}>
+                <div style={{fontSize:24,marginBottom:8}}>📹</div>
+                <div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:4}}>{lang==="fr"?"Lien visioconférence":lang==="ar"?"رابط الفيديو":"Video link"}</div>
+                <div style={{fontSize:12,color:"#64748B"}}>{lang==="fr"?"Sera envoyé par email avant le cours":lang==="ar"?"سيُرسل بالبريد قبل الحصة":"Will be sent by email before the lesson"}</div>
+              </div>
+              <div style={{background:"#FEF3C7",border:"1.5px solid #FCD34D",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13,color:"#92400E",fontWeight:600}}>
+                ⚠️ {lang==="fr"?"Tu ne seras débité QU'APRÈS avoir confirmé que le cours a eu lieu.":lang==="ar"?"لن يتم خصم المبلغ إلا بعد تأكيدك أن الحصة قد انتهت.":"You will only be charged AFTER confirming the lesson took place."}
+              </div>
+              <button className="btn-full" style={{background:"#0ABFA3",marginBottom:12}} onClick={async()=>{
+                await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/capture-payment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:activeBooking?.id})});
+                await supabase.from("bookings").update({status:"completed"}).eq("id",activeBooking?.id);
+                setStudentState("rate");
+                showToast("✅ "+(lang==="fr"?"Cours confirmé ! Merci !":lang==="ar"?"تم تأكيد الحصة! شكراً!":"Lesson confirmed! Thank you!"));
+              }}>✅ {lang==="fr"?"Confirmer — le cours a eu lieu":lang==="ar"?"تأكيد — انتهت الحصة":"Confirm — lesson completed"}</button>
+              <button className="btn-ghost" style={{width:"100%"}}>⚠️ {lang==="fr"?"Signaler un problème":lang==="ar"?"الإبلاغ عن مشكلة":"Report an issue"}</button>
+            </div>}
+
+            {/* ÉTAT 5 — rate */}
+            {studentState==="rate"&&<div style={{textAlign:"center",padding:"2rem 0"}}>
+              <div style={{fontSize:56,marginBottom:"1rem"}}>⭐</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Comment s'est passé le cours ?":lang==="ar"?"كيف كانت الحصة؟":"How was the lesson?"}</div>
+              <div style={{fontSize:14,color:"#64748B",marginBottom:"2rem"}}>{lang==="fr"?"Ta note aide les autres familles à choisir le bon enseignant.":lang==="ar"?"تقييمك يساعد الأسر الأخرى في اختيار المدرس المناسب.":"Your rating helps other families choose the right tutor."}</div>
+              <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:"2rem"}}>
+                {[1,2,3,4,5].map(star=>(
+                  <div key={star} style={{fontSize:40,cursor:"pointer",transition:"transform .2s"}}
+                    onClick={async()=>{
+                      await supabase.from("reviews").insert({booking_id:activeBooking?.id,teacher_id:activeBooking?.teacher_id,student_id:user?.id,score:star});
+                      setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setCurrentRequestId(null);
+                      showToast("⭐ "+(lang==="fr"?"Merci pour ton avis !":lang==="ar"?"شكراً على تقييمك!":"Thanks for your review!"));
+                    }}
+                    onMouseEnter={e=>(e.currentTarget as HTMLElement).style.transform="scale(1.2)"}
+                    onMouseLeave={e=>(e.currentTarget as HTMLElement).style.transform="scale(1)"}>⭐</div>
+                ))}
+              </div>
+              <button className="btn-ghost" onClick={()=>{setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setCurrentRequestId(null);}}>
+                {lang==="fr"?"Passer":lang==="ar"?"تخطي":"Skip"}
+              </button>
+            </div>}
+
+          </div>}
+
+          {appTab==="student-payment"&&selectedBid&&<PaymentScreen bid={selectedBid} booking={currentBooking} form={form} country={country} lang={lang} onSuccess={handlePaymentSuccess} onBack={()=>setAppTab("student-home")} />}
+
+          {appTab==="student-history"&&<div style={{maxWidth:560,margin:"0 auto"}}>
+            <div className="page-title">{lang==="fr"?"Mes cours":lang==="ar"?"دروسي":"My lessons"}</div>
+            <div className="page-sub">{lang==="fr"?"Historique de tous tes cours":lang==="ar"?"سجل جميع دروسك":"All your lesson history"}</div>
+            <StudentHistory userId={user?.id} lang={lang} />
+          </div>}
 
           {appTab==="student-confirm"&&<div className="success-screen">
             <div style={{fontSize:56,marginBottom:"1rem"}}>🎉</div>
