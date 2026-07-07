@@ -751,11 +751,15 @@ function CheckoutForm({ booking, totalAmount, onSuccess, onBack, lang }) {
       if (serverError) throw new Error(serverError);
 
       const cardElement = elements.getElement(CardElement);
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      const { error: stripeErr, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card: cardElement },
       });
 
-      if (stripeError) { setCardError(stripeError.message); setPaying(false); return; }
+      if (stripeErr) {
+        const code=stripeErr.code||"";
+        const humanError=code.includes("insufficient_funds")?(lang==="fr"?"Fonds insuffisants sur ta carte.":lang==="ar"?"رصيد البطاقة غير كافٍ.":"Insufficient funds on your card."):code.includes("card_declined")?(lang==="fr"?"Ta carte a été refusée. Essaie une autre carte.":lang==="ar"?"تم رفض بطاقتك. جرّب بطاقة أخرى.":"Your card was declined. Try another card."):code.includes("expired_card")?(lang==="fr"?"Ta carte est expirée.":lang==="ar"?"بطاقتك منتهية الصلاحية.":"Your card is expired."):code.includes("incorrect_cvc")?(lang==="fr"?"Le code CVC est incorrect.":lang==="ar"?"رمز CVC غير صحيح.":"Incorrect CVC code."):(lang==="fr"?"Paiement refusé. Vérifie tes informations ou utilise une autre carte.":lang==="ar"?"تم رفض الدفع. تحقق من معلوماتك أو استخدم بطاقة أخرى.":"Payment declined. Check your details or use another card.");
+        setCardError(humanError);setPaying(false);return;
+      }
 
       if (paymentIntent.status === "requires_capture" || paymentIntent.status === "succeeded") {
         onSuccess();
@@ -779,8 +783,9 @@ function CheckoutForm({ booking, totalAmount, onSuccess, onBack, lang }) {
         <CardElement options={cardStyle} />
       </div>
       {cardError && (
-        <div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#B91C1C",marginBottom:12,fontWeight:600}}>
-          {cardError}
+        <div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:10,padding:"12px 16px",fontSize:13,color:"#B91C1C",marginBottom:14,fontWeight:600}}>
+          <div style={{marginBottom:8}}>❌ {cardError}</div>
+          <div style={{fontSize:12,color:"#B91C1C",fontWeight:500}}>{lang==="fr"?"Tu peux réessayer avec une autre carte ci-dessous.":lang==="ar"?"يمكنك المحاولة مرة أخرى ببطاقة أخرى أدناه.":"You can retry with another card below."}</div>
         </div>
       )}
       <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#9CA3AF",marginBottom:16,fontWeight:600}}>
@@ -1026,12 +1031,11 @@ export default function TutorApp() {
   const [lang,setLang]=useState("en");
   const [country]=useState("UAE");
   const [page,setPage]=useState("home");
-  const [appTab,setAppTab]=useState("student-form");
+  const [appTab,setAppTab]=useState("student-home");
   const [teacherState,setTeacherState]=useState<"idle"|"has_requests"|"offer_sent"|"booked"|"pending_payment">("idle");
   const [toast,setToast]=useState(null);
-  const [selectedBid,setSelectedBid]=useState(null);
-  const [currentBooking,setCurrentBooking]=useState(null);
-  const [paymentResult,setPaymentResult]=useState(null);
+  const [selectedOffer,setSelectedOffer]=useState(null);
+  const [payResult,setPayResult]=useState(null);
   const [showOnboard,setShowOnboard]=useState(false);
   const [curriculum,setCurriculum]=useState("");
   const [user,setUser]=useState(null);
@@ -1051,11 +1055,22 @@ export default function TutorApp() {
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [profileLoading,setProfileLoading]=useState(true);
-  const [studentState,setStudentState]=useState<"idle"|"waiting"|"offers"|"booked"|"rate">("idle");
+  const [studentState,setStudentState]=useState<"idle"|"waiting"|"offers"|"payment"|"booked"|"rate">("idle");
   const [activeRequest,setActiveRequest]=useState(null);
   const [activeBooking,setActiveBooking]=useState(null);
   const [activeOffers,setActiveOffers]=useState([]);
-  const [studentStats,setStudentStats]=useState({totalLessons:0,totalSpent:0,avgRating:null});
+  const [studentStats,setStudentStats]=useState({totalLessons:0,totalSpent:0});
+  const [waitingSeconds,setWaitingSeconds]=useState(0);
+  const [hoveredStar,setHoveredStar]=useState(0);
+  const [stripeError,setStripeError]=useState("");
+  const [retryingPayment,setRetryingPayment]=useState(false);
+  const [childName,setChildName]=useState("");
+  const [childCurriculum,setChildCurriculum]=useState("");
+  const [childLevel,setChildLevel]=useState("");
+  const [childLang,setChildLang]=useState("");
+  const [childSubjects,setChildSubjects]=useState<string[]>([]);
+  const [savingChild,setSavingChild]=useState(false);
+  const childLevels=childCurriculum&&CURRICULA[childCurriculum]?CURRICULA[childCurriculum].levels[lang]||CURRICULA[childCurriculum].levels.en:[];
   const [teacherActiveBooking,setTeacherActiveBooking]=useState(null);
   const [teacherPendingOffers,setTeacherPendingOffers]=useState([]);
   const [matchedRequests,setMatchedRequests]=useState([]);
@@ -1154,23 +1169,27 @@ export default function TutorApp() {
         if (studentProf.curriculum) setCurriculum(studentProf.curriculum);
       }
 
-      // Charger l'état actif élève
       if (profile?.role === "student") {
-        const { data: openReq } = await supabase.from("requests").select("*").eq("poster_id", realUserId).eq("status","open").limit(1).maybeSingle();
-        if (openReq) {
-          setActiveRequest(openReq);
-          setCurrentRequestId(openReq.id);
-          const offers = await getBidsForRequest(openReq.id).catch(()=>[]);
-          if (offers.length > 0) { setActiveOffers(offers); setStudentState("offers"); }
-          else { setStudentState("waiting"); }
-        } else {
-          const { data: bk } = await supabase.from("bookings").select("*, teacher:profiles!teacher_id(full_name,teaching_rate)").eq("poster_id", realUserId).eq("status","pending_payment").limit(1).maybeSingle();
-          if (bk) { setActiveBooking(bk); setStudentState("booked"); }
-          else { setStudentState("idle"); }
+        setPage("app");setAppTab("student-home");
+        const {data:completedBookings}=await supabase.from("bookings").select("gross_price_aed").eq("poster_id",realUserId).eq("status","completed");
+        setStudentStats({totalLessons:completedBookings?.length||0,totalSpent:completedBookings?.reduce((s,b)=>s+b.gross_price_aed,0)||0});
+        setChildName(profile.child_name||"");setChildCurriculum(profile.child_curriculum||"");
+        setChildLevel(profile.child_level||"");setChildLang(profile.child_lang||"");
+        setChildSubjects(profile.child_subjects||[]);
+        const {data:sp}=await supabase.from("student_profiles").select("*").eq("owner_id",realUserId).limit(1).maybeSingle();
+        const prefCurriculum=profile.child_curriculum||sp?.curriculum||"";
+        const prefLevel=profile.child_level||sp?.level||"";
+        const ilMap={en:T.en.instrLangs[0],ar:T.ar.instrLangs[0],fr:T.fr.instrLangs[0]};
+        const prefLang=profile.child_lang||(sp?ilMap[sp.default_lang]:"")||"";
+        if(prefCurriculum||prefLevel||prefLang){setForm(f=>({...f,curriculum:prefCurriculum,level:prefLevel,instrLang:prefLang}));if(prefCurriculum)setCurriculum(prefCurriculum);}
+        const {data:openReq}=await supabase.from("requests").select("*").eq("poster_id",realUserId).eq("status","open").limit(1).maybeSingle();
+        if(openReq){
+          const ageHours=(Date.now()-new Date(openReq.created_at).getTime())/(1000*60*60);
+          if(ageHours>24){await supabase.from("requests").update({status:"expired"}).eq("id",openReq.id);}
+          else{setActiveRequest(openReq);const offers=await getBidsForRequest(openReq.id).catch(()=>[]);setActiveOffers(offers);setStudentState(offers.length>0?"offers":"waiting");setProfileLoading(false);return profile;}
         }
-        const { data: completedBks } = await supabase.from("bookings").select("gross_price_aed").eq("poster_id", realUserId).eq("status","completed");
-        const totalSpent = (completedBks||[]).reduce((s,b)=>s+(b.gross_price_aed||0),0);
-        setStudentStats({totalLessons:(completedBks||[]).length, totalSpent, avgRating:null});
+        const {data:booking}=await supabase.from("bookings").select("*, teacher:profiles!teacher_id(full_name,teaching_rate)").eq("poster_id",realUserId).in("status",["pending_payment","confirmed"]).limit(1).maybeSingle();
+        if(booking){setActiveBooking(booking);setStudentState("booked");}
       }
 
       setProfileLoading(false);
@@ -1205,18 +1224,36 @@ export default function TutorApp() {
 
 
   useEffect(()=>{
-    if(studentState !== "waiting" && studentState !== "offers") return;
+    if(studentState!=="waiting"){setWaitingSeconds(0);return;}
+    const timer=setInterval(()=>setWaitingSeconds(prev=>prev+1),1000);
+    return()=>clearInterval(timer);
+  },[studentState]);
+
+  useEffect(()=>{
+    if(!user||isTeacher) return;
+    if(studentState!=="waiting"&&studentState!=="offers") return;
     if(!activeRequest?.id) return;
-    const poll = async () => {
-      try {
-        const offers = await getBidsForRequest(activeRequest.id);
-        if(offers.length > 0) { setActiveOffers(offers); setStudentState("offers"); }
-      } catch(e) {}
+    let previousCount=activeOffers.length;
+    const poll=async()=>{
+      try{
+        const {data:reqCheck}=await supabase.from("requests").select("status,created_at").eq("id",activeRequest.id).single();
+        if(reqCheck){
+          const ageHours=(Date.now()-new Date(reqCheck.created_at).getTime())/(1000*60*60);
+          if(reqCheck.status!=="open"||ageHours>24){
+            setStudentState("idle");setActiveRequest(null);setActiveOffers([]);setWaitingSeconds(0);
+            if(ageHours>24)showToast(lang==="fr"?"⏰ Ton annonce a expiré — poste-en une nouvelle !":lang==="ar"?"⏰ انتهت صلاحية إعلانك — انشر إعلاناً جديداً !":"⏰ Your request expired — post a new one!");
+            return;
+          }
+        }
+        const offers=await getBidsForRequest(activeRequest.id);
+        if(offers.length>previousCount){playNotificationSound();previousCount=offers.length;}
+        if(offers.length>0){setActiveOffers(offers);setStudentState("offers");}
+      }catch(e){}
     };
     poll();
-    const interval = setInterval(poll, 10000);
-    return () => clearInterval(interval);
-  },[studentState, activeRequest?.id]);
+    const interval=setInterval(poll,10000);
+    return()=>clearInterval(interval);
+  },[studentState,activeRequest?.id,user,isTeacher]);
 
   useEffect(()=>{
     if(!user||!isTeacher) return;
@@ -1243,6 +1280,46 @@ export default function TutorApp() {
   const t=T[lang];
   const isRTL=lang==="ar";
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),3500);};
+
+  const playNotificationSound=()=>{
+    try{
+      const ctx=new (window.AudioContext||(window as any).webkitAudioContext)();
+      const oscillator=ctx.createOscillator();const gainNode=ctx.createGain();
+      oscillator.connect(gainNode);gainNode.connect(ctx.destination);
+      oscillator.frequency.setValueAtTime(523,ctx.currentTime);
+      oscillator.frequency.setValueAtTime(659,ctx.currentTime+0.1);
+      oscillator.frequency.setValueAtTime(784,ctx.currentTime+0.2);
+      gainNode.gain.setValueAtTime(0.15,ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);
+      oscillator.start(ctx.currentTime);oscillator.stop(ctx.currentTime+0.5);
+    }catch(e){}
+  };
+
+  const formatWaitingTime=()=>{
+    const minutes=Math.floor(waitingSeconds/60);const seconds=waitingSeconds%60;
+    if(minutes===0)return lang==="fr"?`${seconds} secondes`:lang==="ar"?`${seconds} ثانية`:`${seconds} seconds`;
+    return lang==="fr"?`${minutes} min ${seconds}s`:lang==="ar"?`${minutes} د ${seconds}ث`:`${minutes}m ${seconds}s`;
+  };
+
+  const sendConfirmationEmail=async(booking)=>{
+    try{
+      await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({type:"lesson_confirmed",studentEmail:user?.email,studentName:userProfile?.full_name||user?.email,teacherName:booking?.teacher?.full_name,subject:activeRequest?.subject,amount:booking?.gross_price_aed,bookingId:booking?.id}),
+      });
+    }catch(e){}
+  };
+
+  const saveChildProfile=async()=>{
+    if(!user)return;setSavingChild(true);
+    try{
+      await supabase.from("profiles").update({child_name:childName,child_curriculum:childCurriculum,child_level:childLevel,child_lang:childLang,child_subjects:childSubjects}).eq("id",user.id);
+      setForm(f=>({...f,curriculum:childCurriculum,level:childLevel,instrLang:childLang}));
+      if(childCurriculum)setCurriculum(childCurriculum);
+      showToast("✅ "+(lang==="fr"?"Profil sauvegardé !":lang==="ar"?"تم حفظ الملف !":"Profile saved!"));
+    }catch(e){showToast("❌ "+e.message);}
+    finally{setSavingChild(false);}
+  };
   const toggleArr=(arr,val)=>arr.includes(val)?arr.filter(x=>x!==val):[...arr,val];
   const currLevels=curriculum&&CURRICULA[curriculum]?CURRICULA[curriculum].levels[lang]||CURRICULA[curriculum].levels["en"]:[];
   const currentCountry=COUNTRIES.find(c=>c.code===country)||COUNTRIES[0];
@@ -1255,21 +1332,19 @@ export default function TutorApp() {
 
   const handleLogout=async()=>{
     await supabase.auth.signOut();
-    setPage("home");setAppTab("student-form");setUser(null);setUserProfile(null);setProfileLoading(false);
+    setPage("home");setAppTab("student-home");setUser(null);setUserProfile(null);setProfileLoading(false);
+    setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setPayResult(null);setWaitingSeconds(0);setHoveredStar(0);setStripeError("");
     showToast("👋 See you soon!");
   };
 
   const handlePublish=async()=>{
-    if(!form.subject||!form.level){showToast("⚠️ Please select subject and level");return;}
+    if(!form.subject||!form.level){showToast("⚠️ "+(lang==="fr"?"Sélectionne une matière et un niveau":lang==="ar"?"اختر مادة ومستوى":"Please select subject and level"));return;}
     setPublishing(true);
     try{
-      const durationMap={"30 min":30,"1h":60,"1h30":90,"2h":120,"2h30":150,"3h":180};
-      const req=await postRequest({subject:form.subject,instrLang:form.instrLang||"English",curriculum:form.curriculum||"british",level:form.level,cycle:form.cycle,durationMin:durationMap[form.duration]||60,message:form.message,countryCode:country});
-      setCurrentRequestId(req.id);
-      setActiveRequest(req);
-      setStudentState("waiting");
-      setAppTab("student-home");
-      showToast("✅ Request posted! Waiting for tutor offers...");
+      const dm={"30 min":30,"1h":60,"1h30":90,"2h":120,"2h30":150,"3h":180};
+      const req=await postRequest({subject:form.subject,instrLang:form.instrLang||"English",curriculum:form.curriculum||"british",level:form.level,durationMin:dm[form.duration]||60,message:form.message,countryCode:"UAE"});
+      setActiveRequest(req);setActiveOffers([]);setWaitingSeconds(0);setStudentState("waiting");
+      showToast("✅ "+(lang==="fr"?"Annonce publiée !":lang==="ar"?"تم نشر الإعلان !":"Request posted!"));
     }catch(e){showToast("❌ "+e.message);}
     finally{setPublishing(false);}
   };
@@ -1287,21 +1362,15 @@ export default function TutorApp() {
   };
 
   const handleAcceptBid=async(bid)=>{
-    const reqId = currentRequestId || activeRequest?.id;
     try{
-      const booking=await acceptBid(bid.id,reqId);
-      setSelectedBid(bid);setCurrentBooking(booking);setAppTab("student-payment");
+      const booking=await acceptBid(bid.id,activeRequest.id);
+      setSelectedOffer(bid);setActiveBooking(booking);setStripeError("");setStudentState("payment");
     }catch(e){showToast("❌ "+e.message);}
   };
 
-  const handlePaymentSuccess=(result)=>{
-    setPaymentResult(result);
-    setActiveBooking({...currentBooking, teacher: selectedBid?.teacher});
-    setStudentState("booked");
-    setAppTab("student-home");
-    showToast("🎉 Booking confirmed!");
+  const handlePaymentSuccess=()=>{
+    setStudentState("booked");showToast("🎉 "+(lang==="fr"?"Réservation confirmée !":lang==="ar"?"تم تأكيد الحجز !":"Booking confirmed!"));
   };
-  const handleDeclineBid=(bidId)=>{setRealBids(prev=>prev.filter(b=>b.id!==bidId));showToast("Offer declined.");};
 
   const handleTeacherSubmit=async()=>{
     if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.idFile||!teacherForm.diplomaFile||!teacherForm.bankIban||!teacherForm.bankName||!teacherForm.bankHolder){
@@ -1360,6 +1429,8 @@ export default function TutorApp() {
         if(requests.length > 0) setTeacherState("has_requests");
       } else {
         setAppTab("student-home");
+        const {data:cb}=await supabase.from("bookings").select("gross_price_aed").eq("poster_id",u.id).eq("status","completed");
+        setStudentStats({totalLessons:cb?.length||0,totalSpent:cb?.reduce((s,b)=>s+b.gross_price_aed,0)||0});
       }
     }
   };
@@ -1375,10 +1446,10 @@ export default function TutorApp() {
             profileLoading ? null : isTeacher ? (
               <span className="nav-link" onClick={()=>{setPage("app");setAppTab("teacher-home");}}>{t.nav.teach}</span>
             ) : (
-              <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
+              <span className="nav-link" onClick={()=>{setPage("app");setAppTab("student-home");}}>{t.nav.search}</span>
             )
           ) : <>
-            <span className="nav-link" onClick={()=>go("student-form")}>{t.nav.search}</span>
+            <span className="nav-link" onClick={()=>go("student-home")}>{t.nav.search}</span>
             <span className="nav-link" onClick={()=>go("teacher-home")}>{t.nav.teach}</span>
           </>}
           <span className="nav-link" onClick={()=>setPage("teachers")}>{t.nav.teachers}</span>
@@ -1408,17 +1479,17 @@ export default function TutorApp() {
           <h1>{t.hero.h1}<span>{t.hero.h1span}</span>{t.hero.h1b}</h1>
           <p>{t.hero.sub}</p>
           <div className="hero-btns">
-            <button className="btn-big btn-big-primary" onClick={()=>go("student-form")}>{t.hero.cta1}</button>
+            <button className="btn-big btn-big-primary" onClick={()=>go("student-home")}>{t.hero.cta1}</button>
             <button className="btn-big btn-big-outline" onClick={()=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab("teacher-home");setShowOnboard(true);}}>{t.hero.cta2}</button>
           </div>
           <div className="hero-stats">{[{v:t.hero.s1v,l:t.hero.s1l},{v:t.hero.s2v,l:t.hero.s2l},{v:t.hero.s3v,l:t.hero.s3l},{v:t.hero.s4v,l:t.hero.s4l}].map((s,i)=><div key={i} style={{textAlign:"center"}}><div className="hero-stat-val">{s.v}</div><div className="hero-stat-lbl">{s.l}</div></div>)}</div>
         </section>
         <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",borderBottom:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.how.label}</div><div className="section-title">{t.how.title}<span>{t.how.titleSpan}</span></div><div className="steps-grid">{t.how.steps.map((s,i)=><div className="step-card" key={i}><div className="step-num-bg">{i+1}</div><div className="step-icon">{s.icon}</div><h3>{s.t}</h3><p>{s.d}</p></div>)}</div></div></div>
-        <div className="section"><div className="section-label">{t.subjects.label}</div><div className="section-title">{t.subjects.title}<span>{t.subjects.titleSpan}</span></div><div className="subj-grid">{SUBJECTS.map(s=><div className="subj-card" key={s.en} onClick={()=>go("student-form")}><span style={{fontSize:20}}>{s.icon}</span><span>{s[lang]}</span></div>)}</div></div>
+        <div className="section"><div className="section-label">{t.subjects.label}</div><div className="section-title">{t.subjects.title}<span>{t.subjects.titleSpan}</span></div><div className="subj-grid">{SUBJECTS.map(s=><div className="subj-card" key={s.en} onClick={()=>go("student-home")}><span style={{fontSize:20}}>{s.icon}</span><span>{s[lang]}</span></div>)}</div></div>
         <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.nav.teachers}</div><div className="section-title" style={{marginBottom:"2rem"}}>{lang==="ar"?"جميعهم موثّقون":lang==="fr"?"Tous vérifiés":"All verified, all passionate"}</div><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en} onClick={()=>setPage("teachers")}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.slice(0,2).map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}<span style={{fontSize:12,fontWeight:500,color:"#6B7280"}}>/h</span></div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div></div>)}</div></div></div>
       </>}
 
-      {page==="teachers"&&<div className="section"><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}/h</div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div><button className="submit-btn" style={{marginTop:0,padding:"10px"}} onClick={()=>go("student-form")}>{lang==="ar"?"احجز ←":lang==="fr"?"Réserver →":"Book →"}</button></div>)}</div></div>}
+      {page==="teachers"&&<div className="section"><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}/h</div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div><button className="submit-btn" style={{marginTop:0,padding:"10px"}} onClick={()=>go("student-home")}>{lang==="ar"?"احجز ←":lang==="fr"?"Réserver →":"Book →"}</button></div>)}</div></div>}
 
       {page==="admin"&&user?.email==="pierre.garnier93@gmail.com"&&<AdminPage user={user} lang={lang} onBack={()=>setPage("home")} />}
       {page==="admin"&&user?.email!=="pierre.garnier93@gmail.com"&&<div style={{textAlign:"center",padding:"4rem 2rem",fontWeight:800,fontSize:18,color:"#EF4444"}}>⛔ Accès refusé</div>}
@@ -1434,7 +1505,7 @@ export default function TutorApp() {
             <div className={`app-tab${appTab==="teacher-revenue"?" active":""}`} onClick={()=>setAppTab("teacher-revenue")}>💰 {lang==="fr"?"Revenus":lang==="ar"?"الإيرادات":"Revenue"}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {lang==="fr"?"Mon profil":lang==="ar"?"ملفي":"My profile"}</div>
           </> : <>
-            <div className={`app-tab${appTab==="student-home"||appTab==="student-payment"?" active":""}`} onClick={()=>setAppTab("student-home")}>🏠 {lang==="fr"?"Accueil":lang==="ar"?"الرئيسية":"Home"}</div>
+            <div className={`app-tab${appTab==="student-home"?" active":""}`} onClick={()=>setAppTab("student-home")}>🏠 {lang==="fr"?"Accueil":lang==="ar"?"الرئيسية":"Home"}{studentState==="offers"&&activeOffers.length>0&&<span style={{background:"#E34948",color:"#fff",borderRadius:"50%",fontSize:10,fontWeight:900,padding:"1px 6px",marginLeft:6,animation:"pulse 1s infinite"}}>{activeOffers.length}</span>}</div>
             <div className={`app-tab${appTab==="student-history"?" active":""}`} onClick={()=>setAppTab("student-history")}>📅 {lang==="fr"?"Mes cours":lang==="ar"?"دروسي":"My lessons"}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {lang==="fr"?"Mon profil":lang==="ar"?"ملفي":"My profile"}</div>
           </>}
@@ -1478,7 +1549,13 @@ export default function TutorApp() {
             {studentState==="waiting"&&<div style={{textAlign:"center",padding:"2rem 0"}}>
               <div style={{fontSize:56,marginBottom:"1rem",animation:"pulse 2s infinite"}}>🔍</div>
               <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Recherche en cours...":lang==="ar"?"البحث جارٍ...":"Searching for tutors..."}</div>
-              <div style={{fontSize:13,color:"#64748B",marginBottom:"2rem"}}>{lang==="fr"?"Les enseignants vont voir ton annonce et proposer leurs tarifs. En général moins de 15 minutes.":lang==="ar"?"سيرى المدرسون إعلانك ويقترحون أسعارهم. عادةً أقل من 15 دقيقة.":"Tutors will see your request and propose their rates. Usually under 15 minutes."}</div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:"1.5rem"}}>{lang==="fr"?"Les enseignants vont voir ton annonce et proposer leurs tarifs. En général moins de 15 minutes.":lang==="ar"?"سيرى المدرسون إعلانك ويقترحون أسعارهم. عادةً أقل من 15 دقيقة.":"Tutors will see your request and propose their rates. Usually under 15 minutes."}</div>
+              <div style={{background:"#EEF2FF",border:"1.5px solid #C7D2FE",borderRadius:12,padding:"10px 20px",display:"inline-block",marginBottom:"1rem",fontSize:13,fontWeight:700,color:"#5B4FE8"}}>
+                ⏱ {lang==="fr"?"Annonce publiée il y a":lang==="ar"?"نُشر الإعلان منذ":"Posted"} {formatWaitingTime()}{lang==="en"?" ago":""}
+              </div>
+              <div style={{background:"#E2E8F0",borderRadius:4,height:4,marginBottom:"1.5rem",overflow:"hidden"}}>
+                <div style={{background:"#5B4FE8",height:"100%",width:`${Math.min((waitingSeconds/(24*3600))*100,100)}%`,transition:"width 1s linear",borderRadius:4}}/>
+              </div>
               <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
                 <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>{activeRequest?.subject} · {activeRequest?.level}</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -1491,7 +1568,7 @@ export default function TutorApp() {
               <div style={{fontSize:12,color:"#9CA3AF",marginBottom:"2rem",fontWeight:600}}>🔄 {lang==="fr"?"Mise à jour automatique toutes les 10 secondes":lang==="ar"?"تحديث تلقائي كل 10 ثوانٍ":"Auto-refreshing every 10 seconds"}</div>
               <button className="btn-ghost" onClick={async()=>{
                 await supabase.from("requests").update({status:"cancelled"}).eq("id",activeRequest?.id);
-                setStudentState("idle");setActiveRequest(null);setCurrentRequestId(null);
+                setStudentState("idle");setActiveRequest(null);setWaitingSeconds(0);
               }}>{lang==="fr"?"Annuler l'annonce":lang==="ar"?"إلغاء الإعلان":"Cancel request"}</button>
             </div>}
 
@@ -1538,6 +1615,28 @@ export default function TutorApp() {
               ))}
             </>}
 
+            {/* ÉTAT D — payment */}
+            {studentState==="payment"&&selectedOffer&&activeBooking&&<div style={{maxWidth:480,margin:"0 auto"}}>
+              <div className="page-title">{t.payment.title}</div>
+              <div className="page-sub">{t.payment.sub}</div>
+              <div className="payment-card">
+                <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.lessonPrice}</span><span style={{fontWeight:700}}>{selectedOffer.net_price_aed} AED</span></div>
+                <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.serviceFee}</span><span style={{fontWeight:700,color:"#9CA3AF"}}>+ {Math.round(selectedOffer.net_price_aed*0.06)} AED</span></div>
+                <div className="payment-row" style={{borderTop:"2px solid #E8EAF6",paddingTop:12,marginTop:4}}>
+                  <span style={{fontWeight:800,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
+                  <span className="payment-total">{activeBooking.gross_price_aed} AED</span>
+                </div>
+              </div>
+              {stripeError&&<div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:10,padding:"12px 16px",fontSize:13,color:"#B91C1C",marginBottom:14,fontWeight:600}}>
+                <div style={{marginBottom:8}}>❌ {stripeError}</div>
+                <div style={{fontSize:12,color:"#B91C1C",fontWeight:500}}>{lang==="fr"?"Tu peux réessayer avec une autre carte ci-dessous.":lang==="ar"?"يمكنك المحاولة مرة أخرى ببطاقة أخرى أدناه.":"You can retry with another card below."}</div>
+              </div>}
+              <div className="payment-note">⚠️ {t.payment.payNote}</div>
+              <Elements stripe={stripePromise}>
+                <CheckoutForm booking={activeBooking} totalAmount={activeBooking.gross_price_aed} onSuccess={handlePaymentSuccess} onBack={()=>{setStudentState("offers");}} lang={lang} />
+              </Elements>
+            </div>}
+
             {/* ÉTAT 4 — booked */}
             {studentState==="booked"&&<div style={{textAlign:"center"}}>
               <div style={{fontSize:56,marginBottom:"1rem"}}>📅</div>
@@ -1558,10 +1657,13 @@ export default function TutorApp() {
                 ⚠️ {lang==="fr"?"Tu ne seras débité QU'APRÈS avoir confirmé que le cours a eu lieu.":lang==="ar"?"لن يتم خصم المبلغ إلا بعد تأكيدك أن الحصة قد انتهت.":"You will only be charged AFTER confirming the lesson took place."}
               </div>
               <button className="btn-full" style={{background:"#0ABFA3",marginBottom:12}} onClick={async()=>{
-                await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/capture-payment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:activeBooking?.id})});
-                await supabase.from("bookings").update({status:"completed"}).eq("id",activeBooking?.id);
-                setStudentState("rate");
-                showToast("✅ "+(lang==="fr"?"Cours confirmé ! Merci !":lang==="ar"?"تم تأكيد الحصة! شكراً!":"Lesson confirmed! Thank you!"));
+                try{
+                  await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/capture-payment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:activeBooking?.id})});
+                  await supabase.from("bookings").update({status:"completed"}).eq("id",activeBooking?.id);
+                  await sendConfirmationEmail(activeBooking);
+                  setStudentState("rate");
+                  showToast("✅ "+(lang==="fr"?"Cours confirmé ! Email de confirmation envoyé.":lang==="ar"?"تم تأكيد الحصة ! تم إرسال بريد التأكيد.":"Lesson confirmed! Confirmation email sent."));
+                }catch(e){showToast("❌ "+e.message);}
               }}>✅ {lang==="fr"?"Confirmer — le cours a eu lieu":lang==="ar"?"تأكيد — انتهت الحصة":"Confirm — lesson completed"}</button>
               <button className="btn-ghost" style={{width:"100%"}}>⚠️ {lang==="fr"?"Signaler un problème":lang==="ar"?"الإبلاغ عن مشكلة":"Report an issue"}</button>
             </div>}
@@ -1570,27 +1672,31 @@ export default function TutorApp() {
             {studentState==="rate"&&<div style={{textAlign:"center",padding:"2rem 0"}}>
               <div style={{fontSize:56,marginBottom:"1rem"}}>⭐</div>
               <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Comment s'est passé le cours ?":lang==="ar"?"كيف كانت الحصة؟":"How was the lesson?"}</div>
-              <div style={{fontSize:14,color:"#64748B",marginBottom:"2rem"}}>{lang==="fr"?"Ta note aide les autres familles à choisir le bon enseignant.":lang==="ar"?"تقييمك يساعد الأسر الأخرى في اختيار المدرس المناسب.":"Your rating helps other families choose the right tutor."}</div>
-              <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:"2rem"}}>
+              <div style={{fontSize:14,color:"#64748B",marginBottom:"1.5rem"}}>{lang==="fr"?"Ta note aide les autres familles à choisir le bon enseignant.":lang==="ar"?"تقييمك يساعد الأسر الأخرى في اختيار المدرس المناسب.":"Your rating helps other families choose the right tutor."}</div>
+              <div style={{fontSize:14,color:"#5B4FE8",fontWeight:700,marginBottom:"1rem",minHeight:22}}>
+                {hoveredStar===1?(lang==="fr"?"Décevant":lang==="ar"?"مخيب":"Disappointing"):hoveredStar===2?(lang==="fr"?"Passable":lang==="ar"?"مقبول":"Fair"):hoveredStar===3?(lang==="fr"?"Bien":lang==="ar"?"جيد":"Good"):hoveredStar===4?(lang==="fr"?"Très bien":lang==="ar"?"جيد جداً":"Very good"):hoveredStar===5?(lang==="fr"?"Excellent !":lang==="ar"?"ممتاز !":"Excellent!"):""}
+              </div>
+              <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:"1rem"}}>
                 {[1,2,3,4,5].map(star=>(
-                  <div key={star} style={{fontSize:40,cursor:"pointer",transition:"transform .2s"}}
+                  <div key={star}
+                    style={{fontSize:44,cursor:"pointer",transition:"transform .15s,filter .15s",transform:star<=hoveredStar?"scale(1.2)":"scale(1)",filter:star<=hoveredStar?"drop-shadow(0 0 8px rgba(245,166,35,.6))":"grayscale(0.3)"}}
+                    onMouseEnter={()=>setHoveredStar(star)}
+                    onMouseLeave={()=>setHoveredStar(0)}
                     onClick={async()=>{
-                      await supabase.from("reviews").insert({booking_id:activeBooking?.id,teacher_id:activeBooking?.teacher_id,student_id:user?.id,score:star});
-                      setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setCurrentRequestId(null);
-                      showToast("⭐ "+(lang==="fr"?"Merci pour ton avis !":lang==="ar"?"شكراً على تقييمك!":"Thanks for your review!"));
-                    }}
-                    onMouseEnter={e=>(e.currentTarget as HTMLElement).style.transform="scale(1.2)"}
-                    onMouseLeave={e=>(e.currentTarget as HTMLElement).style.transform="scale(1)"}>⭐</div>
+                      try{await supabase.from("reviews").insert({booking_id:activeBooking?.id,teacher_id:activeBooking?.teacher_id,student_id:user?.id,score:star});}catch(e){}
+                      setHoveredStar(0);setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setPayResult(null);setWaitingSeconds(0);setStripeError("");
+                      const {data:cb}=await supabase.from("bookings").select("gross_price_aed").eq("poster_id",user?.id).eq("status","completed");
+                      setStudentStats({totalLessons:cb?.length||0,totalSpent:cb?.reduce((s,b)=>s+b.gross_price_aed,0)||0});
+                      showToast("⭐ "+(lang==="fr"?"Merci pour ton avis !":lang==="ar"?"شكراً على تقييمك !":"Thanks for your rating!"));
+                    }}>{star<=hoveredStar?"⭐":"☆"}</div>
                 ))}
               </div>
-              <button className="btn-ghost" onClick={()=>{setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setCurrentRequestId(null);}}>
+              <button className="btn-ghost" onClick={()=>{setHoveredStar(0);setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setPayResult(null);setWaitingSeconds(0);setStripeError("");}}>
                 {lang==="fr"?"Passer":lang==="ar"?"تخطي":"Skip"}
               </button>
             </div>}
 
           </div>}
-
-          {appTab==="student-payment"&&selectedBid&&<PaymentScreen bid={selectedBid} booking={currentBooking} form={form} country={country} lang={lang} onSuccess={handlePaymentSuccess} onBack={()=>setAppTab("student-home")} />}
 
           {appTab==="student-history"&&<div style={{maxWidth:560,margin:"0 auto"}}>
             <div className="page-title">{lang==="fr"?"Mes cours":lang==="ar"?"دروسي":"My lessons"}</div>
@@ -1598,20 +1704,6 @@ export default function TutorApp() {
             <StudentHistory userId={user?.id} lang={lang} />
           </div>}
 
-          {appTab==="student-confirm"&&<div className="success-screen">
-            <div style={{fontSize:56,marginBottom:"1rem"}}>🎉</div>
-            <div style={{fontFamily:"Fraunces,serif",fontSize:24,fontWeight:900,color:"#1A1A2E",marginBottom:"0.5rem"}}>{t.confirm.title}</div>
-            <div style={{fontSize:14,color:"#6B7280",marginBottom:"1.5rem"}}>{t.confirm.sub1}<strong>{selectedBid?.teacher?.full_name}</strong>{t.confirm.sub2}</div>
-            <div className="confirm-detail">
-              <div className="confirm-row"><span style={{color:"#6B7280"}}>{t.confirm.subject}</span><span style={{fontWeight:700}}>{form.subject}</span></div>
-              <div className="confirm-row"><span style={{color:"#6B7280"}}>{t.confirm.teacher}</span><span style={{fontWeight:700}}>{selectedBid?.teacher?.full_name}</span></div>
-              <div className="confirm-row"><span style={{color:"#6B7280"}}>{t.confirm.price}</span><span style={{fontWeight:900,color:"#5B4FE8",fontFamily:"Fraunces,serif"}}>{fmtPrice(paymentResult?.studentTotal||0,country)}</span></div>
-              <div className="confirm-row"><span style={{color:"#6B7280"}}>{t.confirm.teacherGets}</span><span style={{fontWeight:700,color:"#0ABFA3"}}>{fmtPrice(paymentResult?.teacherPayout||0,country)}</span></div>
-              <div className="confirm-row" style={{borderTop:"2px solid #E8EAF6"}}><span style={{color:"#6B7280"}}>{t.confirm.pay}</span><span style={{color:"#0ABFA3",fontWeight:700}}>{t.confirm.secured}</span></div>
-            </div>
-            <div className="jitsi-box"><div style={{fontSize:24,marginBottom:6}}>📹</div><div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:4}}>{t.confirm.jitsi}</div><div style={{fontSize:12,color:"#6B7280"}}>{t.confirm.jitsiNote}</div></div>
-            <button className="submit-btn" style={{maxWidth:300,margin:"0 auto"}} onClick={()=>{setAppTab("student-form");setSelectedBid(null);setCurrentRequestId(null);setRealBids([]);setPaymentResult(null);}}>{t.confirm.newReq}</button>
-          </div>}
 
           {appTab==="teacher-home"&&showOnboard&&<>
             <div className="page-title">{t.onboard.title}</div>
