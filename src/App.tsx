@@ -1826,7 +1826,19 @@ export default function TutorApp() {
                   </div>
                 )}
                 <button className="btn-ghost" style={{width:"100%"}} onClick={()=>{
-                  setTeacherForm(f=>({...f,name:userProfile?.full_name||"",cycles:userProfile?.teaching_cycles||[],subjects:userProfile?.teaching_subjects||[],instrLangs:userProfile?.teaching_langs||[],rate:userProfile?.teaching_rate||150,curricula:userProfile?.teaching_curricula||[],bankName:userProfile?.bank_name||"",bankIban:userProfile?.bank_iban||"",bankHolder:userProfile?.bank_holder||"",withdrawal:userProfile?.withdrawal_frequency||"wW"}});
+                  setTeacherForm(f=>({
+                    ...f,
+                    name: userProfile?.full_name || "",
+                    cycles: userProfile?.teaching_cycles || [],
+                    subjects: userProfile?.teaching_subjects || [],
+                    instrLangs: userProfile?.teaching_langs || [],
+                    rate: userProfile?.teaching_rate || 150,
+                    curricula: userProfile?.teaching_curricula || [],
+                    bankName: userProfile?.bank_name || "",
+                    bankIban: userProfile?.bank_iban || "",
+                    bankHolder: userProfile?.bank_holder || "",
+                    withdrawal: userProfile?.withdrawal_frequency || "wW",
+                  }));
                   setShowOnboard(true);
                 }}>✏️ {lang==="fr"?"Modifier mon profil":lang==="ar"?"تعديل ملفي":"Edit my profile"}</button>
               </div>
