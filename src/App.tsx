@@ -1230,7 +1230,7 @@ export default function TutorApp() {
   },[studentState]);
 
   useEffect(()=>{
-    if(!user||isTeacher) return;
+    if(!user||userProfile?.role==="teacher") return;
     if(studentState!=="waiting"&&studentState!=="offers") return;
     if(!activeRequest?.id) return;
     let previousCount=activeOffers.length;
@@ -1253,10 +1253,10 @@ export default function TutorApp() {
     poll();
     const interval=setInterval(poll,10000);
     return()=>clearInterval(interval);
-  },[studentState,activeRequest?.id,user,isTeacher]);
+  },[studentState,activeRequest?.id,user,userProfile?.role]);
 
   useEffect(()=>{
-    if(!user||!isTeacher) return;
+    if(!user||userProfile?.role!=="teacher") return;
     if(teacherState==="pending_payment") return;
     const poll=async()=>{
       const requests=await getMatchedRequests(userProfile);
@@ -1275,7 +1275,7 @@ export default function TutorApp() {
     poll();
     const interval=setInterval(poll,30000);
     return()=>clearInterval(interval);
-  },[user,isTeacher,teacherState,userProfile,teacherActiveBooking]);
+  },[user,userProfile?.role,teacherState,userProfile,teacherActiveBooking]);
 
   const t=T[lang];
   const isRTL=lang==="ar";
