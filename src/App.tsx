@@ -709,7 +709,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
         <div className="profile-section">
           <div className="profile-section-title">🎓 {lang==="fr"?"Profil de l'enfant":lang==="ar"?"ملف الطفل":"Child's profile"}</div>
           <div style={{fontSize:12,color:"#64748B",marginBottom:"1rem",fontWeight:600}}>{lang==="fr"?"Ces infos pré-remplissent automatiquement tes annonces.":lang==="ar"?"هذه المعلومات تُعبئ إعلاناتك تلقائياً.":"This info pre-fills your requests automatically."}</div>
-          <div className="form-group"><label className="form-label">{lang==="fr"?"Prénom de l'enfant":lang==="ar"?"اسم الطفل":"Child's first name"}</label><input className="form-input" placeholder="Emma" value={childName} onChange={e=>setChildName(e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">{lang==="fr"?"Prénom de l'enfant":lang==="ar"?"اسم الطفل":"Child's first name"}</label><input className="form-input" placeholder="Emma" autoComplete="off" value={childName} onChange={e=>setChildName(e.target.value)} /></div>
           <div className="form-row">
             <div className="form-group" style={{marginBottom:0}}><label className="form-label">{lang==="fr"?"Cursus":lang==="ar"?"المنهج":"Curriculum"}</label><select className="form-select" value={childCurriculum} onChange={e=>{setChildCurriculum(e.target.value);setChildLevel("");}}><option value="">{lang==="fr"?"Choisir...":"Choose..."}</option>{Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[lang]||v.label.en}</option>)}</select></div>
             <div className="form-group" style={{marginBottom:0}}><label className="form-label">{lang==="fr"?"Niveau":"Level"}</label><select className="form-select" value={childLevel} onChange={e=>setChildLevel(e.target.value)} disabled={!childLevels.length}><option value="">{childLevels.length?(lang==="fr"?"Choisir...":"Choose..."):(lang==="fr"?"Sélectionne un cursus":"Select curriculum")}</option>{childLevels.map(l=><option key={l}>{l}</option>)}</select></div>
@@ -1194,6 +1194,7 @@ export default function TutorApp() {
         setChildName(profile.child_name||"");setChildCurriculum(profile.child_curriculum||"");
         setChildLevel(profile.child_level||"");setChildLang(profile.child_lang||"");
         setChildSubjects(profile.child_subjects||[]);
+        if(profile.child_level)setForm(f=>({...f,level:profile.child_level}));
         const {data:sp}=await supabase.from("student_profiles").select("*").eq("owner_id",realUserId).limit(1).maybeSingle();
         const prefCurriculum=profile.child_curriculum||sp?.curriculum||"";
         const prefLevel=profile.child_level||sp?.level||"";
@@ -1337,7 +1338,7 @@ export default function TutorApp() {
       await supabase.from("profiles").update({child_name:childName,child_curriculum:childCurriculum,child_level:childLevel,child_lang:childLang,child_subjects:childSubjects}).eq("id",user.id);
       setForm(f=>({...f,curriculum:childCurriculum,level:childLevel,instrLang:childLang}));
       if(childCurriculum)setCurriculum(childCurriculum);
-      showToast("✅ "+(lang==="fr"?"Profil sauvegardé !":lang==="ar"?"تم حفظ الملف !":"Profile saved!"));
+      showToast("✅ "+(lang==="fr"?"Changements bien pris en compte !":lang==="ar"?"تم حفظ التغييرات !":"Changes saved successfully!"));
     }catch(e){showToast("❌ "+e.message);}
     finally{setSavingChild(false);}
   };
