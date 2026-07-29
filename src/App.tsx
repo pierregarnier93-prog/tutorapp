@@ -484,7 +484,7 @@ function Auth({ onClose, onSuccess, lang }) {
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true); setError("");
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, role } } });
-    if (error) { setLoading(false); setError(error.message); return; }
+    if (error) { console.error("Signup error:", error); setLoading(false); setError(error.message); return; }
     if (data.user) {
       await supabase.from("profiles").update({
         role, full_name: fullName, language: prefLang, country_code: country,
