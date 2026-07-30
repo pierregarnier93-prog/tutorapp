@@ -1,0 +1,18 @@
+{
+  "name": "TutorApp Gulf",
+  "short_name": "TutorApp",
+  "description": "Trouvez les meilleurs tuteurs du Golfe",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5B4FE8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
