@@ -1155,6 +1155,14 @@ export default function TutorApp() {
   const [cancellingBooking,setCancellingBooking]=useState(false);
   const [onboardStep,setOnboardStep]=useState(1);
   const [expandedOffer,setExpandedOffer]=useState<string|null>(null);
+  const [reviewComment,setReviewComment]=useState("");
+  const [realTeachers,setRealTeachers]=useState([]);
+  const [teachersLoading,setTeachersLoading]=useState(false);
+  const [teachersSearch,setTeachersSearch]=useState("");
+  const [teachersSubjectFilter,setTeachersSubjectFilter]=useState("");
+  const [teachersLangFilter,setTeachersLangFilter]=useState("");
+  const [selectedTeacherProfile,setSelectedTeacherProfile]=useState(null);
+  const [teacherProfileReviews,setTeacherProfileReviews]=useState([]);
 
   // ✅ FIX DÉFINITIF : toujours charger avec l'ID auth réel
   const loadProfile = async (userId: string) => {
@@ -1319,6 +1327,18 @@ export default function TutorApp() {
     if(studentState!=="waiting"&&studentState!=="offers") return;
     if(!activeRequest?.id) return;
     let previousCount=activeOffers.length;
+    // Realtime subscription on new bids for this request
+    const channel=supabase.channel(`bids-${activeRequest.id}`)
+      .on("postgres_changes",{event:"INSERT",schema:"public",table:"bids",filter:`request_id=eq.${activeRequest.id}`},async()=>{
+        const offers=await getBidsForRequest(activeRequest.id);
+        if(offers.length>previousCount){
+          playNotificationSound();
+          const newOffer=offers[offers.length-1];
+          fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"new_offer_received",studentEmail:user?.email,studentName:userProfile?.full_name||user?.email?.split("@")[0],teacherName:newOffer?.teacher?.full_name,netPrice:newOffer?.net_price_aed,subject:activeRequest?.subject,lang})}).catch(()=>{});
+          previousCount=offers.length;
+        }
+        if(offers.length>0){setActiveOffers(offers);setStudentState("offers");}
+      }).subscribe();
     const poll=async()=>{
       try{
         const {data:reqCheck}=await supabase.from("requests").select("status,created_at").eq("id",activeRequest.id).single();
@@ -1346,13 +1366,22 @@ export default function TutorApp() {
       }catch(e){}
     };
     poll();
-    const interval=setInterval(poll,10000);
-    return()=>clearInterval(interval);
+    const interval=setInterval(poll,30000);
+    return()=>{clearInterval(interval);supabase.removeChannel(channel);};
   },[studentState,activeRequest?.id,user,userProfile?.role]);
 
   useEffect(()=>{
     if(!user||userProfile?.role!=="teacher") return;
     if(teacherState==="pending_payment") return;
+    // Realtime: notify teacher instantly when a booking is created for them
+    const channel=supabase.channel(`bookings-teacher-${user.id}`)
+      .on("postgres_changes",{event:"INSERT",schema:"public",table:"bookings",filter:`teacher_id=eq.${user.id}`},async(payload)=>{
+        const booking=payload.new;
+        if(["pending_payment","confirmed"].includes(booking.status)){
+          const {data:full}=await supabase.from("bookings").select("*, student:profiles!poster_id(full_name)").eq("id",booking.id).single();
+          if(full){setTeacherActiveBooking(full);setTeacherState("booked");playNotificationSound();showToast("🎉 "+(lang==="fr"?"Une famille a accepté ton offre !":"A family accepted your offer!"));}
+        }
+      }).subscribe();
     const poll=async()=>{
       const requests=await getMatchedRequests(userProfile);
       setMatchedRequests(requests);
@@ -1369,7 +1398,7 @@ export default function TutorApp() {
     };
     poll();
     const interval=setInterval(poll,30000);
-    return()=>clearInterval(interval);
+    return()=>{clearInterval(interval);supabase.removeChannel(channel);};
   },[user,userProfile?.role,teacherState,userProfile,teacherActiveBooking]);
 
   const t=T[lang];
@@ -1420,6 +1449,28 @@ export default function TutorApp() {
   const currLevels=curriculum&&CURRICULA[curriculum]?CURRICULA[curriculum].levels[lang]||CURRICULA[curriculum].levels["en"]:[];
   const currentCountry=COUNTRIES.find(c=>c.code===country)||COUNTRIES[0];
   const go=(tab)=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab(tab);setShowOnboard(false);};
+
+  const loadRealTeachers=async()=>{
+    setTeachersLoading(true);
+    const {data}=await supabase.from("profiles")
+      .select("id,full_name,teaching_bio,teaching_subjects,teaching_langs,teaching_curricula,teaching_rate,teaching_cycles,country_code,verified")
+      .eq("role","teacher").eq("verified",true).order("created_at",{ascending:false});
+    const teachers=data||[];
+    // fetch avg ratings
+    const withRatings=await Promise.all(teachers.map(async t=>{
+      const {data:revs}=await supabase.from("reviews").select("score,comment,created_at,student:profiles!student_id(full_name)").eq("teacher_id",t.id).order("created_at",{ascending:false});
+      const avg=revs?.length?(revs.reduce((s,r)=>s+r.score,0)/revs.length).toFixed(1):null;
+      return{...t,reviews:revs||[],avgRating:avg};
+    }));
+    setRealTeachers(withRatings);
+    setTeachersLoading(false);
+  };
+
+  const openTeacherProfile=async(teacher)=>{
+    setSelectedTeacherProfile(teacher);
+    setTeacherProfileReviews(teacher.reviews||[]);
+    setPage("teacher-profile");
+  };
   const displayName=userProfile?.full_name||user?.user_metadata?.full_name||user?.email?.split("@")[0]||"";
   const isProfilePrefilled=!!(form.curriculum&&form.instrLang&&form.level);
 
@@ -1601,7 +1652,158 @@ export default function TutorApp() {
         <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.nav.teachers}</div><div className="section-title" style={{marginBottom:"2rem"}}>{lang==="ar"?"جميعهم موثّقون":lang==="fr"?"Tous vérifiés":"All verified, all passionate"}</div><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en} onClick={()=>setPage("teachers")}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.slice(0,2).map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}<span style={{fontSize:12,fontWeight:500,color:"#6B7280"}}>/h</span></div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div></div>)}</div></div></div>
       </>}
 
-      {page==="teachers"&&<div className="section"><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}/h</div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div><button className="submit-btn" style={{marginTop:0,padding:"10px"}} onClick={()=>go("student-home")}>{lang==="ar"?"احجز ←":lang==="fr"?"Réserver →":"Book →"}</button></div>)}</div></div>}
+      {page==="teachers"&&(()=>{
+        if(realTeachers.length===0&&!teachersLoading){loadRealTeachers();}
+        const filtered=realTeachers.filter(t=>{
+          const matchSearch=!teachersSearch||t.full_name?.toLowerCase().includes(teachersSearch.toLowerCase())||(t.teaching_bio||"").toLowerCase().includes(teachersSearch.toLowerCase());
+          const matchSubj=!teachersSubjectFilter||t.teaching_subjects?.includes(teachersSubjectFilter);
+          const matchLang=!teachersLangFilter||t.teaching_langs?.includes(teachersLangFilter);
+          return matchSearch&&matchSubj&&matchLang;
+        });
+        return(
+          <div className="section" style={{maxWidth:1100}}>
+            <div style={{marginBottom:"2rem"}}>
+              <div className="section-label">{lang==="fr"?"Enseignants vérifiés":lang==="ar"?"المدرسون الموثّقون":"Verified tutors"}</div>
+              <div className="section-title">{lang==="fr"?"Nos profs du Golfe":lang==="ar"?"مدرسونا في الخليج":"Our Gulf tutors"}</div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:"1.5rem"}}>
+                <input placeholder={lang==="fr"?"Rechercher un prof...":lang==="ar"?"ابحث عن مدرس...":"Search a tutor..."} value={teachersSearch} onChange={e=>setTeachersSearch(e.target.value)} style={{flex:2,minWidth:180,padding:"10px 16px",border:"1.5px solid #E2E8F0",borderRadius:12,fontSize:14,fontFamily:"inherit",outline:"none"}} />
+                <select value={teachersSubjectFilter} onChange={e=>setTeachersSubjectFilter(e.target.value)} style={{flex:1,minWidth:140,padding:"10px 14px",border:"1.5px solid #E2E8F0",borderRadius:12,fontSize:13,fontFamily:"inherit",background:"#fff"}}>
+                  <option value="">{lang==="fr"?"Toutes matières":lang==="ar"?"كل المواد":"All subjects"}</option>
+                  {SUBJECTS.map(s=><option key={s.en} value={s.en}>{s[lang]||s.en}</option>)}
+                </select>
+                <select value={teachersLangFilter} onChange={e=>setTeachersLangFilter(e.target.value)} style={{flex:1,minWidth:130,padding:"10px 14px",border:"1.5px solid #E2E8F0",borderRadius:12,fontSize:13,fontFamily:"inherit",background:"#fff"}}>
+                  <option value="">{lang==="fr"?"Toutes langues":lang==="ar"?"كل اللغات":"All languages"}</option>
+                  {["English","Arabic","French"].map(l=><option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+            </div>
+            {teachersLoading&&<div className="loading">⏳ {lang==="fr"?"Chargement...":lang==="ar"?"جار التحميل...":"Loading..."}</div>}
+            {!teachersLoading&&filtered.length===0&&(
+              <div className="empty"><div className="empty-icon">🔍</div><div style={{fontWeight:700}}>{lang==="fr"?"Aucun enseignant trouvé":lang==="ar"?"لا يوجد مدرس":"No tutor found"}</div></div>
+            )}
+            <div className="teachers-grid">
+              {filtered.map(tc=>{
+                const initials=(tc.full_name||"T").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2);
+                const bgColors=["#EEF0FF","#E6FAF8","#FEF6E4","#FEE2E2","#F0FDF4"];
+                const fgColors=["#5B4FE8","#0ABFA3","#B45309","#B91C1C","#16A34A"];
+                const ci=(tc.full_name||"").charCodeAt(0)%5;
+                return(
+                  <div className="teacher-card" key={tc.id} style={{cursor:"pointer"}} onClick={()=>openTeacherProfile(tc)}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}>
+                      <div className="tc-avatar" style={{background:bgColors[ci],color:fgColors[ci]}}>{initials}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:800,fontSize:15,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tc.full_name}</div>
+                        <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ {lang==="fr"?"Vérifié":lang==="ar"?"موثّق":"Verified"}</div>
+                      </div>
+                      {tc.avgRating&&<div style={{fontSize:13,color:"#F59E0B",fontWeight:800}}>★ {tc.avgRating}</div>}
+                    </div>
+                    {tc.teaching_bio&&<div style={{fontSize:12,color:"#64748B",marginBottom:10,lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{tc.teaching_bio}</div>}
+                    <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>
+                      {(tc.teaching_subjects||[]).slice(0,3).map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})}
+                      {(tc.teaching_langs||[]).map(l=><span className="pill pill-teal" key={l}>{l}</span>)}
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}>
+                      <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{tc.teaching_rate} AED/h</div>
+                      <div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>{tc.reviews?.length||0} {lang==="fr"?"avis":lang==="ar"?"تقييم":"reviews"}</div>
+                    </div>
+                    <button className="submit-btn" style={{marginTop:0,padding:"10px"}} onClick={e=>{e.stopPropagation();openTeacherProfile(tc);}}>
+                      {lang==="fr"?"Voir le profil →":lang==="ar"?"عرض الملف ←":"View profile →"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {page==="teacher-profile"&&selectedTeacherProfile&&(()=>{
+        const tc=selectedTeacherProfile;
+        const initials=(tc.full_name||"T").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2);
+        const bgColors=["#EEF0FF","#E6FAF8","#FEF6E4","#FEE2E2","#F0FDF4"];
+        const fgColors=["#5B4FE8","#0ABFA3","#B45309","#B91C1C","#16A34A"];
+        const ci=(tc.full_name||"").charCodeAt(0)%5;
+        const netRate=Math.round((tc.teaching_rate||0)*0.94);
+        return(
+          <div className="section" style={{maxWidth:680}}>
+            <button className="btn-ghost" style={{marginBottom:"1.5rem"}} onClick={()=>setPage("teachers")}>← {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Back"}</button>
+            {/* Header */}
+            <div style={{background:"linear-gradient(135deg,#5B4FE8 0%,#3D34C4 100%)",borderRadius:24,padding:"2rem",marginBottom:"1.5rem",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+              <div style={{width:72,height:72,borderRadius:"50%",background:bgColors[ci],color:fgColors[ci],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:24,flexShrink:0}}>{initials}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#fff",marginBottom:4}}>{tc.full_name}</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:8}}>✓ {lang==="fr"?"Enseignant vérifié":lang==="ar"?"مدرس موثّق":"Verified tutor"}</div>
+                <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                  {tc.avgRating&&<span style={{background:"rgba(255,255,255,.15)",color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:13,fontWeight:800}}>★ {tc.avgRating} ({tc.reviews?.length} {lang==="fr"?"avis":lang==="ar"?"تقييم":"reviews"})</span>}
+                  <span style={{background:"rgba(255,255,255,.15)",color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:13,fontWeight:800}}>{tc.teaching_rate} AED/h</span>
+                </div>
+              </div>
+            </div>
+            {/* Bio */}
+            {tc.teaching_bio&&(
+              <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.25rem"}}>
+                <div style={{fontWeight:800,fontSize:13,color:"#5B4FE8",marginBottom:8}}>💬 {lang==="fr"?"À propos":lang==="ar"?"عن المدرس":"About"}</div>
+                <div style={{fontSize:14,color:"#374151",lineHeight:1.7}}>{tc.teaching_bio}</div>
+              </div>
+            )}
+            {/* Info grid */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:"1.25rem"}}>
+              {tc.teaching_subjects?.length>0&&(
+                <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem"}}>
+                  <div style={{fontWeight:800,fontSize:12,color:"#5B4FE8",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>📚 {lang==="fr"?"Matières":lang==="ar"?"المواد":"Subjects"}</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{tc.teaching_subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="badge badge-purple" key={s}>{subj?subj[lang]:s}</span>;})}</div>
+                </div>
+              )}
+              {tc.teaching_langs?.length>0&&(
+                <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem"}}>
+                  <div style={{fontWeight:800,fontSize:12,color:"#0ABFA3",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>🗣 {lang==="fr"?"Langues":lang==="ar"?"اللغات":"Languages"}</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{tc.teaching_langs.map(l=><span className="badge badge-green" key={l}>{l}</span>)}</div>
+                </div>
+              )}
+              {tc.teaching_curricula?.length>0&&(
+                <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem"}}>
+                  <div style={{fontWeight:800,fontSize:12,color:"#92400E",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>🎓 {lang==="fr"?"Cursus":lang==="ar"?"المناهج":"Curricula"}</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{tc.teaching_curricula.map(c=>{const cur=CURRICULA[c];return<span className="badge badge-amber" key={c}>{cur?cur.label[lang]:c}</span>;})}</div>
+                </div>
+              )}
+              <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1rem"}}>
+                <div style={{fontWeight:800,fontSize:12,color:"#0F6E56",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>💰 {lang==="fr"?"Tarif":lang==="ar"?"السعر":"Rate"}</div>
+                <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,color:"#0ABFA3"}}>{tc.teaching_rate} AED/h</div>
+                <div style={{fontSize:11,color:"#64748B",marginTop:4}}>{lang==="fr"?`Tu paies ${tc.teaching_rate} AED → prof reçoit ${netRate} AED`:lang==="ar"?`تدفع ${tc.teaching_rate} AED → يستلم ${netRate} AED`:`You pay ${tc.teaching_rate} AED → tutor gets ${netRate} AED`}</div>
+              </div>
+            </div>
+            {/* CTA */}
+            <button className="btn-full" style={{marginBottom:"2rem",fontSize:16}} onClick={()=>{
+              if(!user){setShowAuth(true);return;}
+              const firstSubject=tc.teaching_subjects?.[0]||"";
+              setForm(f=>({...f,subject:firstSubject}));
+              setPage("app");setAppTab("student-home");
+              showToast(lang==="fr"?`✅ Annonce pré-remplie pour ${tc.full_name}`:lang==="ar"?`✅ تم تعبئة الطلب لـ ${tc.full_name}`:`✅ Request pre-filled for ${tc.full_name}`);
+            }}>📋 {lang==="fr"?"Poster une annonce (ce prof pourra répondre)":lang==="ar"?"نشر إعلان (هذا المدرس سيتمكن من الرد)":"Post a request (this tutor can respond)"}</button>
+            {/* Reviews */}
+            {teacherProfileReviews.length>0&&(
+              <div>
+                <div style={{fontWeight:800,fontSize:16,marginBottom:"1rem"}}>⭐ {lang==="fr"?"Avis":lang==="ar"?"التقييمات":"Reviews"} ({teacherProfileReviews.length})</div>
+                {teacherProfileReviews.map((r,i)=>(
+                  <div key={i} style={{border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem",marginBottom:10}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{fontWeight:700,fontSize:13}}>{r.student?.full_name||"Famille"}</div>
+                      <div style={{fontSize:16}}>{"⭐".repeat(r.score)}</div>
+                    </div>
+                    {r.comment&&<div style={{fontSize:13,color:"#374151",fontStyle:"italic",lineHeight:1.6}}>"{r.comment}"</div>}
+                    <div style={{fontSize:11,color:"#9CA3AF",marginTop:6}}>{new Date(r.created_at).toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{month:"long",year:"numeric"})}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {teacherProfileReviews.length===0&&(
+              <div style={{textAlign:"center",padding:"2rem",color:"#9CA3AF",fontSize:14}}>
+                {lang==="fr"?"Pas encore d'avis.":lang==="ar"?"لا توجد تقييمات بعد.":"No reviews yet."}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {page==="admin"&&user?.email==="pierre.garnier93@gmail.com"&&<AdminPage user={user} lang={lang} onBack={()=>setPage("home")} />}
       {page==="admin"&&user?.email!=="pierre.garnier93@gmail.com"&&<div style={{textAlign:"center",padding:"4rem 2rem",fontWeight:800,fontSize:18,color:"#EF4444"}}>⛔ Accès refusé</div>}
@@ -1962,19 +2164,19 @@ export default function TutorApp() {
               <div style={{fontSize:14,color:"#5B4FE8",fontWeight:700,marginBottom:"1rem",minHeight:22}}>
                 {hoveredStar===1?(lang==="fr"?"Décevant":lang==="ar"?"مخيب":"Disappointing"):hoveredStar===2?(lang==="fr"?"Passable":lang==="ar"?"مقبول":"Fair"):hoveredStar===3?(lang==="fr"?"Bien":lang==="ar"?"جيد":"Good"):hoveredStar===4?(lang==="fr"?"Très bien":lang==="ar"?"جيد جداً":"Very good"):hoveredStar===5?(lang==="fr"?"Excellent !":lang==="ar"?"ممتاز !":"Excellent!"):""}
               </div>
-              <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:"2rem"}}>
+              <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:"1.5rem"}}>
                 {[1,2,3,4,5].map(star=>(
                   <div key={star}
                     style={{fontSize:44,cursor:"pointer",transition:"transform .15s,filter .15s",transform:star<=hoveredStar?"scale(1.2)":"scale(1)",filter:star<=hoveredStar?"drop-shadow(0 0 8px rgba(245,166,35,.6))":"grayscale(0.3)"}}
                     onMouseEnter={()=>setHoveredStar(star)}
                     onMouseLeave={()=>setHoveredStar(0)}
                     onClick={async()=>{
-                      try{await supabase.from("reviews").insert({booking_id:activeBooking?.id,teacher_id:activeBooking?.teacher_id,student_id:user?.id,score:star});}catch(e){}
+                      try{await supabase.from("reviews").insert({booking_id:activeBooking?.id,teacher_id:activeBooking?.teacher_id,student_id:user?.id,score:star,comment:reviewComment||null});}catch(e){}
                       const teacherName=activeBooking?.teacher?.full_name;
                       const subject=activeRequest?.subject;
                       const teacherId=activeBooking?.teacher_id;
                       setLastCompletedTeacher(teacherName&&teacherId&&subject?{name:teacherName,id:teacherId,subject}:null);
-                      setHoveredStar(0);
+                      setHoveredStar(0);setReviewComment("");
                       setStudentState("post_rate");
                       setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setPayResult(null);setWaitingSeconds(0);setStripeError("");setRequestViews(0);
                       const {data:cb}=await supabase.from("bookings").select("gross_price_aed").eq("poster_id",user?.id).eq("status","completed");
@@ -1983,7 +2185,13 @@ export default function TutorApp() {
                     }}>{star<=hoveredStar?"⭐":"☆"}</div>
                 ))}
               </div>
-              <button className="btn-ghost" onClick={()=>{setHoveredStar(0);setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setPayResult(null);setWaitingSeconds(0);setStripeError("");setRequestViews(0);}}>
+              <textarea
+                placeholder={lang==="fr"?"Laisse un commentaire (optionnel)...":lang==="ar"?"اترك تعليقاً (اختياري)...":"Leave a comment (optional)..."}
+                value={reviewComment}
+                onChange={e=>setReviewComment(e.target.value)}
+                style={{width:"100%",padding:"12px 16px",border:"1.5px solid #E2E8F0",borderRadius:12,fontSize:13,fontFamily:"inherit",resize:"vertical",minHeight:80,marginBottom:"1.5rem",outline:"none",lineHeight:1.6}}
+              />
+              <button className="btn-ghost" onClick={()=>{setHoveredStar(0);setReviewComment("");setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setPayResult(null);setWaitingSeconds(0);setStripeError("");setRequestViews(0);}}>
                 {lang==="fr"?"Passer":lang==="ar"?"تخطي":"Skip"}
               </button>
             </div>}
