@@ -502,7 +502,7 @@ function Auth({ onClose, onSuccess, lang }) {
     }
     setLoading(false);
     if (data.session) { onSuccess(); }
-    else { setSuccess("✅ Account created! You can now sign in."); setTab("login"); }
+    else { setSuccess(lang==="fr"?"✅ Compte créé ! Vérifie ta boîte email (et tes spams) et clique sur le lien de confirmation pour activer ton compte.":lang==="ar"?"✅ تم إنشاء الحساب ! تحقق من بريدك الإلكتروني (والبريد العشوائي) وانقر على رابط التأكيد لتفعيل حسابك.":"✅ Account created! Check your inbox (and spam folder) and click the confirmation link to activate your account."); setTab("login"); }
   };
 
   return (
