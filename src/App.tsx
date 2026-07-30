@@ -30,7 +30,7 @@ async function postRequest({ subject, instrLang, curriculum, level, cycle, durat
 async function getBidsForRequest(requestId) {
   const { data, error } = await supabase
     .from("bids")
-    .select("*, teacher:profiles!teacher_id(full_name, country_code)")
+    .select("*, teacher:profiles!teacher_id(full_name, country_code, teaching_bio, teaching_curricula, teaching_rate)")
     .eq("request_id", requestId).eq("status", "pending")
     .order("net_price_aed", { ascending: true });
   if (error) throw error;
@@ -1091,6 +1091,9 @@ export default function TutorApp() {
   const [requestViews,setRequestViews]=useState(0);
   const [currentTestimonial,setCurrentTestimonial]=useState(0);
   const [lastCompletedTeacher,setLastCompletedTeacher]=useState<{name:string,id:string,subject:string}|null>(null);
+  const [showStudentOnboard,setShowStudentOnboard]=useState(false);
+  const [onboardStep,setOnboardStep]=useState(1);
+  const [expandedOffer,setExpandedOffer]=useState<string|null>(null);
 
   // ✅ FIX DÉFINITIF : toujours charger avec l'ID auth réel
   const loadProfile = async (userId: string) => {
@@ -1186,6 +1189,7 @@ export default function TutorApp() {
 
       if (profile?.role === "student") {
         setPage("app");setAppTab("student-home");
+        if(!profile?.child_curriculum&&!profile?.child_name){setShowStudentOnboard(true);setOnboardStep(1);}
         const {data:completedBookings}=await supabase.from("bookings").select("gross_price_aed").eq("poster_id",realUserId).eq("status","completed");
         setStudentStats({totalLessons:completedBookings?.length||0,totalSpent:completedBookings?.reduce((s,b)=>s+b.gross_price_aed,0)||0});
         const {count:todayCount}=await supabase.from("bookings").select("*",{count:"exact",head:true}).eq("status","completed").gte("created_at",new Date(new Date().setHours(0,0,0,0)).toISOString());
@@ -1454,6 +1458,7 @@ export default function TutorApp() {
         setAppTab("student-home");
         const {data:cb}=await supabase.from("bookings").select("gross_price_aed").eq("poster_id",u.id).eq("status","completed");
         setStudentStats({totalLessons:cb?.length||0,totalSpent:cb?.reduce((s,b)=>s+b.gross_price_aed,0)||0});
+        if(!profile?.child_curriculum&&!profile?.child_name){setShowStudentOnboard(true);setOnboardStep(1);}
       }
     }
   };
@@ -1681,6 +1686,19 @@ export default function TutorApp() {
                     <div style={{fontSize:11,color:"#9CA3AF",fontWeight:600,marginBottom:12,display:"flex",alignItems:"center",gap:4}}>
                       🛡 {lang==="fr"?"Si le cours n'a pas lieu, remboursement 100%":lang==="ar"?"إذا لم تتم الحصة، استرداد 100%":"If lesson doesn't happen, 100% refund"}
                     </div>
+                    {/* Bio expandable */}
+                    {offer.teacher?.teaching_bio&&(
+                      <div style={{marginBottom:10}}>
+                        <button style={{background:"none",border:"none",color:"#5B4FE8",fontSize:12,fontWeight:700,cursor:"pointer",padding:0,textDecoration:"underline"}} onClick={()=>setExpandedOffer(expandedOffer===offer.id?null:offer.id)}>
+                          {expandedOffer===offer.id?(lang==="fr"?"▲ Masquer le profil":lang==="ar"?"▲ إخفاء الملف":"▲ Hide profile"):(lang==="fr"?"▼ Voir le profil complet":lang==="ar"?"▼ عرض الملف الكامل":"▼ View full profile")}
+                        </button>
+                        {expandedOffer===offer.id&&(
+                          <div style={{marginTop:8,padding:"12px 14px",background:"#F8FAFF",borderRadius:10,fontSize:13,color:"#1A1A2E",lineHeight:1.65,borderLeft:"3px solid #5B4FE8"}}>
+                            {offer.teacher.teaching_bio}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div style={{display:"flex",gap:10}}>
                       <button className="btn-accept" style={{flex:2}} onClick={()=>handleAcceptBid(offer)}>{lang==="fr"?"Accepter & Réserver →":lang==="ar"?"قبول وحجز ←":"Accept & Book →"}</button>
                       <button className="btn-decline" style={{flex:1}} onClick={()=>{const remaining=activeOffers.filter(o=>o.id!==offer.id);setActiveOffers(remaining);if(remaining.length===0)setStudentState("waiting");}}>{lang==="fr"?"Refuser":lang==="ar"?"رفض":"Decline"}</button>
@@ -1734,11 +1752,24 @@ export default function TutorApp() {
                   </div>
                 ))}
               </div>
-              <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem"}}>
-                <div style={{fontSize:28,marginBottom:8}}>📹</div>
-                <div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:4}}>{lang==="fr"?"Lien visioconférence":lang==="ar"?"رابط الفيديو":"Video link"}</div>
-                <div style={{fontSize:12,color:"#64748B"}}>{lang==="fr"?"Sera envoyé par email avant le cours":lang==="ar"?"سيُرسل بالبريد قبل الحصة":"Will be sent by email before the lesson"}</div>
-              </div>
+              {(()=>{
+                const jitsiRoom=activeBooking?.id?`TutorApp-${activeBooking.id.slice(-8).toUpperCase()}`:null;
+                const jitsiLink=jitsiRoom?`https://meet.jit.si/${jitsiRoom}`:null;
+                return jitsiLink?(
+                  <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem"}}>
+                    <div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Ton lien visioconférence":lang==="ar"?"رابط الفيديو الخاص بك":"Your video link"}</div>
+                    <div style={{fontSize:12,color:"#64748B",marginBottom:10,fontFamily:"monospace",wordBreak:"break-all",background:"#fff",padding:"8px 12px",borderRadius:8,border:"1px solid #A7F3D0"}}>{jitsiLink}</div>
+                    <div style={{display:"flex",gap:8}}>
+                      <a href={jitsiLink} target="_blank" rel="noopener noreferrer" style={{flex:2,background:"#0ABFA3",color:"#fff",borderRadius:12,padding:"10px",fontSize:13,fontWeight:800,cursor:"pointer",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                        🎥 {lang==="fr"?"Rejoindre le cours":lang==="ar"?"الانضمام للحصة":"Join lesson"}
+                      </a>
+                      <button style={{flex:1,background:"transparent",border:"1.5px solid #0ABFA3",color:"#0ABFA3",borderRadius:12,padding:"10px",fontSize:12,fontWeight:700,cursor:"pointer"}} onClick={()=>{navigator.clipboard?.writeText(jitsiLink);showToast("📋 "+(lang==="fr"?"Lien copié !":lang==="ar"?"تم نسخ الرابط !":"Link copied!"));}}>
+                        📋 {lang==="fr"?"Copier":lang==="ar"?"نسخ":"Copy"}
+                      </button>
+                    </div>
+                  </div>
+                ):null;
+              })()}
               <div style={{background:"#FEF3C7",border:"1.5px solid #FCD34D",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13,color:"#92400E",fontWeight:600}}>
                 ⚠️ {lang==="fr"?"Clique 'Confirmer' UNIQUEMENT après le cours.":lang==="ar"?"انقر 'تأكيد' فقط بعد انتهاء الحصة.":"Click 'Confirm' ONLY after the lesson."}
               </div>
@@ -2165,6 +2196,88 @@ export default function TutorApp() {
 
       {showAuth&&<Auth onClose={()=>setShowAuth(false)} onSuccess={handleLoginSuccess} lang={lang} />}
       {toast&&<div className="toast">{toast}</div>}
+
+      {showStudentOnboard&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
+          <div style={{background:"#fff",borderRadius:24,padding:"2rem",maxWidth:460,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            {/* Barre de progression */}
+            <div style={{display:"flex",gap:8,marginBottom:"1.75rem"}}>
+              {[1,2,3].map(s=>(
+                <div key={s} style={{flex:1,height:4,borderRadius:2,background:s<=onboardStep?"#5B4FE8":"#E2E8F0",transition:"background .3s"}}/>
+              ))}
+            </div>
+
+            {onboardStep===1&&<>
+              <div style={{fontSize:28,marginBottom:8}}>👋</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+                {lang==="fr"?"Bienvenue ! Qui apprend ?":lang==="ar"?"مرحباً! من يتعلم؟":"Welcome! Who's learning?"}
+              </div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:"1.5rem",lineHeight:1.6}}>
+                {lang==="fr"?"Ces infos pré-remplissent tes annonces automatiquement — 30 secondes, une seule fois.":lang==="ar"?"ستملأ هذه المعلومات إعلاناتك تلقائياً — 30 ثانية، مرة واحدة فقط.":"This pre-fills your requests automatically — 30 seconds, just once."}
+              </div>
+              <div className="form-group">
+                <label className="form-label">{lang==="fr"?"Prénom de l'enfant":lang==="ar"?"اسم الطفل":"Child's first name"}</label>
+                <input className="form-input" placeholder="Emma" name="child_firstname" autoComplete="given-name-off" autoCorrect="off" value={childName} onChange={e=>setChildName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&childName.trim()&&setOnboardStep(2)}/>
+              </div>
+              <button className="btn-full" onClick={()=>setOnboardStep(2)} disabled={!childName.trim()}>
+                {lang==="fr"?"Continuer →":lang==="ar"?"متابعة ←":"Continue →"}
+              </button>
+              <button className="btn-ghost" style={{width:"100%",marginTop:8,fontSize:12}} onClick={()=>setShowStudentOnboard(false)}>
+                {lang==="fr"?"Passer pour l'instant":lang==="ar"?"تخطي الآن":"Skip for now"}
+              </button>
+            </>}
+
+            {onboardStep===2&&<>
+              <div style={{fontSize:28,marginBottom:8}}>📚</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+                {lang==="fr"?`Quel est le cursus de ${childName||"l'enfant"} ?`:lang==="ar"?`ما هو منهج ${childName||"الطفل"}؟`:`What's ${childName||"the child"}'s curriculum?`}
+              </div>
+              <div className="form-group">
+                <label className="form-label">{lang==="fr"?"Cursus":lang==="ar"?"المنهج":"Curriculum"}</label>
+                <select className="form-select" value={childCurriculum} onChange={e=>{setChildCurriculum(e.target.value);setChildLevel("");}}>
+                  <option value="">{lang==="fr"?"Choisir...":lang==="ar"?"اختر...":"Choose..."}</option>
+                  {Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[lang]||v.label.en}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">{lang==="fr"?"Niveau":lang==="ar"?"المستوى":"Level"}</label>
+                <select className="form-select" value={childLevel} onChange={e=>setChildLevel(e.target.value)} disabled={!childLevels.length}>
+                  <option value="">{childLevels.length?(lang==="fr"?"Choisir...":"Choose..."):(lang==="fr"?"Sélectionne un cursus d'abord":"Select curriculum first")}</option>
+                  {childLevels.map(l=><option key={l}>{l}</option>)}
+                </select>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <button className="btn-ghost" style={{flex:1}} onClick={()=>setOnboardStep(1)}>← {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Back"}</button>
+                <button className="btn-full" style={{flex:2}} onClick={()=>setOnboardStep(3)} disabled={!childCurriculum||!childLevel}>
+                  {lang==="fr"?"Continuer →":lang==="ar"?"متابعة ←":"Continue →"}
+                </button>
+              </div>
+            </>}
+
+            {onboardStep===3&&<>
+              <div style={{fontSize:28,marginBottom:8}}>🗣</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+                {lang==="fr"?"Langue d'enseignement préférée ?":lang==="ar"?"لغة التدريس المفضلة؟":"Preferred teaching language?"}
+              </div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:"1.25rem"}}>
+                {lang==="fr"?"Les profs filtreront par langue.":lang==="ar"?"سيقوم المدرسون بالتصفية حسب اللغة.":"Tutors will filter by language."}
+              </div>
+              <div className="chips-row" style={{marginBottom:"1.5rem"}}>
+                {t.instrLangs.map(l=><div key={l} className={`chip${childLang===l?" selected":""}`} onClick={()=>setChildLang(l)}>{l}</div>)}
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <button className="btn-ghost" style={{flex:1}} onClick={()=>setOnboardStep(2)}>← {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Back"}</button>
+                <button className="btn-full" style={{flex:2}} onClick={async()=>{
+                  await saveChildProfile();
+                  setShowStudentOnboard(false);
+                }}>
+                  {lang==="fr"?"C'est parti 🚀":lang==="ar"?"انطلق 🚀":"Let's go 🚀"}
+                </button>
+              </div>
+            </>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
