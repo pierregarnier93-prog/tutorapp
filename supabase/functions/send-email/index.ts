@@ -351,6 +351,67 @@ serve(async (req) => {
     };
   }
 
+  if (body.type === "recurring_setup") {
+    const lang = body.lang || "en";
+    const isWeekly = body.freq === "weekly";
+    let teacherSubject, teacherH2, teacherP1, teacherNote;
+    let studentSubject, studentH2, studentP1;
+    if (lang === "fr") {
+      teacherSubject = `🔄 ${body.studentName} veut des cours ${isWeekly?"hebdomadaires":"toutes les 2 semaines"} — ${body.subject}`;
+      teacherH2 = `Super nouvelle ! Cours réguliers demandés 🔄`;
+      teacherP1 = `<strong>${body.studentName}</strong> souhaite réserver des cours <strong>${isWeekly?"hebdomadaires":"toutes les 2 semaines"}</strong> de <strong>${body.subject}</strong> avec vous.`;
+      teacherNote = "Connectez-vous sur TutorApp pour confirmer les prochains créneaux.";
+      studentSubject = `✅ Cours ${isWeekly?"hebdomadaires":"bimensuels"} activés — ${body.subject} avec ${body.teacherName}`;
+      studentH2 = `Cours réguliers activés ! 🔄`;
+      studentP1 = `Vos cours <strong>${isWeekly?"hebdomadaires":"toutes les 2 semaines"}</strong> de <strong>${body.subject}</strong> avec <strong>${body.teacherName}</strong> sont configurés. Vous recevrez un rappel avant chaque séance.`;
+    } else if (lang === "ar") {
+      teacherSubject = `🔄 ${body.studentName} يريد دروساً ${isWeekly?"أسبوعية":"كل أسبوعين"} — ${body.subject}`;
+      teacherH2 = `خبر رائع! طلب دروس منتظمة 🔄`;
+      teacherP1 = `<strong>${body.studentName}</strong> يريد حجز دروس <strong>${isWeekly?"أسبوعية":"كل أسبوعين"}</strong> في <strong>${body.subject}</strong> معك.`;
+      teacherNote = "سجّل الدخول إلى TutorApp لتأكيد المواعيد القادمة.";
+      studentSubject = `✅ دروس ${isWeekly?"أسبوعية":"نصف شهرية"} مفعّلة — ${body.subject} مع ${body.teacherName}`;
+      studentH2 = `دروس منتظمة مفعّلة ! 🔄`;
+      studentP1 = `دروسك <strong>${isWeekly?"الأسبوعية":"كل أسبوعين"}</strong> في <strong>${body.subject}</strong> مع <strong>${body.teacherName}</strong> جاهزة. ستتلقى تذكيراً قبل كل حصة.`;
+    } else {
+      teacherSubject = `🔄 ${body.studentName} wants ${isWeekly?"weekly":"biweekly"} lessons — ${body.subject}`;
+      teacherH2 = `Great news! Regular lessons requested 🔄`;
+      teacherP1 = `<strong>${body.studentName}</strong> wants to book <strong>${isWeekly?"weekly":"biweekly"}</strong> <strong>${body.subject}</strong> lessons with you.`;
+      teacherNote = "Log in to TutorApp to confirm the upcoming slots.";
+      studentSubject = `✅ ${isWeekly?"Weekly":"Biweekly"} lessons activated — ${body.subject} with ${body.teacherName}`;
+      studentH2 = `Regular lessons activated! 🔄`;
+      studentP1 = `Your <strong>${isWeekly?"weekly":"biweekly"}</strong> <strong>${body.subject}</strong> lessons with <strong>${body.teacherName}</strong> are set up. You'll receive a reminder before each session.`;
+    }
+    const recipients = [];
+    if (body.teacherEmail) {
+      recipients.push(fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "TutorApp <noreply@tutorapp.online>",
+          to: [body.teacherEmail],
+          subject: teacherSubject,
+          html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto"><h2 style="color:#5B4FE8">${teacherH2}</h2><p>${teacherP1}</p><p style="color:#6B7280;font-size:13px">${teacherNote}</p><br/><a href="https://www.tutorapp.online" style="background:#5B4FE8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">${lang==="fr"?"Voir mon dashboard →":lang==="ar"?"عرض لوحة التحكم ←":"View my dashboard →"}</a><br/><br/><p style="color:#6B7280;font-size:13px">TutorApp · tutorapp.online</p></div>`,
+        }),
+      }));
+    }
+    if (body.studentEmail) {
+      recipients.push(fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "TutorApp <noreply@tutorapp.online>",
+          to: [body.studentEmail],
+          subject: studentSubject,
+          html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto"><h2 style="color:#0ABFA3">${studentH2}</h2><p>${studentP1}</p><br/><a href="https://www.tutorapp.online" style="background:#5B4FE8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">${lang==="fr"?"Voir ma réservation →":lang==="ar"?"عرض حجزي ←":"View my booking →"}</a><br/><br/><p style="color:#6B7280;font-size:13px">TutorApp · tutorapp.online</p></div>`,
+        }),
+      }));
+    }
+    await Promise.all(recipients);
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (!emailData) {
     return new Response(JSON.stringify({ error: "Unknown email type" }), {
       status: 400,

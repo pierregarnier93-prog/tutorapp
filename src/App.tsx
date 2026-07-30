@@ -1121,7 +1121,7 @@ export default function TutorApp() {
   const [selectedRate,setSelectedRate]=useState(150);
   const [teacherStats,setTeacherStats]=useState({revenue:0,courses:0,rating:"—"});
   const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:""});
-  const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",cguAccepted:false,childProtectionAccepted:false});
+  const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",whatsapp:"",cguAccepted:false,childProtectionAccepted:false});
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [profileLoading,setProfileLoading]=useState(true);
@@ -1153,6 +1153,8 @@ export default function TutorApp() {
   const [showStudentOnboard,setShowStudentOnboard]=useState(false);
   const [showCancelConfirm,setShowCancelConfirm]=useState(false);
   const [cancellingBooking,setCancellingBooking]=useState(false);
+  const [showRecurringModal,setShowRecurringModal]=useState(false);
+  const [recurringSetup,setRecurringSetup]=useState<"weekly"|"biweekly"|null>(null);
   const [onboardStep,setOnboardStep]=useState(1);
   const [expandedOffer,setExpandedOffer]=useState<string|null>(null);
   const [reviewComment,setReviewComment]=useState("");
@@ -1477,7 +1479,7 @@ export default function TutorApp() {
   const loadRealTeachers=async()=>{
     setTeachersLoading(true);
     const {data}=await supabase.from("profiles")
-      .select("id,full_name,teaching_bio,teaching_subjects,teaching_langs,teaching_curricula,teaching_rate,teaching_cycles,country_code,verified")
+      .select("id,full_name,teaching_bio,teaching_subjects,teaching_langs,teaching_curricula,teaching_rate,teaching_cycles,country_code,verified,teaching_whatsapp")
       .eq("role","teacher").eq("verified",true).order("created_at",{ascending:false});
     const teachers=data||[];
     // fetch avg ratings
@@ -1553,8 +1555,18 @@ export default function TutorApp() {
     }catch(e){showToast("❌ "+e.message);}
   };
 
+  const handleSetupRecurring=async(freq:"weekly"|"biweekly")=>{
+    setRecurringSetup(freq);
+    setShowRecurringModal(false);
+    const freqLabel=freq==="weekly"?(lang==="fr"?"hebdomadaires":lang==="ar"?"أسبوعية":"weekly"):(lang==="fr"?"toutes les 2 semaines":lang==="ar"?"كل أسبوعين":"every 2 weeks");
+    showToast("🔄 "+(lang==="fr"?`Cours ${freqLabel} activés !`:lang==="ar"?`تم تفعيل الدروس ${freqLabel} !`:`${freq==="weekly"?"Weekly":"Biweekly"} lessons activated!`));
+    const body={type:"recurring_setup",freq,teacherEmail:activeBooking?.teacher?.email,teacherName:activeBooking?.teacher?.full_name,studentEmail:user?.email,studentName:userProfile?.full_name||childName,subject:activeRequest?.subject,lang};
+    fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).catch(()=>{});
+  };
+
   const handlePaymentSuccess=()=>{
     setStudentState("booked");
+    setShowRecurringModal(true);
     showToast("🎉 "+(lang==="fr"?"Réservation confirmée !":lang==="ar"?"تم تأكيد الحجز !":"Booking confirmed!"));
     const jitsiRoom=activeBooking?.id?`TutorApp-${activeBooking.id.slice(-8).toUpperCase()}`:null;
     const jitsiLink=jitsiRoom?`https://meet.jit.si/${jitsiRoom}`:null;
@@ -1587,6 +1599,7 @@ export default function TutorApp() {
         teaching_cycles:teacherForm.cycles,teaching_subjects:teacherForm.subjects,
         teaching_langs:teacherForm.instrLangs,teaching_rate:teacherForm.rate,
         teaching_bio:teacherForm.bio||"",teaching_curricula:teacherForm.curricula,
+        teaching_whatsapp:teacherForm.whatsapp||null,
       }).eq("id",user.id);
 
       try{
@@ -1749,9 +1762,16 @@ export default function TutorApp() {
                       <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{tc.teaching_rate} AED/h</div>
                       <div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>{tc.reviews?.length||0} {lang==="fr"?"avis":lang==="ar"?"تقييم":"reviews"}</div>
                     </div>
-                    <button className="submit-btn" style={{marginTop:0,padding:"10px"}} onClick={e=>{e.stopPropagation();openTeacherProfile(tc);}}>
-                      {lang==="fr"?"Voir le profil →":lang==="ar"?"عرض الملف ←":"View profile →"}
-                    </button>
+                    <div style={{display:"flex",gap:8}}>
+                      <button className="submit-btn" style={{marginTop:0,padding:"10px",flex:1}} onClick={e=>{e.stopPropagation();openTeacherProfile(tc);}}>
+                        {lang==="fr"?"Voir le profil →":lang==="ar"?"عرض الملف ←":"View profile →"}
+                      </button>
+                      {tc.teaching_whatsapp&&(
+                        <a href={`https://wa.me/${tc.teaching_whatsapp.replace(/\+/,"")}?text=${encodeURIComponent(lang==="fr"?`Bonjour, je vous contacte via TutorApp pour des cours de ${(tc.teaching_subjects||[])[0]||"cours"}.`:lang==="ar"?`مرحباً، أتواصل معك عبر TutorApp لدروس ${(tc.teaching_subjects||[])[0]||""}.`:`Hi, I'm contacting you via TutorApp for ${(tc.teaching_subjects||[])[0]||"tutoring"} lessons.`)}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center",background:"#25D366",color:"#fff",borderRadius:12,padding:"10px 14px",fontSize:18,textDecoration:"none",flexShrink:0}}>
+                          💬
+                        </a>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -1816,13 +1836,20 @@ export default function TutorApp() {
               </div>
             </div>
             {/* CTA */}
-            <button className="btn-full" style={{marginBottom:"2rem",fontSize:16}} onClick={()=>{
-              if(!user){setShowAuth(true);return;}
-              const firstSubject=tc.teaching_subjects?.[0]||"";
-              setForm(f=>({...f,subject:firstSubject}));
-              setPage("app");setAppTab("student-home");
-              showToast(lang==="fr"?`✅ Annonce pré-remplie pour ${tc.full_name}`:lang==="ar"?`✅ تم تعبئة الطلب لـ ${tc.full_name}`:`✅ Request pre-filled for ${tc.full_name}`);
-            }}>📋 {lang==="fr"?"Poster une annonce (ce prof pourra répondre)":lang==="ar"?"نشر إعلان (هذا المدرس سيتمكن من الرد)":"Post a request (this tutor can respond)"}</button>
+            <div style={{display:"flex",gap:10,marginBottom:"2rem",flexWrap:"wrap"}}>
+              <button className="btn-full" style={{flex:2,minWidth:200,fontSize:15,marginBottom:0}} onClick={()=>{
+                if(!user){setShowAuth(true);return;}
+                const firstSubject=tc.teaching_subjects?.[0]||"";
+                setForm(f=>({...f,subject:firstSubject}));
+                setPage("app");setAppTab("student-home");
+                showToast(lang==="fr"?`✅ Annonce pré-remplie pour ${tc.full_name}`:lang==="ar"?`✅ تم تعبئة الطلب لـ ${tc.full_name}`:`✅ Request pre-filled for ${tc.full_name}`);
+              }}>📋 {lang==="fr"?"Poster une annonce":lang==="ar"?"نشر إعلان":"Post a request"}</button>
+              {tc.teaching_whatsapp&&(
+                <a href={`https://wa.me/${tc.teaching_whatsapp.replace(/\+/,"")}?text=${encodeURIComponent(lang==="fr"?`Bonjour ${tc.full_name}, je vous contacte via TutorApp pour des cours de ${(tc.teaching_subjects||[])[0]||"cours"}.`:lang==="ar"?`مرحباً ${tc.full_name}، أتواصل معك عبر TutorApp لدروس ${(tc.teaching_subjects||[])[0]||""}.`:`Hi ${tc.full_name}, I found you on TutorApp and would like to book ${(tc.teaching_subjects||[])[0]||"tutoring"} lessons.`)}`} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"#25D366",color:"#fff",borderRadius:14,padding:"12px 20px",fontSize:14,fontWeight:800,textDecoration:"none",flex:1,minWidth:160}}>
+                  💬 {lang==="fr"?"WhatsApp":lang==="ar"?"واتساب":"WhatsApp"}
+                </a>
+              )}
+            </div>
             {/* Reviews */}
             {teacherProfileReviews.length>0&&(
               <div>
@@ -2145,10 +2172,19 @@ export default function TutorApp() {
                       <button style={{flex:1,background:"transparent",border:"1.5px solid #0ABFA3",color:"#0ABFA3",borderRadius:12,padding:"10px",fontSize:12,fontWeight:700,cursor:"pointer"}} onClick={()=>{navigator.clipboard?.writeText(jitsiLink);showToast("📋 "+(lang==="fr"?"Lien copié !":lang==="ar"?"تم نسخ الرابط !":"Link copied!"));}}>
                         📋 {lang==="fr"?"Copier":lang==="ar"?"نسخ":"Copy"}
                       </button>
+                      <a href={`https://wa.me/?text=${encodeURIComponent((lang==="fr"?"Lien de ton cours :":lang==="ar"?"رابط حصتك:":`Your lesson link:`)+" "+jitsiLink)}`} target="_blank" rel="noopener noreferrer" style={{flex:1,background:"#25D366",color:"#fff",borderRadius:12,padding:"10px",fontSize:18,textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        💬
+                      </a>
                     </div>
                   </div>
                 ):null;
               })()}
+              {recurringSetup&&(
+                <div style={{background:"#EEF2FF",border:"1.5px solid #C7D2FE",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",textAlign:"start"}}>
+                  <div style={{fontWeight:800,fontSize:14,color:"#4338CA",marginBottom:4}}>🔄 {lang==="fr"?`Cours ${recurringSetup==="weekly"?"hebdomadaires":"bimensuels"} activés !`:lang==="ar"?`دروس ${recurringSetup==="weekly"?"أسبوعية":"نصف أسبوعية"} مفعّلة !`:`${recurringSetup==="weekly"?"Weekly":"Biweekly"} lessons activated!`}</div>
+                  <div style={{fontSize:12,color:"#6366F1",lineHeight:1.5}}>{lang==="fr"?`Tu recevras un rappel avant chaque prochain cours avec ${activeBooking?.teacher?.full_name}.`:lang==="ar"?`ستتلقى تذكيراً قبل كل حصة قادمة مع ${activeBooking?.teacher?.full_name}.`:`You'll get a reminder before each upcoming lesson with ${activeBooking?.teacher?.full_name}.`}</div>
+                </div>
+              )}
               <div style={{background:"#FEF3C7",border:"1.5px solid #FCD34D",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13,color:"#92400E",fontWeight:600}}>
                 ⚠️ {lang==="fr"?"Clique 'Confirmer' UNIQUEMENT après le cours.":lang==="ar"?"انقر 'تأكيد' فقط بعد انتهاء الحصة.":"Click 'Confirm' ONLY after the lesson."}
               </div>
@@ -2191,13 +2227,39 @@ export default function TutorApp() {
                         if(activeBooking?.teacher?.email){
                           fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"booking_cancelled",teacherEmail:activeBooking.teacher.email,teacherName:activeBooking.teacher.full_name,studentName:userProfile?.full_name,subject:activeRequest?.subject,lang})}).catch(()=>{});
                         }
-                        setShowCancelConfirm(false);
+                        setShowCancelConfirm(false);setRecurringSetup(null);setShowRecurringModal(false);
                         setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setWaitingSeconds(0);setRequestViews(0);
                         showToast(lang==="fr"?"Réservation annulée.":lang==="ar"?"تم إلغاء الحجز.":"Booking cancelled.");
                       }catch(e){showToast("❌ "+(lang==="fr"?"Erreur lors de l'annulation":"Cancellation error"));}
                       finally{setCancellingBooking(false);}
                     }}>
                       {cancellingBooking?"⏳ "+(lang==="fr"?"Annulation...":"Cancelling..."):(lang==="fr"?"Confirmer l'annulation":lang==="ar"?"تأكيد الإلغاء":"Confirm cancellation")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL COURS RÉCURRENTS */}
+            {showRecurringModal&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.7)",zIndex:2001,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
+                <div style={{background:"#fff",borderRadius:24,padding:"2rem 1.5rem",maxWidth:400,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.25)",textAlign:"center"}}>
+                  <div style={{fontSize:48,marginBottom:12}}>🔄</div>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:900,marginBottom:8,color:"#1A1A2E"}}>
+                    {lang==="fr"?"Cours réguliers ?":lang==="ar"?"دروس منتظمة؟":"Regular lessons?"}
+                  </div>
+                  <div style={{fontSize:13,color:"#64748B",marginBottom:"1.75rem",lineHeight:1.65}}>
+                    {lang==="fr"?`Continue avec ${activeBooking?.teacher?.full_name} — on te rappelle avant chaque séance.`:lang==="ar"?`استمر مع ${activeBooking?.teacher?.full_name} — سنذكّرك قبل كل حصة.`:`Keep learning with ${activeBooking?.teacher?.full_name} — we'll remind you before each session.`}
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                    <button onClick={()=>handleSetupRecurring("weekly")} style={{background:"linear-gradient(135deg,#5B4FE8,#7C73F0)",color:"#fff",border:"none",borderRadius:14,padding:"14px 20px",fontSize:15,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                      📅 {lang==="fr"?"Toutes les semaines":lang==="ar"?"كل أسبوع":"Every week"}
+                    </button>
+                    <button onClick={()=>handleSetupRecurring("biweekly")} style={{background:"#F1F5F9",color:"#1A1A2E",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"14px 20px",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                      📆 {lang==="fr"?"Toutes les 2 semaines":lang==="ar"?"كل أسبوعين":"Every 2 weeks"}
+                    </button>
+                    <button onClick={()=>setShowRecurringModal(false)} style={{background:"transparent",color:"#94A3B8",border:"none",borderRadius:14,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                      {lang==="fr"?"Non merci":lang==="ar"?"لا شكراً":"No thanks"}
                     </button>
                   </div>
                 </div>
@@ -2290,6 +2352,11 @@ export default function TutorApp() {
               <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>{t.teacher.rateHint} → {fmtPrice(Math.round(teacherForm.rate*(1-TEACHER_FEE)),country)}/h</div>
             </div>
             <div className="form-group"><label className="form-label">{t.onboard.bio}</label><textarea className="form-textarea" placeholder={t.onboard.bioPh} value={teacherForm.bio} onChange={e=>setTeacherForm({...teacherForm,bio:e.target.value})} /></div>
+            <div className="form-group">
+              <label className="form-label">💬 WhatsApp {lang==="fr"?"(optionnel, visible sur votre profil)":lang==="ar"?"(اختياري، مرئي في ملفك)":"(optional, shown on your profile)"}</label>
+              <input className="form-input" placeholder="+971 50 123 4567" value={teacherForm.whatsapp} onChange={e=>setTeacherForm({...teacherForm,whatsapp:e.target.value.replace(/\s/g,"")})} />
+              <div style={{fontSize:11,color:"#6B7280",marginTop:4}}>{lang==="fr"?"Format international : +971XXXXXXXXX":lang==="ar"?"الصيغة الدولية: +971XXXXXXXXX":"International format: +971XXXXXXXXX"}</div>
+            </div>
 
             <div className="section-divider">🪪 {t.onboard.idDoc}</div>
             <div style={{fontSize:12,color:"#6B7280",marginBottom:12,fontWeight:600}}>ℹ️ {t.onboard.idDocHint}</div>
