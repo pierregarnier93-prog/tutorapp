@@ -18,7 +18,6 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   const url = new URL(e.request.url);
-  // Don't cache Supabase or Stripe requests
   if (url.hostname.includes("supabase") || url.hostname.includes("stripe")) return;
 
   e.respondWith(
@@ -29,5 +28,33 @@ self.addEventListener("fetch", (e) => {
         return res;
       })
       .catch(() => caches.match(e.request))
+  );
+});
+
+self.addEventListener("push", (e) => {
+  if (!e.data) return;
+  let data = {};
+  try { data = e.data.json(); } catch { data = { title: "TutorApp", body: e.data.text() }; }
+
+  e.waitUntil(
+    self.registration.showNotification(data.title || "TutorApp", {
+      body: data.body || "",
+      icon: "/favicon.svg",
+      badge: "/favicon.svg",
+      data: { url: data.url || "/" },
+      vibrate: [200, 100, 200],
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = e.notification.data?.url || "/";
+  e.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
+      const w = cs.find((c) => c.url.includes(self.location.origin));
+      if (w) { w.focus(); w.navigate(url); }
+      else clients.openWindow(url);
+    })
   );
 });

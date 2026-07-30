@@ -30,7 +30,7 @@ async function postRequest({ subject, instrLang, curriculum, level, cycle, durat
 async function getBidsForRequest(requestId) {
   const { data, error } = await supabase
     .from("bids")
-    .select("*, teacher:profiles!teacher_id(full_name, country_code, teaching_bio, teaching_curricula, teaching_rate)")
+    .select("*, teacher:profiles!teacher_id(full_name, country_code, teaching_bio, teaching_curricula, teaching_rate, avatar_url)")
     .eq("request_id", requestId).eq("status", "pending")
     .order("net_price_aed", { ascending: true });
   if (error) throw error;
@@ -1124,7 +1124,8 @@ export default function TutorApp() {
   const [selectedRate,setSelectedRate]=useState(150);
   const [teacherStats,setTeacherStats]=useState({revenue:0,courses:0,rating:"—"});
   const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:""});
-  const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",whatsapp:"",cguAccepted:false,childProtectionAccepted:false});
+  const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,photoFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",whatsapp:"",cguAccepted:false,childProtectionAccepted:false});
+  const [pushSubscribed,setPushSubscribed]=useState(false);
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [profileLoading,setProfileLoading]=useState(true);
@@ -1499,7 +1500,7 @@ export default function TutorApp() {
   const loadRealTeachers=async()=>{
     setTeachersLoading(true);
     const {data}=await supabase.from("profiles")
-      .select("id,full_name,teaching_bio,teaching_subjects,teaching_langs,teaching_curricula,teaching_rate,teaching_cycles,country_code,verified,teaching_whatsapp")
+      .select("id,full_name,teaching_bio,teaching_subjects,teaching_langs,teaching_curricula,teaching_rate,teaching_cycles,country_code,verified,teaching_whatsapp,avatar_url")
       .eq("role","teacher").eq("verified",true).order("created_at",{ascending:false});
     const teachers=data||[];
     // fetch avg ratings
@@ -1577,6 +1578,7 @@ export default function TutorApp() {
     try{
       const booking=await acceptBid(bid.id,activeRequest.id,slot);
       setSelectedOffer(bid);setActiveBooking(booking);setStripeError("");setStudentState("payment");
+      sendPushTo(bid.teacher_id,lang==="fr"?"🎉 Offre acceptée !":lang==="ar"?"🎉 تم قبول عرضك !":"🎉 Offer accepted!",lang==="fr"?`${userProfile?.full_name||"Un élève"} a accepté ton offre — procède au paiement.`:lang==="ar"?`${userProfile?.full_name||"طالب"} قبل عرضك — في انتظار الدفع.`:`${userProfile?.full_name||"A student"} accepted your offer — awaiting payment.`);
     }catch(e){showToast("❌ "+e.message);}
   };
 
@@ -1588,11 +1590,39 @@ export default function TutorApp() {
   const sendChatMessage=async()=>{
     if(!chatInput.trim()||!activeBooking?.id) return;
     setSendingMsg(true);
-    const msg={booking_id:activeBooking.id,sender_id:user?.id,sender_name:userProfile?.full_name||"Vous",content:chatInput.trim()};
+    const content=chatInput.trim();
+    const msg={booking_id:activeBooking.id,sender_id:user?.id,sender_name:userProfile?.full_name||"Vous",content};
     const {data}=await supabase.from("messages").insert(msg).select().single();
     if(data) setChatMessages(prev=>[...prev,data]);
     setChatInput("");
     setSendingMsg(false);
+    const otherId=user?.id===activeBooking?.poster_id?activeBooking?.teacher_id:activeBooking?.poster_id;
+    if(otherId) sendPushTo(otherId,"💬 "+(lang==="fr"?"Nouveau message":lang==="ar"?"رسالة جديدة":"New message"),content);
+  };
+
+  const sendPushTo=(userId:string,title:string,body:string)=>{
+    fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-push",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({userId,title,body}),
+    }).catch(()=>{});
+  };
+
+  const subscribeToPush=async()=>{
+    if(!("Notification" in window)||!("serviceWorker" in navigator)) return;
+    try{
+      const permission=await Notification.requestPermission();
+      if(permission!=="granted") return;
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:"BLeV-YqFg2WyZ0fid2HXOYHHkaFyhtp8jrff2ax6SergpAZEBXDKs8ZdzCLNxkjRZg32TD_BFJD5yEYcxKRu7JU",
+      });
+      const {data:{user:u}}=await supabase.auth.getUser();
+      if(u){
+        await supabase.from("push_subscriptions").upsert({user_id:u.id,subscription:JSON.stringify(sub)},{onConflict:"user_id"});
+        setPushSubscribed(true);
+      }
+    }catch(e){console.error("Push subscribe:",e);}
   };
 
   const handleSetupRecurring=async(freq:"weekly"|"biweekly")=>{
@@ -1632,6 +1662,16 @@ export default function TutorApp() {
       showToast("⚠️ Please accept the Terms of Service and Child Protection Charter");return;
     }
     if(user){
+      let avatarUrl:string|null=null;
+      if(teacherForm.photoFile){
+        const ext=(teacherForm.photoFile as File).name.split(".").pop();
+        const path=`${user.id}/avatar.${ext}`;
+        const {error:upErr}=await supabase.storage.from("avatars").upload(path,teacherForm.photoFile as File,{upsert:true,contentType:(teacherForm.photoFile as File).type});
+        if(!upErr){
+          const {data:pub}=supabase.storage.from("avatars").getPublicUrl(path);
+          avatarUrl=pub.publicUrl;
+        }
+      }
       await supabase.from("profiles").update({
         full_name:teacherForm.name,email:teacherForm.email,withdrawal_frequency:teacherForm.withdrawal,
         bank_name:teacherForm.bankName,bank_iban:teacherForm.bankIban,bank_holder:teacherForm.bankHolder,
@@ -1640,6 +1680,7 @@ export default function TutorApp() {
         teaching_langs:teacherForm.instrLangs,teaching_rate:teacherForm.rate,
         teaching_bio:teacherForm.bio||"",teaching_curricula:teacherForm.curricula,
         teaching_whatsapp:teacherForm.whatsapp||null,
+        ...(avatarUrl?{avatar_url:avatarUrl}:{}),
       }).eq("id",user.id);
 
       try{
@@ -1664,6 +1705,7 @@ export default function TutorApp() {
 
   const handleLoginSuccess=async()=>{
     setShowAuth(false);
+    subscribeToPush();
     const {data:{user:u}}=await supabase.auth.getUser();
     if(u){
       setUser(u);
@@ -1786,7 +1828,9 @@ export default function TutorApp() {
                 return(
                   <div className="teacher-card" key={tc.id} style={{cursor:"pointer"}} onClick={()=>openTeacherProfile(tc)}>
                     <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}>
-                      <div className="tc-avatar" style={{background:bgColors[ci],color:fgColors[ci]}}>{initials}</div>
+                      {tc.avatar_url
+                        ?<img src={tc.avatar_url} alt={tc.full_name} className="tc-avatar" style={{objectFit:"cover"}} />
+                        :<div className="tc-avatar" style={{background:bgColors[ci],color:fgColors[ci]}}>{initials}</div>}
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontWeight:800,fontSize:15,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tc.full_name}</div>
                         <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ {lang==="fr"?"Vérifié":lang==="ar"?"موثّق":"Verified"}</div>
@@ -1832,7 +1876,9 @@ export default function TutorApp() {
             <button className="btn-ghost" style={{marginBottom:"1.5rem"}} onClick={()=>setPage("teachers")}>← {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Back"}</button>
             {/* Header */}
             <div style={{background:"linear-gradient(135deg,#5B4FE8 0%,#3D34C4 100%)",borderRadius:24,padding:"2rem",marginBottom:"1.5rem",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
-              <div style={{width:72,height:72,borderRadius:"50%",background:bgColors[ci],color:fgColors[ci],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:24,flexShrink:0}}>{initials}</div>
+              {tc.avatar_url
+                ?<img src={tc.avatar_url} alt={tc.full_name} style={{width:72,height:72,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"3px solid rgba(255,255,255,.3)"}} />
+                :<div style={{width:72,height:72,borderRadius:"50%",background:bgColors[ci],color:fgColors[ci],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:24,flexShrink:0}}>{initials}</div>}
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#fff",marginBottom:4}}>{tc.full_name}</div>
                 <div style={{fontSize:12,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:8}}>✓ {lang==="fr"?"Enseignant vérifié":lang==="ar"?"مدرس موثّق":"Verified tutor"}</div>
@@ -2097,9 +2143,11 @@ export default function TutorApp() {
                   <div key={offer.id||i} className="offer-card">
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
                       <div style={{display:"flex",alignItems:"center",gap:12}}>
-                        <div style={{width:46,height:46,borderRadius:"50%",background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:16,color:"#5B4FE8",flexShrink:0}}>
-                          {(offer.teacher?.full_name||"T").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2)}
-                        </div>
+                        {offer.teacher?.avatar_url
+                          ?<img src={offer.teacher.avatar_url} alt={offer.teacher?.full_name} style={{width:46,height:46,borderRadius:"50%",objectFit:"cover",flexShrink:0}} />
+                          :<div style={{width:46,height:46,borderRadius:"50%",background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:16,color:"#5B4FE8",flexShrink:0}}>
+                            {(offer.teacher?.full_name||"T").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2)}
+                          </div>}
                         <div>
                           <div style={{fontWeight:800,fontSize:15}}>{offer.teacher?.full_name||"Tutor"}</div>
                           <div style={{display:"flex",gap:6,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
@@ -2462,6 +2510,16 @@ export default function TutorApp() {
               <div style={{fontSize:11,color:"#6B7280",marginTop:4}}>{lang==="fr"?"Format international : +971XXXXXXXXX":lang==="ar"?"الصيغة الدولية: +971XXXXXXXXX":"International format: +971XXXXXXXXX"}</div>
             </div>
 
+            <div className="form-group">
+              <label className="form-label">📸 {lang==="fr"?"Photo de profil (optionnel)":lang==="ar"?"صورة الملف الشخصي (اختياري)":"Profile photo (optional)"}</label>
+              <div className="upload-zone" onClick={()=>document.getElementById('photo-upload').click()} style={{textAlign:"center"}}>
+                {teacherForm.photoFile
+                  ?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{(teacherForm.photoFile as File).name}</div></>
+                  :<><div style={{fontSize:28}}>👤</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{lang==="fr"?"Clique pour ajouter ta photo":lang==="ar"?"انقر لإضافة صورتك":"Click to add your photo"}</div></>}
+              </div>
+              <input id="photo-upload" type="file" accept="image/*" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,photoFile:e.target.files?.[0]||null})} />
+            </div>
+
             <div className="section-divider">🪪 {t.onboard.idDoc}</div>
             <div style={{fontSize:12,color:"#6B7280",marginBottom:12,fontWeight:600}}>ℹ️ {t.onboard.idDocHint}</div>
             <div className="form-row">
@@ -2796,6 +2854,7 @@ export default function TutorApp() {
                 setSubmittingBid(true);
                 try{
                   await submitBid({requestId:selectedRequestForBid.id,netPriceAed:selectedRate,message:bidForm.message,proposedSlots:bidSlots});
+                  if(selectedRequestForBid?.poster_id) sendPushTo(selectedRequestForBid.poster_id,lang==="fr"?"📩 Nouvelle offre reçue !":lang==="ar"?"📩 عرض جديد !":"📩 New offer received!",lang==="fr"?`${userProfile?.full_name||"Un prof"} a répondu à ta demande`:lang==="ar"?`${userProfile?.full_name||"مدرس"} ردّ على طلبك`:`${userProfile?.full_name||"A tutor"} replied to your request`);
                   const {data:bids}=await supabase.from("bids").select("*, request:requests(subject,level,duration_min,created_at)").eq("teacher_id",user.id).eq("status","pending");
                   setTeacherPendingOffers(bids||[]);setTeacherState("offer_sent");
                   setSelectedRequestForBid(null);setBidForm({message:""});setBidSlots(["",""]);setAppTab("teacher-home");
