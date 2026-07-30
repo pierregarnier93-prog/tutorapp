@@ -1151,6 +1151,8 @@ export default function TutorApp() {
   const [currentTestimonial,setCurrentTestimonial]=useState(0);
   const [lastCompletedTeacher,setLastCompletedTeacher]=useState<{name:string,id:string,subject:string}|null>(null);
   const [showStudentOnboard,setShowStudentOnboard]=useState(false);
+  const [showCancelConfirm,setShowCancelConfirm]=useState(false);
+  const [cancellingBooking,setCancellingBooking]=useState(false);
   const [onboardStep,setOnboardStep]=useState(1);
   const [expandedOffer,setExpandedOffer]=useState<string|null>(null);
 
@@ -1765,6 +1767,17 @@ export default function TutorApp() {
                 </div>
               </div>
               <div className="banner banner-teal">💳 {lang==="fr"?"Tu paies UNIQUEMENT après le cours — 6% de frais de service":lang==="ar"?"تدفع فقط بعد الحصة — رسوم خدمة 6٪":"Pay ONLY after the lesson — 6% service fee"}</div>
+              <div style={{textAlign:"end",marginBottom:8}}>
+                <button className="btn-ghost" style={{fontSize:12,color:"#DC2626",borderColor:"#FCA5A5"}} onClick={async()=>{
+                  if(!confirm(lang==="fr"?"Annuler l'annonce et toutes les offres reçues ?":lang==="ar"?"إلغاء الإعلان وجميع العروض المستلمة؟":"Cancel request and all received offers?")) return;
+                  if(activeRequest?.id){
+                    await supabase.from("requests").update({status:"cancelled"}).eq("id",activeRequest.id);
+                    await supabase.from("bids").update({status:"declined"}).eq("request_id",activeRequest.id).eq("status","pending");
+                  }
+                  setStudentState("idle");setActiveRequest(null);setActiveOffers([]);setWaitingSeconds(0);setRequestViews(0);
+                  showToast(lang==="fr"?"Annonce annulée.":lang==="ar"?"تم إلغاء الإعلان.":"Request cancelled.");
+                }}>🗑 {lang==="fr"?"Annuler l'annonce":lang==="ar"?"إلغاء الإعلان":"Cancel request"}</button>
+              </div>
               {activeOffers.map((offer,i)=>{
                 const offerAgeMin=Math.floor((Date.now()-new Date(offer.created_at).getTime())/60000);
                 const isFast=offerAgeMin<5;
@@ -1899,7 +1912,47 @@ export default function TutorApp() {
                 }catch(e){showToast("❌ "+e.message);}
               }}>✅ {lang==="fr"?"Confirmer — le cours a eu lieu":lang==="ar"?"تأكيد — انتهت الحصة":"Confirm — lesson completed"}</button>
               <button className="btn-ghost" style={{width:"100%"}} onClick={()=>showToast("📧 hello@tutorapp.online")}>⚠️ {lang==="fr"?"Signaler un problème":lang==="ar"?"الإبلاغ عن مشكلة":"Report an issue"}</button>
+              <button className="btn-ghost" style={{width:"100%",marginTop:8,color:"#DC2626",borderColor:"#FCA5A5",fontSize:12}} onClick={()=>setShowCancelConfirm(true)}>
+                🗑 {lang==="fr"?"Annuler la réservation":lang==="ar"?"إلغاء الحجز":"Cancel booking"}
+              </button>
             </div>}
+
+            {/* MODAL CONFIRMATION ANNULATION */}
+            {showCancelConfirm&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
+                <div style={{background:"#fff",borderRadius:20,padding:"2rem",maxWidth:400,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)",textAlign:"center"}}>
+                  <div style={{fontSize:40,marginBottom:12}}>⚠️</div>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:8,color:"#1A1A2E"}}>
+                    {lang==="fr"?"Annuler la réservation ?":lang==="ar"?"إلغاء الحجز؟":"Cancel the booking?"}
+                  </div>
+                  <div style={{fontSize:13,color:"#64748B",marginBottom:"1.5rem",lineHeight:1.6}}>
+                    {lang==="fr"?"L'autorisation bancaire sera annulée. Le prof sera notifié. Cette action est irréversible.":lang==="ar"?"سيتم إلغاء التفويض البنكي وإخطار المدرس. هذا الإجراء لا يمكن التراجع عنه.":"The bank authorization will be cancelled and the tutor notified. This cannot be undone."}
+                  </div>
+                  <div style={{display:"flex",gap:10}}>
+                    <button className="btn-ghost" style={{flex:1}} onClick={()=>setShowCancelConfirm(false)}>
+                      {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Go back"}
+                    </button>
+                    <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer",opacity:cancellingBooking?0.6:1}} disabled={cancellingBooking} onClick={async()=>{
+                      setCancellingBooking(true);
+                      try{
+                        await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/cancel-booking",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:activeBooking?.id})});
+                        if(activeRequest?.id) await supabase.from("requests").update({status:"cancelled"}).eq("id",activeRequest.id);
+                        // Email au prof
+                        if(activeBooking?.teacher?.email){
+                          fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"booking_cancelled",teacherEmail:activeBooking.teacher.email,teacherName:activeBooking.teacher.full_name,studentName:userProfile?.full_name,subject:activeRequest?.subject,lang})}).catch(()=>{});
+                        }
+                        setShowCancelConfirm(false);
+                        setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setWaitingSeconds(0);setRequestViews(0);
+                        showToast(lang==="fr"?"Réservation annulée.":lang==="ar"?"تم إلغاء الحجز.":"Booking cancelled.");
+                      }catch(e){showToast("❌ "+(lang==="fr"?"Erreur lors de l'annulation":"Cancellation error"));}
+                      finally{setCancellingBooking(false);}
+                    }}>
+                      {cancellingBooking?"⏳ "+(lang==="fr"?"Annulation...":"Cancelling..."):(lang==="fr"?"Confirmer l'annulation":lang==="ar"?"تأكيد الإلغاء":"Confirm cancellation")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* ÉTAT 5 — rate */}
             {studentState==="rate"&&<div style={{maxWidth:480,margin:"0 auto",textAlign:"center",padding:"2rem 0"}}>
@@ -2190,9 +2243,18 @@ export default function TutorApp() {
                 <div className="stat-card"><div className="stat-val">{teacherRevenue.courses}</div><div className="stat-lbl">{lang==="fr"?"Cours total":"Total lessons"}</div></div>
               </div>
               {matchedRequests.length>0&&(
-                <button className="btn-ghost" style={{width:"100%"}} onClick={()=>setTeacherState("has_requests")}>
+                <button className="btn-ghost" style={{width:"100%",marginBottom:8}} onClick={()=>setTeacherState("has_requests")}>
                   🔍 {lang==="fr"?`Voir ${matchedRequests.length} autre(s) annonce(s)`:lang==="ar"?`عرض ${matchedRequests.length} إعلان آخر`:`View ${matchedRequests.length} other request(s)`}
                 </button>
+              )}
+              {teacherPendingOffers.length>0&&(
+                <button className="btn-ghost" style={{width:"100%",color:"#DC2626",borderColor:"#FCA5A5",fontSize:12}} onClick={async()=>{
+                  if(!confirm(lang==="fr"?"Retirer toutes tes offres en attente ?":lang==="ar"?"سحب جميع عروضك المعلقة؟":"Withdraw all pending offers?")) return;
+                  const ids=teacherPendingOffers.map(o=>o.id);
+                  await supabase.from("bids").update({status:"withdrawn"}).in("id",ids);
+                  setTeacherPendingOffers([]);setTeacherState("idle");
+                  showToast(lang==="fr"?"Offres retirées.":lang==="ar"?"تم سحب العروض.":"Offers withdrawn.");
+                }}>🗑 {lang==="fr"?"Retirer mes offres":lang==="ar"?"سحب عروضي":"Withdraw my offers"}</button>
               )}
             </div>
           )}

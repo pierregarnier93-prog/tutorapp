@@ -256,6 +256,45 @@ serve(async (req) => {
     };
   }
 
+  if (body.type === "booking_cancelled") {
+    const lang = body.lang || "en";
+    let subjectLine, h2, p1, note;
+    if (lang === "fr") {
+      subjectLine = `❌ Réservation annulée — ${body.subject}`;
+      h2 = "La réservation a été annulée";
+      p1 = `<strong>${body.studentName}</strong> a annulé la réservation pour <strong>${body.subject}</strong>.`;
+      note = "L'autorisation bancaire a été annulée. Aucun montant ne vous a été prélevé.";
+    } else if (lang === "ar") {
+      subjectLine = `❌ تم إلغاء الحجز — ${body.subject}`;
+      h2 = "تم إلغاء الحجز";
+      p1 = `<strong>${body.studentName}</strong> ألغى حجز حصة <strong>${body.subject}</strong>.`;
+      note = "تم إلغاء التفويض البنكي. لم يُخصم منك أي مبلغ.";
+    } else {
+      subjectLine = `❌ Booking cancelled — ${body.subject}`;
+      h2 = "The booking was cancelled";
+      p1 = `<strong>${body.studentName}</strong> cancelled the <strong>${body.subject}</strong> booking.`;
+      note = "The bank authorization has been cancelled. No amount was charged.";
+    }
+    emailData = {
+      from: "TutorApp <noreply@tutorapp.online>",
+      to: [body.teacherEmail],
+      subject: subjectLine,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto">
+          <h2 style="color:#DC2626">${h2}</h2>
+          <p>${p1}</p>
+          <p style="color:#6B7280;font-size:13px">${note}</p>
+          <br/>
+          <a href="https://www.tutorapp.online" style="background:#5B4FE8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+            ${lang==="fr"?"Voir les nouvelles annonces →":lang==="ar"?"عرض الطلبات الجديدة ←":"View new requests →"}
+          </a>
+          <br/><br/>
+          <p style="color:#6B7280;font-size:13px">TutorApp · tutorapp.online</p>
+        </div>
+      `,
+    };
+  }
+
   if (!emailData) {
     return new Response(JSON.stringify({ error: "Unknown email type" }), {
       status: 400,
