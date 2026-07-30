@@ -1272,7 +1272,15 @@ export default function TutorApp() {
         const {count:viewCount}=await supabase.from("profiles").select("*",{count:"exact",head:true}).eq("role","teacher").eq("verified",true);
         setRequestViews(Math.min(viewCount||0,8));
         const offers=await getBidsForRequest(activeRequest.id);
-        if(offers.length>previousCount){playNotificationSound();previousCount=offers.length;}
+        if(offers.length>previousCount){
+          playNotificationSound();
+          const newOffer=offers[offers.length-1];
+          fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({type:"new_offer_received",studentEmail:user?.email,studentName:userProfile?.full_name||user?.email?.split("@")[0],teacherName:newOffer?.teacher?.full_name,netPrice:newOffer?.net_price_aed,subject:activeRequest?.subject,lang}),
+          }).catch(()=>{});
+          previousCount=offers.length;
+        }
         if(offers.length>0){setActiveOffers(offers);setStudentState("offers");}
       }catch(e){}
     };
@@ -1396,7 +1404,14 @@ export default function TutorApp() {
   };
 
   const handlePaymentSuccess=()=>{
-    setStudentState("booked");showToast("🎉 "+(lang==="fr"?"Réservation confirmée !":lang==="ar"?"تم تأكيد الحجز !":"Booking confirmed!"));
+    setStudentState("booked");
+    showToast("🎉 "+(lang==="fr"?"Réservation confirmée !":lang==="ar"?"تم تأكيد الحجز !":"Booking confirmed!"));
+    const jitsiRoom=activeBooking?.id?`TutorApp-${activeBooking.id.slice(-8).toUpperCase()}`:null;
+    const jitsiLink=jitsiRoom?`https://meet.jit.si/${jitsiRoom}`:null;
+    fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({type:"booking_confirmed",studentEmail:user?.email,studentName:userProfile?.full_name,teacherName:activeBooking?.teacher?.full_name,subject:activeRequest?.subject,jitsiLink,grossPrice:activeBooking?.gross_price_aed,lang}),
+    }).catch(()=>{});
   };
 
   const handleTeacherSubmit=async()=>{
@@ -1601,6 +1616,21 @@ export default function TutorApp() {
                   <div className="form-group"><label className="form-label">{t.form.msg}</label><textarea className="form-textarea" placeholder={t.form.msgPh} value={form.message} onChange={e=>setForm({...form,message:e.target.value})}/></div>
                 </>)}
 
+                {form.subject&&form.level&&(
+                  <div style={{background:"#F8FAFF",border:"1.5px solid #C7D2FE",borderRadius:14,padding:"1rem",marginBottom:14}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#5B4FE8",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>
+                      👁 {lang==="fr"?"Aperçu — ce que les profs verront":lang==="ar"?"معاينة — ما سيراه المدرسون":"Preview — what tutors will see"}
+                    </div>
+                    <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>{form.subject} · {form.level}</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:form.message?8:0}}>
+                      {form.curriculum&&<span className="badge badge-purple">{Object.entries(CURRICULA).find(([k])=>k===form.curriculum)?.[1]?.label[lang]||form.curriculum}</span>}
+                      {form.instrLang&&<span className="badge badge-blue">🗣 {form.instrLang}</span>}
+                      <span className="badge badge-amber">{form.duration}</span>
+                      <span className="badge badge-teal">📹 Online</span>
+                    </div>
+                    {form.message&&<div style={{fontSize:12,color:"#64748B",fontStyle:"italic",marginTop:4}}>"{form.message}"</div>}
+                  </div>
+                )}
                 <button className="btn-full" onClick={handlePublish} disabled={publishing}>{publishing?"⏳ "+(lang==="fr"?"Publication...":"Posting..."):lang==="fr"?"Publier mon annonce →":lang==="ar"?"نشر إعلاني ←":"Post my request →"}</button>
               </div>
             </div>}
@@ -1649,7 +1679,22 @@ export default function TutorApp() {
                   <div className="page-title">{lang==="fr"?"Offres reçues":lang==="ar"?"العروض المستلمة":"Offers received"} 🎉</div>
                   <div style={{fontSize:13,color:"#64748B"}}>{activeRequest?.subject} · {activeRequest?.level} · {activeRequest?.duration_min} min</div>
                 </div>
-                <span className="badge badge-amber">{activeOffers.length} {lang==="fr"?"offres":lang==="ar"?"عروض":"offers"}</span>
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                  <span className="badge badge-amber">{activeOffers.length} {lang==="fr"?"offres":lang==="ar"?"عروض":"offers"}</span>
+                  {activeRequest?.created_at&&(()=>{
+                    const minLeft=Math.max(0,24*60-Math.floor((Date.now()-new Date(activeRequest.created_at).getTime())/60000));
+                    const h=Math.floor(minLeft/60),m=minLeft%60;
+                    return minLeft<120?(
+                      <span style={{fontSize:11,color:"#DC2626",fontWeight:700,background:"#FEE2E2",padding:"2px 8px",borderRadius:20}}>
+                        ⏳ {lang==="fr"?`Expire dans ${h}h${m}m`:lang==="ar"?`تنتهي خلال ${h}س${m}د`:`Expires in ${h}h${m}m`}
+                      </span>
+                    ):(
+                      <span style={{fontSize:11,color:"#92400E",fontWeight:700,background:"#FEF3C7",padding:"2px 8px",borderRadius:20}}>
+                        ⏳ {lang==="fr"?`${h}h${m}m restantes`:lang==="ar"?`${h}س${m}د متبقية`:`${h}h${m}m left`}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
               <div className="banner banner-teal">💳 {lang==="fr"?"Tu paies UNIQUEMENT après le cours — 6% de frais de service":lang==="ar"?"تدفع فقط بعد الحصة — رسوم خدمة 6٪":"Pay ONLY after the lesson — 6% service fee"}</div>
               {activeOffers.map((offer,i)=>{
@@ -1724,6 +1769,9 @@ export default function TutorApp() {
                 <div style={{marginBottom:8}}>❌ {stripeError}</div>
                 <div style={{fontSize:12,color:"#B91C1C",fontWeight:500}}>{lang==="fr"?"Tu peux réessayer avec une autre carte ci-dessous.":lang==="ar"?"يمكنك المحاولة مرة أخرى ببطاقة أخرى أدناه.":"You can retry with another card below."}</div>
               </div>}
+              <div style={{background:"#EEF2FF",border:"1.5px solid #C7D2FE",borderRadius:12,padding:"12px 16px",marginBottom:14,fontSize:12,fontWeight:700,color:"#3730A3",display:"flex",alignItems:"center",gap:8}}>
+                🔒 {lang==="fr"?"Sécurisé par Stripe — vous ne serez débité qu'après le cours":lang==="ar"?"مؤمَّن بـ Stripe — لن يُخصم منك إلا بعد الحصة":"Secured by Stripe — you'll only be charged after the lesson"}
+              </div>
               <div className="payment-note">⚠️ {t.payment.payNote}</div>
               <Elements stripe={stripePromise}>
                 <CheckoutForm booking={activeBooking} totalAmount={activeBooking.gross_price_aed} onSuccess={handlePaymentSuccess} onBack={()=>{setStudentState("offers");}} lang={lang} />
