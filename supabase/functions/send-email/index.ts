@@ -80,7 +80,7 @@ serve(async (req) => {
 
   if (body.type === "new_offer_received") {
     const lang = body.lang || "en";
-    const subjects: Record<string, Record<string, string>> = {
+    const subjects = {
       fr: {
         subject_line: `🎉 Offre reçue pour ${body.subject} — ${body.teacherName} propose ${body.netPrice} AED`,
         h2: `Bonne nouvelle ${body.studentName || ""} !`,
@@ -131,7 +131,7 @@ serve(async (req) => {
 
   if (body.type === "booking_confirmed") {
     const lang = body.lang || "en";
-    const t: Record<string, Record<string, string>> = {
+    const t = {
       fr: {
         subject_line: `📅 Réservation confirmée — ${body.subject} avec ${body.teacherName}`,
         h2: "Votre réservation est confirmée ! 🎉",
@@ -195,6 +195,59 @@ serve(async (req) => {
           <a href="https://www.tutorapp.online"
              style="background:#5B4FE8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
             ${s.cta}
+          </a>
+          <br/><br/>
+          <p style="color:#6B7280;font-size:13px">TutorApp · tutorapp.online</p>
+        </div>
+      `,
+    };
+  }
+
+  if (body.type === "teacher_booking_confirmed") {
+    const lang = body.lang || "en";
+    const netEarned = Math.round((body.netPrice || 0) * 0.94);
+    const jitsiRow = body.jitsiLink
+      ? `<tr><td style="padding:10px 0;color:#6B7280;font-size:14px">${lang==="fr"?"Lien visio :":lang==="ar"?"رابط الفيديو :":"Video link:"}</td><td style="padding:10px 0;text-align:right"><a href="${body.jitsiLink}" style="color:#5B4FE8;font-weight:700;font-size:13px">${body.jitsiLink}</a></td></tr>`
+      : "";
+    const jitsiBtn = body.jitsiLink
+      ? `<a href="${body.jitsiLink}" style="display:inline-block;background:#0ABFA3;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-bottom:16px">🎥 ${lang==="fr"?"Rejoindre le cours":lang==="ar"?"الانضمام للحصة":"Join lesson"}</a><br/>`
+      : "";
+    let subjectLine, h2, p1, earning;
+    if (lang === "fr") {
+      subjectLine = `🎉 Nouvelle réservation — ${body.subject} avec ${body.studentName}`;
+      h2 = `Une famille a réservé votre cours ! 🎉`;
+      p1 = `<strong>${body.studentName}</strong> a accepté votre offre pour <strong>${body.subject}</strong>.`;
+      earning = `Vous recevrez : <strong style="color:#0ABFA3;font-size:18px">+${netEarned} AED</strong> après le cours.`;
+    } else if (lang === "ar") {
+      subjectLine = `🎉 حجز جديد — ${body.subject} مع ${body.studentName}`;
+      h2 = `عائلة حجزت حصتك ! 🎉`;
+      p1 = `<strong>${body.studentName}</strong> قبل عرضك لـ <strong>${body.subject}</strong>.`;
+      earning = `ستستلم : <strong style="color:#0ABFA3;font-size:18px">+${netEarned} AED</strong> بعد الحصة.`;
+    } else {
+      subjectLine = `🎉 New booking — ${body.subject} with ${body.studentName}`;
+      h2 = `A family booked your lesson! 🎉`;
+      p1 = `<strong>${body.studentName}</strong> accepted your offer for <strong>${body.subject}</strong>.`;
+      earning = `You'll receive: <strong style="color:#0ABFA3;font-size:18px">+${netEarned} AED</strong> after the lesson.`;
+    }
+    emailData = {
+      from: "TutorApp <noreply@tutorapp.online>",
+      to: [body.teacherEmail],
+      subject: subjectLine,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto">
+          <h2 style="color:#5B4FE8">${h2}</h2>
+          <p>${p1}</p>
+          <p>${earning}</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0">
+            ${jitsiRow}
+          </table>
+          ${jitsiBtn}
+          <p style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px;font-size:13px;color:#92400E">
+            ${lang==="fr"?"⚠️ Le paiement sera capturé après confirmation du cours par la famille.":lang==="ar"?"⚠️ سيُحصَّل الدفع بعد تأكيد الأسرة انتهاء الحصة.":"⚠️ Payment is captured after the family confirms the lesson took place."}
+          </p>
+          <br/>
+          <a href="https://www.tutorapp.online" style="background:#5B4FE8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+            ${lang==="fr"?"Voir mon tableau de bord →":lang==="ar"?"عرض لوحة التحكم ←":"View my dashboard →"}
           </a>
           <br/><br/>
           <p style="color:#6B7280;font-size:13px">TutorApp · tutorapp.online</p>

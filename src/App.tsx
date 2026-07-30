@@ -106,7 +106,7 @@ function timeAgo(date, lang) {
 async function getMatchedRequests(profile) {
   let query = supabase
     .from("requests")
-    .select("*, poster:profiles!poster_id(full_name)")
+    .select("*, poster:profiles!poster_id(full_name), bids(count)")
     .eq("status", "open")
     .order("created_at", { ascending: false });
   if (profile?.teaching_subjects?.length > 0) {
@@ -1031,6 +1031,65 @@ function StudentHistory({ userId, lang, onBookAgain }: { userId: string, lang: s
   );
 }
 
+function TeacherHistory({ userId, lang }: { userId: string, lang: string }) {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    if(!userId) return;
+    supabase.from("bookings")
+      .select("*, student:profiles!poster_id(full_name), request:requests!request_id(subject)")
+      .eq("teacher_id", userId)
+      .order("created_at", {ascending:false})
+      .then(({data})=>{ setBookings(data||[]); setLoading(false); });
+  },[userId]);
+
+  if(loading) return <div className="loading">⏳ {lang==="fr"?"Chargement...":lang==="ar"?"جار التحميل...":"Loading..."}</div>;
+
+  const completed = bookings.filter(b=>b.status==="completed");
+  const totalEarned = completed.reduce((s,b)=>s+Math.round((b.net_price_aed||0)*0.94),0);
+
+  return (
+    <div>
+      {totalEarned>0&&(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginBottom:"1.5rem"}}>
+          <div className="stat-card"><div className="stat-val" style={{color:"#0ABFA3"}}>{totalEarned} AED</div><div className="stat-lbl">{lang==="fr"?"Total gagné":lang==="ar"?"إجمالي الأرباح":"Total earned"}</div></div>
+          <div className="stat-card"><div className="stat-val">{completed.length}</div><div className="stat-lbl">{lang==="fr"?"Cours effectués":lang==="ar"?"الحصص المكتملة":"Lessons done"}</div></div>
+        </div>
+      )}
+      {bookings.length===0&&(
+        <div className="empty">
+          <div className="empty-icon">🎓</div>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>{lang==="fr"?"Aucun cours pour l'instant":lang==="ar"?"لا توجد حصص بعد":"No lessons yet"}</div>
+          <div style={{fontSize:13,color:"#9CA3AF"}}>{lang==="fr"?"Réponds aux annonces pour commencer":lang==="ar"?"ابدأ بالرد على الطلبات":"Start by replying to student requests"}</div>
+        </div>
+      )}
+      {bookings.map((b,i)=>{
+        const subject=b.request?.subject||b.subject||"Cours";
+        const netEarned=Math.round((b.net_price_aed||0)*0.94);
+        const dateStr=new Date(b.created_at).toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{day:"numeric",month:"long",year:"numeric"});
+        return(
+          <div key={b.id||i} style={{border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+              <div>
+                <div style={{fontWeight:800,fontSize:15}}>{subject}</div>
+                <div style={{fontSize:13,color:"#64748B",marginTop:3}}>👤 {b.student?.full_name||"—"}</div>
+                <div style={{fontSize:11,color:"#9CA3AF",fontWeight:600,marginTop:3}}>{dateStr}</div>
+              </div>
+              <div style={{textAlign:"end"}}>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:900,color:"#0ABFA3"}}>+{netEarned} AED</div>
+                <span className={`badge ${b.status==="completed"?"badge-green":b.status==="pending_payment"?"badge-amber":"badge-gray"}`} style={{marginTop:4,display:"inline-flex"}}>
+                  {b.status==="completed"?(lang==="fr"?"✅ Payé":lang==="ar"?"✅ مدفوع":"✅ Paid"):b.status==="pending_payment"?(lang==="fr"?"⏳ En attente":lang==="ar"?"⏳ معلّق":"⏳ Pending"):b.status}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const TESTIMONIALS = [
   { name: "Layla M.", text: { fr: "Prof trouvé en 7 minutes pour l'exam de demain !", en: "Found a tutor in 7 minutes for tomorrow's exam!", ar: "وجدت مدرساً في 7 دقائق للامتحان غداً!" }, stars: 5 },
   { name: "Ahmed K.", text: { fr: "Ma fille a eu 18/20 après 3 cours avec Sarah.", en: "My daughter got 18/20 after 3 lessons with Sarah.", ar: "حصلت ابنتي على 18/20 بعد 3 حصص مع سارة." }, stars: 5 },
@@ -1211,7 +1270,7 @@ export default function TutorApp() {
           if(ageHours>24){await supabase.from("requests").update({status:"expired"}).eq("id",openReq.id);}
           else{setActiveRequest(openReq);const offers=await getBidsForRequest(openReq.id).catch(()=>[]);setActiveOffers(offers);setStudentState(offers.length>0?"offers":"waiting");setProfileLoading(false);return profile;}
         }
-        const {data:booking}=await supabase.from("bookings").select("*, teacher:profiles!teacher_id(full_name,teaching_rate)").eq("poster_id",realUserId).in("status",["pending_payment","confirmed"]).limit(1).maybeSingle();
+        const {data:booking}=await supabase.from("bookings").select("*, teacher:profiles!teacher_id(full_name,teaching_rate,email)").eq("poster_id",realUserId).in("status",["pending_payment","confirmed"]).limit(1).maybeSingle();
         if(booking){setActiveBooking(booking);setStudentState("booked");}
       }
 
@@ -1408,10 +1467,18 @@ export default function TutorApp() {
     showToast("🎉 "+(lang==="fr"?"Réservation confirmée !":lang==="ar"?"تم تأكيد الحجز !":"Booking confirmed!"));
     const jitsiRoom=activeBooking?.id?`TutorApp-${activeBooking.id.slice(-8).toUpperCase()}`:null;
     const jitsiLink=jitsiRoom?`https://meet.jit.si/${jitsiRoom}`:null;
+    // Email to student
     fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({type:"booking_confirmed",studentEmail:user?.email,studentName:userProfile?.full_name,teacherName:activeBooking?.teacher?.full_name,subject:activeRequest?.subject,jitsiLink,grossPrice:activeBooking?.gross_price_aed,lang}),
     }).catch(()=>{});
+    // Email to teacher
+    if(activeBooking?.teacher?.email){
+      fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({type:"teacher_booking_confirmed",teacherEmail:activeBooking.teacher.email,teacherName:activeBooking.teacher.full_name,studentName:userProfile?.full_name,subject:activeRequest?.subject,jitsiLink,netPrice:activeBooking.net_price_aed,lang}),
+      }).catch(()=>{});
+    }
   };
 
   const handleTeacherSubmit=async()=>{
@@ -1546,6 +1613,7 @@ export default function TutorApp() {
           ) : isTeacher ? <>
             <div className={`app-tab${appTab==="teacher-home"||appTab==="teacher-bid"?" active":""}`} onClick={()=>{setAppTab("teacher-home");setShowOnboard(false);}}>🏠 {lang==="fr"?"Accueil":lang==="ar"?"الرئيسية":"Home"}</div>
             <div className={`app-tab${appTab==="teacher-revenue"?" active":""}`} onClick={()=>setAppTab("teacher-revenue")}>💰 {lang==="fr"?"Revenus":lang==="ar"?"الإيرادات":"Revenue"}</div>
+            <div className={`app-tab${appTab==="teacher-history"?" active":""}`} onClick={()=>setAppTab("teacher-history")}>📋 {lang==="fr"?"Historique":lang==="ar"?"السجل":"History"}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {lang==="fr"?"Mon profil":lang==="ar"?"ملفي":"My profile"}</div>
           </> : <>
             <div className={`app-tab${appTab==="student-home"?" active":""}`} onClick={()=>setAppTab("student-home")}>🏠 {lang==="fr"?"Accueil":lang==="ar"?"الرئيسية":"Home"}{studentState==="offers"&&activeOffers.length>0&&<span style={{background:"#E34948",color:"#fff",borderRadius:"50%",fontSize:10,fontWeight:900,padding:"1px 6px",marginLeft:6,animation:"pulse 1s infinite"}}>{activeOffers.length}</span>}</div>
@@ -2066,9 +2134,18 @@ export default function TutorApp() {
                   {r.message&&(
                     <div style={{fontSize:13,color:"#64748B",marginBottom:12,fontStyle:"italic",background:"#F8FAFF",borderRadius:8,padding:"8px 12px",borderLeft:"3px solid #D8DBFE"}}>"{r.message}"</div>
                   )}
-                  <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:10,padding:"8px 12px",marginBottom:12,fontSize:13,fontWeight:700,color:"#0F6E56"}}>
+                  <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:10,padding:"8px 12px",marginBottom:8,fontSize:13,fontWeight:700,color:"#0F6E56"}}>
                     💰 {lang==="fr"?"Gain potentiel":lang==="ar"?"الربح المحتمل":"Potential earning"} <strong>{Math.round((userProfile?.teaching_rate||150)*0.94)} AED</strong>{lang==="fr"?" avec ton tarif actuel":lang==="ar"?" بتعريفتك الحالية":" at your current rate"}
                   </div>
+                  {(()=>{const bidCount=(r.bids?.[0]?.count)||0;return bidCount>0?(
+                    <div style={{fontSize:11,color:bidCount>=3?"#DC2626":"#92400E",fontWeight:700,background:bidCount>=3?"#FEE2E2":"#FEF3C7",borderRadius:8,padding:"4px 10px",marginBottom:12,display:"inline-flex",alignItems:"center",gap:4}}>
+                      {bidCount>=3?"🔥":"⚡"} {lang==="fr"?`${bidCount} offre(s) déjà envoyée(s) — sois rapide !`:lang==="ar"?`${bidCount} عروض مُرسلة — كن سريعاً !`:`${bidCount} offer(s) already sent — act fast!`}
+                    </div>
+                  ):(
+                    <div style={{fontSize:11,color:"#0F6E56",fontWeight:700,background:"#D1FAE5",borderRadius:8,padding:"4px 10px",marginBottom:12,display:"inline-flex",alignItems:"center",gap:4}}>
+                      ✨ {lang==="fr"?"Sois le premier à répondre !":lang==="ar"?"كن أول من يرد !":"Be the first to respond!"}
+                    </div>
+                  );})()}
                   <div style={{display:"flex",gap:8}}>
                     <button className="btn-teal" style={{flex:2}} onClick={()=>{setSelectedRequestForBid(r);setSelectedRate(userProfile?.teaching_rate||150);setBidForm({message:""});setAppTab("teacher-bid");}}>
                       {lang==="fr"?"Faire une offre →":lang==="ar"?"تقديم عرض ←":"Make an offer →"}
@@ -2085,13 +2162,13 @@ export default function TutorApp() {
           {/* ÉTAT C — offer_sent */}
           {appTab==="teacher-home"&&!showOnboard&&teacherState==="offer_sent"&&(
             <div style={{maxWidth:520,margin:"0 auto"}}>
-              <div style={{textAlign:"center",marginBottom:"2rem"}}>
-                <div style={{fontSize:48,marginBottom:8}}>⏳</div>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:900,marginBottom:6}}>{lang==="fr"?"Offre(s) envoyée(s)":lang==="ar"?"تم إرسال العرض":"Offer(s) sent"}</div>
-                <div style={{fontSize:13,color:"#64748B"}}>{lang==="fr"?"En attente de réponse. Mise à jour toutes les 30 secondes.":lang==="ar"?"في انتظار الرد. تحديث كل 30 ثانية.":"Waiting for response. Updates every 30 seconds."}</div>
+              <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
+                <div style={{fontSize:44,marginBottom:8,animation:"pulse 2s infinite"}}>📨</div>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:900,marginBottom:6}}>{lang==="fr"?"Offre(s) envoyée(s) !":lang==="ar"?"تم إرسال العرض !":"Offer(s) sent!"}</div>
+                <div style={{fontSize:13,color:"#64748B"}}>{lang==="fr"?"Mise à jour automatique toutes les 30 secondes.":lang==="ar"?"تحديث تلقائي كل 30 ثانية.":"Auto-updates every 30 seconds."}</div>
               </div>
               {teacherPendingOffers.map((offer,i)=>(
-                <div key={offer.id||i} style={{border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:12}}>
+                <div key={offer.id||i} style={{border:"1.5px solid #D8DBFE",borderRadius:16,padding:"1.25rem",marginBottom:12,background:"#FAFBFF"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <div style={{fontWeight:800,fontSize:15}}>{offer.request?.subject}</div>
                     <span style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:900,color:"#5B4FE8"}}>{offer.net_price_aed} AED/h</span>
@@ -2104,10 +2181,19 @@ export default function TutorApp() {
                   <div style={{fontSize:12,color:"#9CA3AF",fontWeight:600}}>{lang==="fr"?"Envoyée":"Sent"} {timeAgo(offer.created_at,lang)}</div>
                 </div>
               ))}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginTop:"1.5rem"}}>
+              <div style={{background:"#FFF7ED",border:"1.5px solid #FED7AA",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13,color:"#92400E"}}>
+                <div style={{fontWeight:800,marginBottom:6}}>💡 {lang==="fr"?"Conseil":lang==="ar"?"نصيحة":"Tip"}</div>
+                <div style={{lineHeight:1.6}}>{lang==="fr"?"Les parents répondent en moyenne en 12 minutes. Profites-en pour consulter les nouvelles annonces.":lang==="ar"?"يرد الآباء في المتوسط خلال 12 دقيقة. استغل الوقت لمراجعة الطلبات الجديدة.":"Parents respond in ~12 minutes on average. Check new requests in the meantime."}</div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginBottom:"1rem"}}>
                 <div className="stat-card"><div className="stat-val">{teacherRevenue.thisMonth} AED</div><div className="stat-lbl">{lang==="fr"?"Ce mois":"This month"}</div></div>
                 <div className="stat-card"><div className="stat-val">{teacherRevenue.courses}</div><div className="stat-lbl">{lang==="fr"?"Cours total":"Total lessons"}</div></div>
               </div>
+              {matchedRequests.length>0&&(
+                <button className="btn-ghost" style={{width:"100%"}} onClick={()=>setTeacherState("has_requests")}>
+                  🔍 {lang==="fr"?`Voir ${matchedRequests.length} autre(s) annonce(s)`:lang==="ar"?`عرض ${matchedRequests.length} إعلان آخر`:`View ${matchedRequests.length} other request(s)`}
+                </button>
+              )}
             </div>
           )}
 
@@ -2131,11 +2217,20 @@ export default function TutorApp() {
                   <span style={{fontWeight:700,color:"#0ABFA3"}}>✓ {lang==="fr"?"Après confirmation élève":lang==="ar"?"بعد تأكيد الطالب":"After student confirms"}</span>
                 </div>
               </div>
-              <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem"}}>
-                <div style={{fontSize:28,marginBottom:8}}>📹</div>
-                <div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:4}}>{lang==="fr"?"Lien visioconférence":lang==="ar"?"رابط الفيديو":"Video link"}</div>
-                <div style={{fontSize:12,color:"#64748B"}}>{lang==="fr"?"Sera envoyé par email avant le cours":lang==="ar"?"سيُرسل بالبريد قبل الحصة":"Will be sent by email before the lesson"}</div>
-              </div>
+              {(()=>{
+                const jRoom=teacherActiveBooking?.id?`TutorApp-${teacherActiveBooking.id.slice(-8).toUpperCase()}`:null;
+                const jLink=jRoom?`https://meet.jit.si/${jRoom}`:null;
+                return jLink?(
+                  <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
+                    <div style={{fontWeight:800,fontSize:13,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Lien visioconférence":lang==="ar"?"رابط الفيديو":"Video link"}</div>
+                    <div style={{fontSize:12,fontFamily:"monospace",background:"#fff",borderRadius:8,padding:"8px 10px",color:"#0F6E56",fontWeight:700,marginBottom:10,wordBreak:"break-all"}}>{jLink}</div>
+                    <div style={{display:"flex",gap:8}}>
+                      <a href={jLink} target="_blank" rel="noopener" style={{flex:2,background:"#0ABFA3",color:"#fff",borderRadius:8,padding:"9px 14px",fontWeight:800,fontSize:13,textDecoration:"none",textAlign:"center"}}>🎥 {lang==="fr"?"Rejoindre":lang==="ar"?"الانضمام":"Join"}</a>
+                      <button onClick={()=>{navigator.clipboard?.writeText(jLink);showToast("📋 "+(lang==="fr"?"Lien copié !":lang==="ar"?"تم نسخ الرابط !":"Link copied!"));}} style={{flex:1,background:"#fff",border:"1.5px solid #A7F3D0",borderRadius:8,padding:"9px 14px",fontWeight:700,fontSize:13,cursor:"pointer",color:"#0F6E56"}}>📋 {lang==="fr"?"Copier":lang==="ar"?"نسخ":"Copy"}</button>
+                    </div>
+                  </div>
+                ):null;
+              })()}
               <div style={{background:"#FEF3C7",border:"1.5px solid #FCD34D",borderRadius:14,padding:"1rem",fontSize:13,color:"#92400E",fontWeight:600,textAlign:"start"}}>
                 ⏳ {lang==="fr"?"Tu recevras ton paiement dès que l'élève confirme le cours.":lang==="ar"?"ستستلم دفعتك فور تأكيد الطالب انتهاء الحصة.":"You'll receive payment once the student confirms."}
               </div>
@@ -2207,6 +2302,15 @@ export default function TutorApp() {
                 }catch(e){showToast("❌ "+e.message);}
                 finally{setSubmittingBid(false);}
               }} disabled={submittingBid}>{submittingBid?"⏳ "+(lang==="fr"?"Envoi...":"Sending..."):lang==="fr"?"Envoyer mon offre →":lang==="ar"?"إرسال عرضي ←":"Send my offer →"}</button>
+            </div>
+          )}
+
+          {/* ONGLET HISTORIQUE ENSEIGNANT */}
+          {appTab==="teacher-history"&&!showOnboard&&(
+            <div style={{maxWidth:560,margin:"0 auto"}}>
+              <div className="page-title">📋 {lang==="fr"?"Mes cours":lang==="ar"?"حصصي":"My lessons"}</div>
+              <div className="page-sub">{lang==="fr"?"Historique de tous vos cours":lang==="ar"?"سجل جميع حصصك":"Your complete lesson history"}</div>
+              <TeacherHistory userId={user?.id} lang={lang} />
             </div>
           )}
 
