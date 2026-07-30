@@ -37,18 +37,20 @@ async function getBidsForRequest(requestId) {
   return data || [];
 }
 
-async function submitBid({ requestId, netPriceAed, message }) {
+async function submitBid({ requestId, netPriceAed, message, proposedSlots }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
+  const slots = (proposedSlots||[]).filter(s=>s).map(s=>new Date(s).toISOString());
   const { data, error } = await supabase.from("bids").insert({
     request_id: requestId, teacher_id: user.id,
     net_price_aed: netPriceAed, message, status: "pending",
+    proposed_slots: slots.length ? slots : null,
   }).select().single();
   if (error) throw error;
   return data;
 }
 
-async function acceptBid(bidId, requestId) {
+async function acceptBid(bidId, requestId, scheduledAt?) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
   const { data: bid } = await supabase.from("bids").select("*").eq("id", bidId).single();
@@ -62,6 +64,7 @@ async function acceptBid(bidId, requestId) {
     poster_id: user.id, teacher_id: bid.teacher_id,
     net_price_aed: netPrice, gross_price_aed: grossPrice,
     commission_aed: commission, status: "pending_payment", country_code: "UAE",
+    scheduled_at: scheduledAt || null,
   }).select().single();
   if (error) throw error;
   await supabase.from("bids").update({ status: "accepted" }).eq("id", bidId);
@@ -1155,6 +1158,12 @@ export default function TutorApp() {
   const [cancellingBooking,setCancellingBooking]=useState(false);
   const [showRecurringModal,setShowRecurringModal]=useState(false);
   const [recurringSetup,setRecurringSetup]=useState<"weekly"|"biweekly"|null>(null);
+  const [bidSlots,setBidSlots]=useState(["",""]);
+  const [selectedSlot,setSelectedSlot]=useState<Record<string,string>>({});
+  const [chatMessages,setChatMessages]=useState<any[]>([]);
+  const [chatInput,setChatInput]=useState("");
+  const [showChat,setShowChat]=useState(false);
+  const [sendingMsg,setSendingMsg]=useState(false);
   const [onboardStep,setOnboardStep]=useState(1);
   const [expandedOffer,setExpandedOffer]=useState<string|null>(null);
   const [reviewComment,setReviewComment]=useState("");
@@ -1427,6 +1436,17 @@ export default function TutorApp() {
     return()=>{clearInterval(interval);supabase.removeChannel(channel);};
   },[user,userProfile?.role,teacherState,userProfile,teacherActiveBooking]);
 
+  // Realtime messages for active booking
+  useEffect(()=>{
+    if(!activeBooking?.id||!showChat) return;
+    const ch=supabase.channel(`messages-${activeBooking.id}`)
+      .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:`booking_id=eq.${activeBooking.id}`},(payload)=>{
+        const msg=payload.new;
+        if(msg.sender_id!==user?.id) setChatMessages(prev=>[...prev,msg]);
+      }).subscribe();
+    return()=>{supabase.removeChannel(ch);};
+  },[activeBooking?.id,showChat,user?.id]);
+
   const t=T[lang];
   const isRTL=lang==="ar";
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),3500);};
@@ -1549,10 +1569,30 @@ export default function TutorApp() {
   };
 
   const handleAcceptBid=async(bid)=>{
+    const slot=selectedSlot[bid.id]||null;
+    if(bid.proposed_slots?.length>0&&!slot){
+      showToast("⚠️ "+(lang==="fr"?"Choisis un créneau horaire":lang==="ar"?"اختر موعداً":"Please select a time slot"));
+      return;
+    }
     try{
-      const booking=await acceptBid(bid.id,activeRequest.id);
+      const booking=await acceptBid(bid.id,activeRequest.id,slot);
       setSelectedOffer(bid);setActiveBooking(booking);setStripeError("");setStudentState("payment");
     }catch(e){showToast("❌ "+e.message);}
+  };
+
+  const loadChatMessages=async(bookingId:string)=>{
+    const {data}=await supabase.from("messages").select("*").eq("booking_id",bookingId).order("created_at",{ascending:true});
+    setChatMessages(data||[]);
+  };
+
+  const sendChatMessage=async()=>{
+    if(!chatInput.trim()||!activeBooking?.id) return;
+    setSendingMsg(true);
+    const msg={booking_id:activeBooking.id,sender_id:user?.id,sender_name:userProfile?.full_name||"Vous",content:chatInput.trim()};
+    const {data}=await supabase.from("messages").insert(msg).select().single();
+    if(data) setChatMessages(prev=>[...prev,data]);
+    setChatInput("");
+    setSendingMsg(false);
   };
 
   const handleSetupRecurring=async(freq:"weekly"|"biweekly")=>{
@@ -2102,6 +2142,24 @@ export default function TutorApp() {
                         )}
                       </div>
                     )}
+                    {offer.proposed_slots?.length>0&&(
+                      <div style={{background:"#F0FDF4",border:"1.5px solid #A7F3D0",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+                        <div style={{fontWeight:800,fontSize:12,color:"#0F6E56",marginBottom:8}}>📅 {lang==="fr"?"Créneaux proposés — choisis un :":lang==="ar"?"المواعيد المقترحة — اختر واحداً:":"Proposed slots — pick one:"}</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                          {offer.proposed_slots.map((slot,si)=>{
+                            const d=new Date(slot);
+                            const label=d.toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{weekday:"short",day:"numeric",month:"short"})+" · "+d.toLocaleTimeString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{hour:"2-digit",minute:"2-digit"});
+                            const isSelected=selectedSlot[offer.id]===slot;
+                            return(
+                              <label key={si} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:isSelected?"#D1FAE5":"#fff",border:isSelected?"1.5px solid #0ABFA3":"1.5px solid #E2E8F0",borderRadius:8,padding:"8px 12px",fontSize:13,fontWeight:isSelected?700:500,transition:"all .15s"}}>
+                                <input type="radio" name={`slot-${offer.id}`} checked={isSelected} onChange={()=>setSelectedSlot(prev=>({...prev,[offer.id]:slot}))} style={{accentColor:"#0ABFA3"}} />
+                                {label}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     <div style={{display:"flex",gap:10}}>
                       <button className="btn-accept" style={{flex:2}} onClick={()=>handleAcceptBid(offer)}>{lang==="fr"?"Accepter & Réserver →":lang==="ar"?"قبول وحجز ←":"Accept & Book →"}</button>
                       <button className="btn-decline" style={{flex:1}} onClick={()=>{const remaining=activeOffers.filter(o=>o.id!==offer.id);setActiveOffers(remaining);if(remaining.length===0)setStudentState("waiting");}}>{lang==="fr"?"Refuser":lang==="ar"?"رفض":"Decline"}</button>
@@ -2145,6 +2203,15 @@ export default function TutorApp() {
                 </div>
                 <div style={{fontSize:13,color:"rgba(255,255,255,.85)"}}>{lang==="fr"?"Avec":lang==="ar"?"مع":"With"} <strong>{activeBooking?.teacher?.full_name}</strong> · {lang==="fr"?"Enseignant vérifié ✅":lang==="ar"?"مدرس موثّق ✅":"Verified tutor ✅"}</div>
               </div>
+              {activeBooking?.scheduled_at&&(
+                <div style={{background:"linear-gradient(135deg,#F0FDF4,#DCFCE7)",border:"1.5px solid #86EFAC",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1.25rem",display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{fontSize:28}}>📅</div>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:13,color:"#0F6E56",marginBottom:2}}>{lang==="fr"?"Cours prévu le":lang==="ar"?"موعد الحصة":"Lesson scheduled"}</div>
+                    <div style={{fontWeight:900,fontSize:15,color:"#166534"}}>{new Date(activeBooking.scheduled_at).toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{weekday:"long",day:"numeric",month:"long"})} · {new Date(activeBooking.scheduled_at).toLocaleTimeString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{hour:"2-digit",minute:"2-digit"})}</div>
+                  </div>
+                </div>
+              )}
               <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
                 {([
                   [lang==="fr"?"Matière":lang==="ar"?"المادة":"Subject",activeRequest?.subject,false],
@@ -2188,6 +2255,9 @@ export default function TutorApp() {
               <div style={{background:"#FEF3C7",border:"1.5px solid #FCD34D",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13,color:"#92400E",fontWeight:600}}>
                 ⚠️ {lang==="fr"?"Clique 'Confirmer' UNIQUEMENT après le cours.":lang==="ar"?"انقر 'تأكيد' فقط بعد انتهاء الحصة.":"Click 'Confirm' ONLY after the lesson."}
               </div>
+              <button className="btn-ghost" style={{width:"100%",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"#F8FAFF",borderColor:"#C7D2FE",color:"#5B4FE8"}} onClick={()=>{setShowChat(true);if(activeBooking?.id)loadChatMessages(activeBooking.id);}}>
+                💬 {lang==="fr"?"Messagerie avec le prof":lang==="ar"?"المراسلة مع المدرس":"Message the tutor"}
+              </button>
               <button className="btn-full" style={{background:"#0ABFA3",marginBottom:12}} onClick={async()=>{
                 try{
                   await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/capture-payment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:activeBooking?.id})});
@@ -2235,6 +2305,40 @@ export default function TutorApp() {
                     }}>
                       {cancellingBooking?"⏳ "+(lang==="fr"?"Annulation...":"Cancelling..."):(lang==="fr"?"Confirmer l'annulation":lang==="ar"?"تأكيد الإلغاء":"Confirm cancellation")}
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL MESSAGERIE */}
+            {showChat&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.7)",zIndex:2001,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0"}}>
+                <div style={{background:"#fff",borderRadius:"24px 24px 0 0",width:"100%",maxWidth:560,maxHeight:"80vh",display:"flex",flexDirection:"column",boxShadow:"0 -8px 40px rgba(0,0,0,.2)"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1rem 1.25rem",borderBottom:"1px solid #E2E8F0"}}>
+                    <div style={{fontWeight:900,fontSize:16,color:"#1A1A2E"}}>💬 {activeBooking?.teacher?.full_name}</div>
+                    <button style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#9CA3AF"}} onClick={()=>setShowChat(false)}>✕</button>
+                  </div>
+                  <div style={{flex:1,overflowY:"auto",padding:"1rem",display:"flex",flexDirection:"column",gap:8}}>
+                    {chatMessages.length===0&&(
+                      <div style={{textAlign:"center",color:"#9CA3AF",fontSize:13,padding:"2rem 0"}}>
+                        {lang==="fr"?"Pas encore de messages. Dis bonjour !":lang==="ar"?"لا رسائل بعد. قل مرحباً !":"No messages yet. Say hello!"}
+                      </div>
+                    )}
+                    {chatMessages.map((msg,i)=>{
+                      const isMe=msg.sender_id===user?.id;
+                      return(
+                        <div key={i} style={{display:"flex",flexDirection:"column",alignItems:isMe?"flex-end":"flex-start"}}>
+                          <div style={{background:isMe?"#5B4FE8":"#F1F5F9",color:isMe?"#fff":"#1A1A2E",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",padding:"10px 14px",maxWidth:"80%",fontSize:14,lineHeight:1.5}}>
+                            {msg.content}
+                          </div>
+                          <div style={{fontSize:11,color:"#9CA3AF",marginTop:3}}>{msg.sender_name} · {new Date(msg.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{padding:"0.75rem 1rem",borderTop:"1px solid #E2E8F0",display:"flex",gap:8}}>
+                    <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChatMessage();}}} placeholder={lang==="fr"?"Écris un message...":lang==="ar"?"اكتب رسالة...":"Write a message..."} style={{flex:1,padding:"10px 14px",border:"1.5px solid #E2E8F0",borderRadius:12,fontSize:14,fontFamily:"inherit",outline:"none"}} />
+                    <button onClick={sendChatMessage} disabled={sendingMsg||!chatInput.trim()} style={{background:"#5B4FE8",color:"#fff",border:"none",borderRadius:12,padding:"10px 16px",fontSize:18,cursor:"pointer",opacity:sendingMsg||!chatInput.trim()?0.5:1}}>➤</button>
                   </div>
                 </div>
               </div>
@@ -2675,14 +2779,26 @@ export default function TutorApp() {
                 <label className="form-label">{lang==="fr"?"Ton message à l'élève":lang==="ar"?"رسالتك للطالب":"Your message to the student"}</label>
                 <textarea className="form-textarea" style={{minHeight:110}} placeholder={lang==="fr"?"Présente-toi, ton expérience, ta disponibilité...":lang==="ar"?"عرّف بنفسك وخبرتك وتوفرك...":"Introduce yourself, experience, availability..."} value={bidForm.message} onChange={e=>setBidForm({...bidForm,message:e.target.value})} />
               </div>
+              <div className="form-group">
+                <label className="form-label">📅 {lang==="fr"?"Propose des créneaux (optionnel)":lang==="ar"?"اقترح مواعيد (اختياري)":"Propose time slots (optional)"}</label>
+                <div style={{fontSize:12,color:"#6B7280",marginBottom:8}}>{lang==="fr"?"La famille choisira parmi tes créneaux.":lang==="ar"?"ستختار العائلة من بين مواعيدك.":"The family will pick one of your slots."}</div>
+                {bidSlots.map((slot,si)=>(
+                  <input key={si} type="datetime-local" className="form-input" style={{marginBottom:8}} value={slot} min={new Date(Date.now()+3600000).toISOString().slice(0,16)} onChange={e=>{const s=[...bidSlots];s[si]=e.target.value;setBidSlots(s);}} />
+                ))}
+                {bidSlots.length<3&&(
+                  <button type="button" style={{background:"none",border:"none",color:"#5B4FE8",fontSize:12,fontWeight:700,cursor:"pointer",padding:0,textDecoration:"underline"}} onClick={()=>setBidSlots([...bidSlots,""])}>
+                    + {lang==="fr"?"Ajouter un créneau":lang==="ar"?"أضف موعداً":"Add a slot"}
+                  </button>
+                )}
+              </div>
               <button className="btn-full" onClick={async()=>{
                 if(!bidForm.message){showToast("⚠️ "+(lang==="fr"?"Écris un message":"Write a message"));return;}
                 setSubmittingBid(true);
                 try{
-                  await submitBid({requestId:selectedRequestForBid.id,netPriceAed:selectedRate,message:bidForm.message});
+                  await submitBid({requestId:selectedRequestForBid.id,netPriceAed:selectedRate,message:bidForm.message,proposedSlots:bidSlots});
                   const {data:bids}=await supabase.from("bids").select("*, request:requests(subject,level,duration_min,created_at)").eq("teacher_id",user.id).eq("status","pending");
                   setTeacherPendingOffers(bids||[]);setTeacherState("offer_sent");
-                  setSelectedRequestForBid(null);setBidForm({message:""});setAppTab("teacher-home");
+                  setSelectedRequestForBid(null);setBidForm({message:""});setBidSlots(["",""]);setAppTab("teacher-home");
                   showToast("✅ "+(lang==="fr"?"Offre envoyée !":lang==="ar"?"تم إرسال العرض !":"Offer sent!"));
                 }catch(e){showToast("❌ "+e.message);}
                 finally{setSubmittingBid(false);}
