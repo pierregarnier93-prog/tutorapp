@@ -1156,6 +1156,11 @@ export default function TutorApp() {
   const [onboardStep,setOnboardStep]=useState(1);
   const [expandedOffer,setExpandedOffer]=useState<string|null>(null);
   const [reviewComment,setReviewComment]=useState("");
+  const [offerRatings,setOfferRatings]=useState<Record<string,{avg:string,count:number}>>({});
+  const [relanceSent,setRelanceSent]=useState(false);
+  const [showReportModal,setShowReportModal]=useState(false);
+  const [reportMessage,setReportMessage]=useState("");
+  const [landingStats,setLandingStats]=useState({teachers:0,lessons:0,rating:"4.9"});
   const [realTeachers,setRealTeachers]=useState([]);
   const [teachersLoading,setTeachersLoading]=useState(false);
   const [teachersSearch,setTeachersSearch]=useState("");
@@ -1311,6 +1316,16 @@ export default function TutorApp() {
       setUser(session?.user??null);
       if(!session?.user){setUserProfile(null);setPage("home");setProfileLoading(false);}
     });
+    // Load real landing stats for non-logged-in visitors
+    (async()=>{
+      const [{count:tc},{count:lc},{data:revs}]=await Promise.all([
+        supabase.from("profiles").select("*",{count:"exact",head:true}).eq("role","teacher").eq("verified",true),
+        supabase.from("bookings").select("*",{count:"exact",head:true}).eq("status","completed"),
+        supabase.from("reviews").select("score"),
+      ]);
+      const avg=revs?.length?(revs.reduce((s,r)=>s+r.score,0)/revs.length).toFixed(1):"4.9";
+      setLandingStats({teachers:tc||0,lessons:lc||0,rating:avg});
+    })();
     return ()=>subscription.unsubscribe();
   },[]);
 
@@ -1337,7 +1352,7 @@ export default function TutorApp() {
           fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"new_offer_received",studentEmail:user?.email,studentName:userProfile?.full_name||user?.email?.split("@")[0],teacherName:newOffer?.teacher?.full_name,netPrice:newOffer?.net_price_aed,subject:activeRequest?.subject,lang})}).catch(()=>{});
           previousCount=offers.length;
         }
-        if(offers.length>0){setActiveOffers(offers);setStudentState("offers");}
+        if(offers.length>0){setActiveOffers(offers);setStudentState("offers");fetchOfferRatings(offers);}
       }).subscribe();
     const poll=async()=>{
       try{
@@ -1362,7 +1377,16 @@ export default function TutorApp() {
           }).catch(()=>{});
           previousCount=offers.length;
         }
-        if(offers.length>0){setActiveOffers(offers);setStudentState("offers");}
+        if(offers.length>0){
+          setActiveOffers(offers);setStudentState("offers");fetchOfferRatings(offers);
+          if(!relanceSent&&document.hidden){
+            const firstOfferAge=(Date.now()-new Date(offers[0].created_at).getTime())/60000;
+            if(firstOfferAge>30){
+              setRelanceSent(true);
+              fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"offers_reminder",studentEmail:user?.email,studentName:userProfile?.full_name,offerCount:offers.length,subject:activeRequest?.subject,lang})}).catch(()=>{});
+            }
+          }
+        }
       }catch(e){}
     };
     poll();
@@ -1464,6 +1488,20 @@ export default function TutorApp() {
     }));
     setRealTeachers(withRatings);
     setTeachersLoading(false);
+  };
+
+  const fetchOfferRatings=async(offers)=>{
+    if(!offers?.length) return;
+    const ids=[...new Set(offers.map(o=>o.teacher_id).filter(Boolean))];
+    const ratings:{[id:string]:{avg:string,count:number}}={};
+    await Promise.all(ids.map(async id=>{
+      const {data}=await supabase.from("reviews").select("score").eq("teacher_id",id);
+      if(data?.length){
+        const avg=(data.reduce((s,r)=>s+r.score,0)/data.length).toFixed(1);
+        ratings[id]={avg,count:data.length};
+      }
+    }));
+    setOfferRatings(ratings);
   };
 
   const openTeacherProfile=async(teacher)=>{
@@ -1645,7 +1683,12 @@ export default function TutorApp() {
             <button className="btn-big btn-big-primary" onClick={()=>go("student-home")}>{t.hero.cta1}</button>
             <button className="btn-big btn-big-outline" onClick={()=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab("teacher-home");setShowOnboard(true);}}>{t.hero.cta2}</button>
           </div>
-          <div className="hero-stats">{[{v:t.hero.s1v,l:t.hero.s1l},{v:t.hero.s2v,l:t.hero.s2l},{v:t.hero.s3v,l:t.hero.s3l},{v:t.hero.s4v,l:t.hero.s4l}].map((s,i)=><div key={i} style={{textAlign:"center"}}><div className="hero-stat-val">{s.v}</div><div className="hero-stat-lbl">{s.l}</div></div>)}</div>
+          <div className="hero-stats">{[
+            {v:landingStats.teachers>0?`${landingStats.teachers}+`:t.hero.s1v,l:t.hero.s1l},
+            {v:t.hero.s2v,l:t.hero.s2l},
+            {v:landingStats.rating?`${landingStats.rating}★`:t.hero.s3v,l:t.hero.s3l},
+            {v:landingStats.lessons>0?`${landingStats.lessons}+`:t.hero.s4v,l:lang==="fr"?"Cours effectués":lang==="ar"?"دروس مكتملة":"Lessons done"},
+          ].map((s,i)=><div key={i} style={{textAlign:"center"}}><div className="hero-stat-val">{s.v}</div><div className="hero-stat-lbl">{s.l}</div></div>)}</div>
         </section>
         <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",borderBottom:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.how.label}</div><div className="section-title">{t.how.title}<span>{t.how.titleSpan}</span></div><div className="steps-grid">{t.how.steps.map((s,i)=><div className="step-card" key={i}><div className="step-num-bg">{i+1}</div><div className="step-icon">{s.icon}</div><h3>{s.t}</h3><p>{s.d}</p></div>)}</div></div></div>
         <div className="section"><div className="section-label">{t.subjects.label}</div><div className="section-title">{t.subjects.title}<span>{t.subjects.titleSpan}</span></div><div className="subj-grid">{SUBJECTS.map(s=><div className="subj-card" key={s.en} onClick={()=>go("student-home")}><span style={{fontSize:20}}>{s.icon}</span><span>{s[lang]}</span></div>)}</div></div>
@@ -1992,8 +2035,13 @@ export default function TutorApp() {
                         </div>
                         <div>
                           <div style={{fontWeight:800,fontSize:15}}>{offer.teacher?.full_name||"Tutor"}</div>
-                          <div style={{display:"flex",gap:6,marginTop:3,flexWrap:"wrap"}}>
+                          <div style={{display:"flex",gap:6,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
                             <span style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✅ {lang==="fr"?"Vérifié":lang==="ar"?"موثّق":"Verified"}</span>
+                            {offerRatings[offer.teacher_id]&&(
+                              <span style={{fontSize:12,color:"#F59E0B",fontWeight:800,background:"#FEF9C3",padding:"2px 7px",borderRadius:8}}>
+                                ★ {offerRatings[offer.teacher_id].avg} <span style={{color:"#92400E",fontWeight:600}}>({offerRatings[offer.teacher_id].count})</span>
+                              </span>
+                            )}
                             {isFast&&<span style={{fontSize:11,color:"#F59E0B",fontWeight:700}}>⚡ {lang==="fr"?"Répond vite":lang==="ar"?"يرد بسرعة":"Fast reply"}</span>}
                             {offer.teacher?.teaching_curricula?.length>0&&<span style={{fontSize:11,color:"#64748B",fontWeight:600}}>📚 {offer.teacher.teaching_curricula.map(c=>CURRICULA[c]?.label[lang]||c).join(", ")}</span>}
                           </div>
@@ -2113,7 +2161,7 @@ export default function TutorApp() {
                   showToast("✅ "+(lang==="fr"?"Cours confirmé !":lang==="ar"?"تم تأكيد الحصة !":"Lesson confirmed!"));
                 }catch(e){showToast("❌ "+e.message);}
               }}>✅ {lang==="fr"?"Confirmer — le cours a eu lieu":lang==="ar"?"تأكيد — انتهت الحصة":"Confirm — lesson completed"}</button>
-              <button className="btn-ghost" style={{width:"100%"}} onClick={()=>showToast("📧 hello@tutorapp.online")}>⚠️ {lang==="fr"?"Signaler un problème":lang==="ar"?"الإبلاغ عن مشكلة":"Report an issue"}</button>
+              <button className="btn-ghost" style={{width:"100%"}} onClick={()=>setShowReportModal(true)}>⚠️ {lang==="fr"?"Signaler un problème":lang==="ar"?"الإبلاغ عن مشكلة":"Report an issue"}</button>
               <button className="btn-ghost" style={{width:"100%",marginTop:8,color:"#DC2626",borderColor:"#FCA5A5",fontSize:12}} onClick={()=>setShowCancelConfirm(true)}>
                 🗑 {lang==="fr"?"Annuler la réservation":lang==="ar"?"إلغاء الحجز":"Cancel booking"}
               </button>
@@ -2618,6 +2666,38 @@ export default function TutorApp() {
 
       {showAuth&&<Auth onClose={()=>setShowAuth(false)} onSuccess={handleLoginSuccess} lang={lang} />}
       {toast&&<div className="toast">{toast}</div>}
+
+      {showReportModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
+          <div style={{background:"#fff",borderRadius:20,padding:"2rem",maxWidth:420,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            <div style={{fontSize:36,marginBottom:8,textAlign:"center"}}>⚠️</div>
+            <div style={{fontFamily:"Fraunces,serif",fontSize:18,fontWeight:900,marginBottom:6,textAlign:"center"}}>
+              {lang==="fr"?"Signaler un problème":lang==="ar"?"الإبلاغ عن مشكلة":"Report an issue"}
+            </div>
+            <div style={{fontSize:13,color:"#64748B",marginBottom:"1.25rem",textAlign:"center"}}>
+              {lang==="fr"?"Décris le problème — nous revenons sous 2h.":lang==="ar"?"صف المشكلة — سنرد خلال ساعتين.":"Describe the issue — we'll respond within 2h."}
+            </div>
+            <textarea
+              placeholder={lang==="fr"?"Ex: le prof n'est pas venu au cours, problème technique...":lang==="ar"?"مثال: لم يأت المدرس، مشكلة تقنية...":"E.g. tutor didn't show up, technical issue..."}
+              value={reportMessage}
+              onChange={e=>setReportMessage(e.target.value)}
+              style={{width:"100%",padding:"12px 16px",border:"1.5px solid #E2E8F0",borderRadius:12,fontSize:13,fontFamily:"inherit",minHeight:100,resize:"vertical",outline:"none",marginBottom:"1.25rem"}}
+            />
+            <div style={{display:"flex",gap:10}}>
+              <button className="btn-ghost" style={{flex:1}} onClick={()=>{setShowReportModal(false);setReportMessage("");}}>
+                {lang==="fr"?"Annuler":lang==="ar"?"إلغاء":"Cancel"}
+              </button>
+              <button className="btn-full" style={{flex:1,background:"#DC2626"}} disabled={!reportMessage.trim()} onClick={async()=>{
+                await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"dispute_report",adminEmail:"pierre.garnier93@gmail.com",studentEmail:user?.email,studentName:userProfile?.full_name,bookingId:activeBooking?.id,subject:activeRequest?.subject,message:reportMessage,lang})}).catch(()=>{});
+                setShowReportModal(false);setReportMessage("");
+                showToast(lang==="fr"?"✅ Signalement envoyé — nous revenons sous 2h.":lang==="ar"?"✅ تم إرسال البلاغ — سنرد خلال ساعتين.":"✅ Report sent — we'll get back to you within 2h.");
+              }}>
+                {lang==="fr"?"Envoyer":lang==="ar"?"إرسال":"Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showStudentOnboard&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>

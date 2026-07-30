@@ -256,6 +256,62 @@ serve(async (req) => {
     };
   }
 
+  if (body.type === "offers_reminder") {
+    const lang = body.lang || "en";
+    let subjectLine, h2, p1, cta;
+    if (lang === "fr") {
+      subjectLine = `⏰ ${body.offerCount} offre(s) t'attendent — ${body.subject}`;
+      h2 = `${body.offerCount} prof(s) ont répondu !`;
+      p1 = `Des enseignants ont proposé leurs tarifs pour <strong>${body.subject}</strong>. Compare et choisis le meilleur pour ton enfant avant que les offres expirent.`;
+      cta = "Voir les offres →";
+    } else if (lang === "ar") {
+      subjectLine = `⏰ ${body.offerCount} عرض بانتظارك — ${body.subject}`;
+      h2 = `${body.offerCount} مدرس ردّ على إعلانك !`;
+      p1 = `قدّم مدرسون عروضهم لـ <strong>${body.subject}</strong>. قارن واختر الأفضل قبل انتهاء صلاحية العروض.`;
+      cta = "عرض العروض ←";
+    } else {
+      subjectLine = `⏰ ${body.offerCount} offer(s) waiting for you — ${body.subject}`;
+      h2 = `${body.offerCount} tutor(s) replied!`;
+      p1 = `Tutors have submitted their rates for <strong>${body.subject}</strong>. Compare and choose the best one before the offers expire.`;
+      cta = "View offers →";
+    }
+    emailData = {
+      from: "TutorApp <noreply@tutorapp.online>",
+      to: [body.studentEmail],
+      subject: subjectLine,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto">
+          <h2 style="color:#5B4FE8">${h2}</h2>
+          <p>${p1}</p>
+          <p style="color:#DC2626;font-size:13px;font-weight:700">⚠️ ${lang==="fr"?"Les offres expirent dans 24h après la publication de l'annonce.":lang==="ar"?"تنتهي العروض بعد 24 ساعة من نشر الإعلان.":"Offers expire 24h after the request was posted."}</p>
+          <br/>
+          <a href="https://www.tutorapp.online" style="background:#5B4FE8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">${cta}</a>
+          <br/><br/>
+          <p style="color:#6B7280;font-size:13px">TutorApp · tutorapp.online</p>
+        </div>
+      `,
+    };
+  }
+
+  if (body.type === "dispute_report") {
+    emailData = {
+      from: "TutorApp <noreply@tutorapp.online>",
+      to: [body.adminEmail || "pierre.garnier93@gmail.com"],
+      subject: `🚨 Signalement — ${body.subject} (${body.studentEmail})`,
+      html: `
+        <h2>🚨 Signalement de problème</h2>
+        <p><strong>Élève :</strong> ${body.studentName} (${body.studentEmail})</p>
+        <p><strong>Matière :</strong> ${body.subject}</p>
+        <p><strong>Booking ID :</strong> ${body.bookingId || "—"}</p>
+        <hr/>
+        <p><strong>Message :</strong></p>
+        <p style="background:#FEE2E2;padding:12px;border-radius:8px;font-style:italic">"${body.message}"</p>
+        <br/>
+        <a href="https://www.tutorapp.online" style="background:#DC2626;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Traiter le signalement →</a>
+      `,
+    };
+  }
+
   if (body.type === "booking_cancelled") {
     const lang = body.lang || "en";
     let subjectLine, h2, p1, note;
