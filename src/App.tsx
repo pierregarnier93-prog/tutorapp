@@ -2041,7 +2041,7 @@ export default function TutorApp() {
                   <div className="page-title">{lang==="fr"?"Mes demandes":lang==="ar"?"طلباتي":"My requests"}</div>
                   <div className="page-sub">{lang==="fr"?"Toutes tes recherches actives":lang==="ar"?"جميع طلباتك النشطة":"All your active searches"}</div>
                 </div>
-                <button className="submit-btn" style={{marginTop:0,padding:"10px 18px",fontSize:13}} onClick={()=>{setStudentState("idle");setStudentView("form");}}>
+                <button className="submit-btn" style={{marginTop:0,padding:"10px 18px",fontSize:13,width:"auto"}} onClick={()=>{setStudentState("idle");setStudentView("form");}}>
                   + {lang==="fr"?"Nouvelle demande":lang==="ar"?"طلب جديد":"New request"}
                 </button>
               </div>
@@ -2063,6 +2063,7 @@ export default function TutorApp() {
                       <span style={{background:statusColor,color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:800,whiteSpace:"nowrap"}}>{statusLabel}</span>
                     </div>
                     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                      {r.instr_lang&&<span className="badge badge-blue">🗣 {r.instr_lang}</span>}
                       {r.curriculum&&<span className="badge badge-purple">{r.curriculum}</span>}
                       <span className="badge badge-amber">{r.duration_min} min</span>
                       <span className="badge badge-teal">📹 Online</span>
