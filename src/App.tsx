@@ -722,9 +722,9 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
       )}
       {!isTeacherProfile && (
         <div className="profile-section">
-          <div className="profile-section-title">🎓 {lang==="fr"?"Profil de l'enfant":lang==="ar"?"ملف الطفل":"Child's profile"}</div>
+          <div className="profile-section-title">🎓 {lang==="fr"?"Profil de l'élève":lang==="ar"?"ملف الطالب":"Student's profile"}</div>
           <div style={{fontSize:12,color:"#64748B",marginBottom:"1rem",fontWeight:600}}>{lang==="fr"?"Ces infos pré-remplissent automatiquement tes annonces.":lang==="ar"?"هذه المعلومات تُعبئ إعلاناتك تلقائياً.":"This info pre-fills your requests automatically."}</div>
-          <div className="form-group"><label className="form-label">{lang==="fr"?"Prénom de l'enfant":lang==="ar"?"اسم الطفل":"Child's first name"}</label><input className="form-input" placeholder="Emma" name="child_firstname" autoComplete="given-name-off" autoCorrect="off" autoCapitalize="off" value={childName} onChange={e=>setChildName(e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">{lang==="fr"?"Prénom de l'élève":lang==="ar"?"اسم الطالب":"Student's first name"}</label><input className="form-input" placeholder="Emma" name="child_firstname" autoComplete="given-name-off" autoCorrect="off" autoCapitalize="off" value={childName} onChange={e=>setChildName(e.target.value)} /></div>
           <div className="form-row">
             <div className="form-group" style={{marginBottom:0}}><label className="form-label">{lang==="fr"?"Cursus":lang==="ar"?"المنهج":"Curriculum"}</label><select className="form-select" value={childCurriculum} onChange={e=>{setChildCurriculum(e.target.value);setChildLevel("");}}><option value="">{lang==="fr"?"Choisir...":"Choose..."}</option>{Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[lang]||v.label.en}</option>)}</select></div>
             <div className="form-group" style={{marginBottom:0}}><label className="form-label">{lang==="fr"?"Niveau":"Level"}</label><select className="form-select" value={childLevel} onChange={e=>setChildLevel(e.target.value)} disabled={!childLevels.length}><option value="">{childLevels.length?(lang==="fr"?"Choisir...":"Choose..."):(lang==="fr"?"Sélectionne un cursus":"Select curriculum")}</option>{childLevels.map(l=><option key={l}>{l}</option>)}</select></div>
@@ -2052,7 +2052,7 @@ export default function TutorApp() {
                   <div className="form-group"><label className="form-label">{lang==="fr"?"Durée":lang==="ar"?"المدة":"Duration"}</label><div className="chips-row">{t.durations.map(d=><div key={d} className={`chip${form.duration===d?" selected":""}`} onClick={()=>setForm({...form,duration:d})}>{d}</div>)}</div></div>
                   <div className="form-group"><label className="form-label">{lang==="fr"?"Message (optionnel)":lang==="ar"?"رسالة (اختياري)":"Message (optional)"}</label><textarea className="form-textarea" placeholder={lang==="fr"?"Ex: exam dans 3 jours...":lang==="ar"?"مثال: امتحان بعد 3 أيام...":"Ex: exam in 3 days, struggling with algebra..."} value={form.message} onChange={e=>setForm({...form,message:e.target.value})}/></div>
                 </>):(<>
-                  <div className="banner banner-amber" style={{marginBottom:"1rem",cursor:"pointer"}} onClick={()=>setAppTab("profile")}>💡 {lang==="fr"?"Remplis ton profil enfant pour aller encore plus vite →":lang==="ar"?"أكمل ملف طفلك لتنشر أسرع →":"Fill your child's profile to post faster →"}</div>
+                  <div className="banner banner-amber" style={{marginBottom:"1rem",cursor:"pointer"}} onClick={()=>setAppTab("profile")}>💡 {lang==="fr"?"Remplis le profil de l'élève pour aller encore plus vite →":lang==="ar"?"أكمل ملف الطالب لتنشر أسرع →":"Fill the student's profile to post faster →"}</div>
                   <div className="form-group"><label className="form-label">{t.form.subject}</label><select className="form-select" value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})}><option value="">{lang==="fr"?"Choisir...":lang==="ar"?"اختر...":"Choose..."}</option>{SUBJECTS.map(s=><option key={s.en} value={s.en}>{s[lang]}</option>)}</select></div>
                   <div className="form-row">
                     <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.form.lang}</label><select className={`form-select${form.instrLang?" prefilled":""}`} value={form.instrLang} onChange={e=>setForm({...form,instrLang:e.target.value})}><option value="">{lang==="fr"?"Choisir...":"Choose..."}</option>{t.instrLangs.map(l=><option key={l}>{l}</option>)}</select></div>
@@ -3006,7 +3006,7 @@ export default function TutorApp() {
                 {lang==="fr"?"Ces infos pré-remplissent tes annonces automatiquement — 30 secondes, une seule fois.":lang==="ar"?"ستملأ هذه المعلومات إعلاناتك تلقائياً — 30 ثانية، مرة واحدة فقط.":"This pre-fills your requests automatically — 30 seconds, just once."}
               </div>
               <div className="form-group">
-                <label className="form-label">{lang==="fr"?"Prénom de l'enfant":lang==="ar"?"اسم الطفل":"Child's first name"}</label>
+                <label className="form-label">{lang==="fr"?"Prénom de l'élève":lang==="ar"?"اسم الطالب":"Student's first name"}</label>
                 <input className="form-input" placeholder="Emma" name="child_firstname" autoComplete="given-name-off" autoCorrect="off" value={childName} onChange={e=>setChildName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&childName.trim()&&setOnboardStep(2)}/>
               </div>
               <button className="btn-full" onClick={()=>setOnboardStep(2)} disabled={!childName.trim()}>
