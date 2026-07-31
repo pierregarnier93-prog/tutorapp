@@ -1139,6 +1139,8 @@ export default function TutorApp() {
   const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,photoFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",whatsapp:"",cguAccepted:false,childProtectionAccepted:false});
   const [pushSubscribed,setPushSubscribed]=useState(false);
   const [firstOfferJustArrived,setFirstOfferJustArrived]=useState(false);
+  const [allRequests,setAllRequests]=useState<any[]>([]);
+  const [studentView,setStudentView]=useState<"list"|"form"|"detail">("form");
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [profileLoading,setProfileLoading]=useState(true);
@@ -1304,14 +1306,9 @@ export default function TutorApp() {
         const ilMap={en:T.en.instrLangs[0],ar:T.ar.instrLangs[0],fr:T.fr.instrLangs[0]};
         const prefLang=profile.child_lang||(sp?ilMap[sp.default_lang]:"")||"";
         if(prefCurriculum||prefLevel||prefLang){setForm(f=>({...f,curriculum:prefCurriculum,level:prefLevel,instrLang:prefLang}));if(prefCurriculum)setCurriculum(prefCurriculum);}
-        const {data:openReq}=await supabase.from("requests").select("*").eq("poster_id",realUserId).eq("status","open").limit(1).maybeSingle();
-        if(openReq){
-          const ageHours=(Date.now()-new Date(openReq.created_at).getTime())/(1000*60*60);
-          if(ageHours>24){await supabase.from("requests").update({status:"expired"}).eq("id",openReq.id);}
-          else{setActiveRequest(openReq);const offers=await getBidsForRequest(openReq.id).catch(()=>[]);setActiveOffers(offers);setStudentState(offers.length>0?"offers":"waiting");setProfileLoading(false);return profile;}
-        }
-        const {data:booking}=await supabase.from("bookings").select("*, teacher:profiles!teacher_id(full_name,teaching_rate,email)").eq("poster_id",realUserId).in("status",["pending_payment","confirmed"]).limit(1).maybeSingle();
-        if(booking){setActiveBooking(booking);setStudentState("booked");}
+        const all=await loadAllStudentRequests(realUserId);
+        if(all.length>0){setStudentView("list");}
+        else{setStudentView("form");}
       }
 
       setProfileLoading(false);
@@ -1540,6 +1537,41 @@ export default function TutorApp() {
     setOfferRatings(ratings);
   };
 
+  const loadAllStudentRequests=async(userId:string)=>{
+    const now=Date.now();
+    // Open requests
+    const {data:reqs}=await supabase.from("requests").select("*").eq("poster_id",userId).eq("status","open");
+    const validReqs=(reqs||[]).filter(r=>(now-new Date(r.created_at).getTime())<24*3600*1000);
+    // Active bookings
+    const {data:bookings}=await supabase.from("bookings").select("*, teacher:profiles!teacher_id(full_name,teaching_rate,email,avatar_url)").eq("poster_id",userId).in("status",["pending_payment","confirmed"]);
+    // Bid counts per request
+    const entries=await Promise.all(validReqs.map(async req=>{
+      const {data:bids}=await supabase.from("bids").select("*, teacher:profiles!teacher_id(full_name,country_code,teaching_bio,teaching_curricula,teaching_rate,avatar_url)").eq("request_id",req.id).eq("status","pending");
+      const booking=(bookings||[]).find(b=>b.request_id===req.id)||null;
+      const reqState=booking?"booked":bids?.length>0?"offers":"waiting";
+      return {request:req,booking,offers:bids||[],reqState};
+    }));
+    // Also include booked requests that are no longer "open"
+    const bookedOnly=(bookings||[]).filter(b=>!entries.find(e=>e.booking?.id===b.id));
+    const bookedEntries=await Promise.all(bookedOnly.map(async b=>{
+      const {data:req}=await supabase.from("requests").select("*").eq("id",b.request_id).single();
+      return {request:req,booking:b,offers:[],reqState:"booked"};
+    }));
+    const all=[...entries,...bookedEntries];
+    setAllRequests(all);
+    return all;
+  };
+
+  const openStudentRequest=async(entry:any)=>{
+    setActiveRequest(entry.request);
+    setActiveBooking(entry.booking||null);
+    setActiveOffers(entry.offers||[]);
+    if(entry.reqState==="booked") setStudentState("booked");
+    else if(entry.reqState==="offers"){setStudentState("offers");if(entry.offers?.length) fetchOfferRatings(entry.offers);}
+    else setStudentState("waiting");
+    setStudentView("detail");
+  };
+
   const openTeacherProfile=async(teacher)=>{
     setSelectedTeacherProfile(teacher);
     setTeacherProfileReviews(teacher.reviews||[]);
@@ -1564,7 +1596,9 @@ export default function TutorApp() {
     try{
       const dm={"30 min":30,"1h":60,"1h30":90,"2h":120,"2h30":150,"3h":180};
       const req=await postRequest({subject:form.subject,instrLang:form.instrLang||"English",curriculum:form.curriculum||"british",level:form.level,durationMin:dm[form.duration]||60,message:form.message,countryCode:"UAE"});
-      setActiveRequest(req);setActiveOffers([]);setWaitingSeconds(0);setStudentState("waiting");
+      const newEntry={request:req,booking:null,offers:[],reqState:"waiting"};
+      setAllRequests(prev=>[newEntry,...prev]);
+      setActiveRequest(req);setActiveOffers([]);setWaitingSeconds(0);setStudentState("waiting");setStudentView("detail");
       showToast("✅ "+(lang==="fr"?"Annonce publiée !":lang==="ar"?"تم نشر الإعلان !":"Request posted!"));
     }catch(e){showToast("❌ "+e.message);}
     finally{setPublishing(false);}
@@ -2000,6 +2034,53 @@ export default function TutorApp() {
 
           {appTab==="student-home"&&<div style={{maxWidth:560,margin:"0 auto"}}>
 
+            {/* VUE LISTE */}
+            {studentView==="list"&&<div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1.5rem",flexWrap:"wrap",gap:10}}>
+                <div>
+                  <div className="page-title">{lang==="fr"?"Mes demandes":lang==="ar"?"طلباتي":"My requests"}</div>
+                  <div className="page-sub">{lang==="fr"?"Toutes tes recherches actives":lang==="ar"?"جميع طلباتك النشطة":"All your active searches"}</div>
+                </div>
+                <button className="submit-btn" style={{marginTop:0,padding:"10px 18px",fontSize:13}} onClick={()=>{setStudentState("idle");setStudentView("form");}}>
+                  + {lang==="fr"?"Nouvelle demande":lang==="ar"?"طلب جديد":"New request"}
+                </button>
+              </div>
+              {allRequests.length===0&&<div style={{textAlign:"center",padding:"3rem 0",color:"#64748B"}}>
+                <div style={{fontSize:48,marginBottom:12}}>📭</div>
+                <div style={{fontWeight:700}}>{lang==="fr"?"Aucune demande active":lang==="ar"?"لا طلبات نشطة":"No active requests"}</div>
+              </div>}
+              {allRequests.map((entry,i)=>{
+                const {request:r,booking,offers,reqState}=entry;
+                const statusColor=reqState==="booked"?"#0ABFA3":reqState==="offers"?"#5B4FE8":"#F59E0B";
+                const statusLabel=reqState==="booked"?(lang==="fr"?"Réservé ✅":lang==="ar"?"محجوز ✅":"Booked ✅"):reqState==="offers"?(lang==="fr"?`${offers.length} offre${offers.length>1?"s":""} 🎉`:lang==="ar"?`${offers.length} عروض 🎉`:`${offers.length} offer${offers.length>1?"s":""} 🎉`):(lang==="fr"?"En attente... 🔍":lang==="ar"?"في الانتظار... 🔍":"Waiting... 🔍");
+                const minsAgo=Math.floor((Date.now()-new Date(r.created_at).getTime())/60000);
+                const timeLabel=minsAgo<1?(lang==="fr"?"À l'instant":lang==="ar"?"الآن":"Just now"):minsAgo<60?`${minsAgo} min`:`${Math.floor(minsAgo/60)}h`;
+                return(
+                  <div key={r.id||i} style={{background:"#fff",border:`1.5px solid ${reqState==="offers"?"#C7D2FE":reqState==="booked"?"#A7F3D0":"#E2E8F0"}`,borderRadius:18,padding:"1.25rem 1.5rem",marginBottom:12,cursor:"pointer",transition:"transform .2s,box-shadow .2s",boxShadow:"0 4px 16px rgba(91,79,232,.06)"}}
+                    onClick={()=>openStudentRequest(entry)}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                      <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{r.subject} · {r.level}</div>
+                      <span style={{background:statusColor,color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:800,whiteSpace:"nowrap"}}>{statusLabel}</span>
+                    </div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                      {r.curriculum&&<span className="badge badge-purple">{r.curriculum}</span>}
+                      <span className="badge badge-amber">{r.duration_min} min</span>
+                      <span className="badge badge-teal">📹 Online</span>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:12,color:"#6B7280",fontWeight:600}}>
+                      <span>⏱ {timeLabel}</span>
+                      {reqState==="booked"&&booking?.teacher&&<span>👤 {booking.teacher.full_name}</span>}
+                      <span style={{color:statusColor,fontWeight:800}}>{lang==="fr"?"Voir →":lang==="ar"?"عرض ←":"View →"}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>}
+
+            {/* VUE FORMULAIRE */}
+            {studentView==="form"&&<div style={{maxWidth:560,margin:"0 auto"}}>
+              {allRequests.length>0&&<button className="btn-ghost" style={{marginBottom:"1rem"}} onClick={()=>setStudentView("list")}>← {lang==="fr"?"Mes demandes":lang==="ar"?"طلباتي":"My requests"}</button>}
+
             {/* ÉTAT 1 — idle */}
             {studentState==="idle"&&<div style={{maxWidth:560,margin:"0 auto"}}>
               <div style={{marginBottom:"1.5rem"}}>
@@ -2081,6 +2162,11 @@ export default function TutorApp() {
                 <button className="btn-full" onClick={handlePublish} disabled={publishing}>{publishing?"⏳ "+(lang==="fr"?"Publication...":"Posting..."):lang==="fr"?"Publier mon annonce →":lang==="ar"?"نشر إعلاني ←":"Post my request →"}</button>
               </div>
             </div>}
+            </div>}
+
+            {/* VUE DÉTAIL */}
+            {studentView==="detail"&&<div>
+              <button className="btn-ghost" style={{marginBottom:"1rem"}} onClick={()=>{setStudentView(allRequests.length>0?"list":"form");}}>← {lang==="fr"?"Mes demandes":lang==="ar"?"طلباتي":"My requests"}</button>
 
             {/* ÉTAT 2 — waiting */}
             {studentState==="waiting"&&<div style={{maxWidth:520,margin:"0 auto",textAlign:"center",padding:"2rem 0"}}>
@@ -2393,6 +2479,8 @@ export default function TutorApp() {
                         }
                         setShowCancelConfirm(false);setRecurringSetup(null);setShowRecurringModal(false);
                         setStudentState("idle");setActiveRequest(null);setActiveBooking(null);setSelectedOffer(null);setActiveOffers([]);setWaitingSeconds(0);setRequestViews(0);
+                        const updated=await loadAllStudentRequests(user?.id||"");
+                        setStudentView(updated.length>0?"list":"form");
                         showToast(lang==="fr"?"Réservation annulée.":lang==="ar"?"تم إلغاء الحجز.":"Booking cancelled.");
                       }catch(e){showToast("❌ "+(lang==="fr"?"Erreur lors de l'annulation":"Cancellation error"));}
                       finally{setCancellingBooking(false);}
@@ -2515,13 +2603,15 @@ export default function TutorApp() {
                     🔄 {lang==="fr"?`Reprendre avec ${lastCompletedTeacher.name}`:lang==="ar"?`الاستمرار مع ${lastCompletedTeacher.name}`:`Continue with ${lastCompletedTeacher.name}`}
                   </button>
                 )}
-                <button className="btn-full" onClick={()=>{if(lastCompletedTeacher)setForm(f=>({...f,subject:lastCompletedTeacher.subject}));setStudentState("idle");setLastCompletedTeacher(null);}}>
+                <button className="btn-full" onClick={async()=>{if(lastCompletedTeacher)setForm(f=>({...f,subject:lastCompletedTeacher.subject}));setLastCompletedTeacher(null);setStudentState("idle");setStudentView("form");}}>
                   📋 {lang==="fr"?"Poster une nouvelle annonce":lang==="ar"?"نشر إعلان جديد":"Post a new request"}
                 </button>
                 <button className="btn-ghost" onClick={()=>{setStudentState("idle");setLastCompletedTeacher(null);setAppTab("student-history");}}>
                   📅 {lang==="fr"?"Voir mes cours":lang==="ar"?"عرض دروسي":"View my lessons"}
                 </button>
               </div>
+            </div>}
+
             </div>}
 
           </div>}
