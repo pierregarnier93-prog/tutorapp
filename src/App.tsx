@@ -403,6 +403,9 @@ img,svg{max-width:100%;display:block}
 .footer-logo{font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:.75rem}
 .toast{position:fixed;bottom:1.75rem;right:1.75rem;background:#111827;color:#fff;padding:14px 20px;border-radius:16px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px;z-index:999;animation:slideUp .3s ease;box-shadow:0 18px 50px rgba(0,0,0,.18)}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes popIn{0%{transform:scale(0.7);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes offerSlide{from{transform:translateX(-18px);opacity:0}to{transform:translateX(0);opacity:1}}
 .auth-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.75);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
 .auth-box{background:#fff;border-radius:28px;padding:2.5rem;width:100%;max-width:480px;box-shadow:0 24px 80px rgba(91,79,232,0.16);position:relative;max-height:90vh;overflow-y:auto}
 .auth-logo{font-family:'Fraunces',serif;font-size:24px;font-weight:900;color:#5B4FE8;text-align:center;margin-bottom:.4rem}
@@ -1135,6 +1138,7 @@ export default function TutorApp() {
   const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:""});
   const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,photoFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",whatsapp:"",cguAccepted:false,childProtectionAccepted:false});
   const [pushSubscribed,setPushSubscribed]=useState(false);
+  const [firstOfferJustArrived,setFirstOfferJustArrived]=useState(false);
   const [bidForm,setBidForm]=useState({message:""});
   const [selectedRequest,setSelectedRequest]=useState(null);
   const [profileLoading,setProfileLoading]=useState(true);
@@ -1373,7 +1377,7 @@ export default function TutorApp() {
           fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"new_offer_received",studentEmail:user?.email,studentName:userProfile?.full_name||user?.email?.split("@")[0],teacherName:newOffer?.teacher?.full_name,netPrice:newOffer?.net_price_aed,subject:activeRequest?.subject,lang})}).catch(()=>{});
           previousCount=offers.length;
         }
-        if(offers.length>0){setActiveOffers(offers);setStudentState("offers");fetchOfferRatings(offers);}
+        if(offers.length>0){setActiveOffers(offers);setStudentState("offers");setFirstOfferJustArrived(true);setTimeout(()=>setFirstOfferJustArrived(false),4000);fetchOfferRatings(offers);}
       }).subscribe();
     const poll=async()=>{
       try{
@@ -2031,7 +2035,13 @@ export default function TutorApp() {
                 <div className="banner banner-blue" style={{marginBottom:"1rem"}}>📹 {lang==="fr"?"Cours en visioconférence — lien envoyé automatiquement":lang==="ar"?"الحصة عبر الفيديو — يُرسل الرابط تلقائياً":"Online lesson — video link sent automatically"}</div>
 
                 {(form.curriculum&&form.level&&form.instrLang)?(<>
-                  <div className="banner banner-green" style={{marginBottom:"1.25rem"}}>✅ {lang==="fr"?"Profil pré-rempli — choisis juste une matière !":lang==="ar"?"ملفك مُعبأ — اختر المادة فقط !":"Profile pre-filled — just pick a subject!"}</div>
+                  <div style={{background:"linear-gradient(135deg,#F0FDF4,#DCFCE7)",border:"1.5px solid #86EFAC",borderRadius:14,padding:"0.9rem 1.1rem",marginBottom:"1.25rem",display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:22}}>⚡</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:800,fontSize:13,color:"#0F6E56"}}>{lang==="fr"?"Profil pré-rempli !":lang==="ar"?"ملفك مُعبأ تلقائياً !":"Pre-filled from your profile!"}</div>
+                      <div style={{fontSize:11,color:"#16A34A",marginTop:1}}>{lang==="fr"?"Choisis une matière et c'est parti.":lang==="ar"?"اختر المادة وانطلق.":"Just pick a subject and you're done."}</div>
+                    </div>
+                  </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:"1.25rem"}}>
                     <span className="badge badge-purple">{Object.entries(CURRICULA).find(([k])=>k===form.curriculum)?.[1]?.label[lang]||form.curriculum}</span>
                     <span className="badge badge-blue">{form.level}</span>
@@ -2111,6 +2121,15 @@ export default function TutorApp() {
 
             {/* ÉTAT 3 — offers */}
             {studentState==="offers"&&<>
+              {firstOfferJustArrived&&(
+                <div style={{background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",borderRadius:16,padding:"1rem 1.25rem",marginBottom:"1rem",display:"flex",alignItems:"center",gap:12,animation:"popIn .4s ease"}}>
+                  <div style={{fontSize:32}}>🎉</div>
+                  <div>
+                    <div style={{fontWeight:900,fontSize:15,color:"#fff"}}>{lang==="fr"?"Des profs ont répondu !":lang==="ar"?"ردّ عليك مدرسون !":"Tutors responded to your request!"}</div>
+                    <div style={{fontSize:12,color:"rgba(255,255,255,.85)",marginTop:2}}>{lang==="fr"?"Compare les offres et choisis le meilleur pour toi.":lang==="ar"?"قارن العروض واختر الأفضل.":"Compare offers and pick the best fit."}</div>
+                  </div>
+                </div>
+              )}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem",flexWrap:"wrap",gap:8}}>
                 <div>
                   <div className="page-title">{lang==="fr"?"Offres reçues":lang==="ar"?"العروض المستلمة":"Offers received"} 🎉</div>
@@ -2260,6 +2279,24 @@ export default function TutorApp() {
                 </div>
                 <div style={{fontSize:13,color:"rgba(255,255,255,.85)"}}>{lang==="fr"?"Avec":lang==="ar"?"مع":"With"} <strong>{activeBooking?.teacher?.full_name}</strong> · {lang==="fr"?"Enseignant vérifié ✅":lang==="ar"?"مدرس موثّق ✅":"Verified tutor ✅"}</div>
               </div>
+              <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.25rem",textAlign:"start",animation:"slideUp .4s ease"}}>
+                <div style={{fontWeight:800,fontSize:13,color:"#5B4FE8",marginBottom:12,textTransform:"uppercase",letterSpacing:.5}}>📋 {lang==="fr"?"Comment ça se passe ?":lang==="ar"?"كيف تسير الأمور؟":"What happens next?"}</div>
+                {[
+                  {icon:"📅",title:lang==="fr"?"Convenez d'un horaire":lang==="ar"?"حددوا الموعد":"Agree on a time",sub:lang==="fr"?"Via la messagerie ou WhatsApp ci-dessous":lang==="ar"?"عبر الرسائل أو واتساب أدناه":"Via chat or WhatsApp below"},
+                  {icon:"📹",title:lang==="fr"?"Rejoignez le cours en ligne":lang==="ar"?"انضموا للحصة أونلاين":"Join the online lesson",sub:lang==="fr"?"Cliquez sur le lien Jitsi — aucune installation requise":lang==="ar"?"انقر رابط Jitsi — لا تثبيت مطلوب":"Click the Jitsi link — no install needed"},
+                  {icon:"✅",title:lang==="fr"?"Confirmez après le cours":lang==="ar"?"أكدوا بعد الحصة":"Confirm after the lesson",sub:lang==="fr"?"Le paiement est libéré uniquement à ce moment":lang==="ar"?"يُحرر الدفع فقط بعد التأكيد":"Payment is released only then"},
+                  {icon:"⭐",title:lang==="fr"?"Notez votre enseignant":lang==="ar"?"قيّموا مدرسكم":"Rate your tutor",sub:lang==="fr"?"Aidez d'autres familles à choisir":lang==="ar"?"ساعدوا عائلات أخرى في الاختيار":"Help other families choose"},
+                ].map((step,i)=>(
+                  <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:i<3?12:0}}>
+                    <div style={{fontSize:20,flexShrink:0,marginTop:1}}>{step.icon}</div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:13,color:"#1A1A2E"}}>{step.title}</div>
+                      <div style={{fontSize:12,color:"#64748B",marginTop:1}}>{step.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {activeBooking?.scheduled_at&&(
                 <div style={{background:"linear-gradient(135deg,#F0FDF4,#DCFCE7)",border:"1.5px solid #86EFAC",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1.25rem",display:"flex",alignItems:"center",gap:12}}>
                   <div style={{fontSize:28}}>📅</div>
