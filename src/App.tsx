@@ -1476,9 +1476,9 @@ export default function TutorApp() {
   };
 
   const formatWaitingTime=()=>{
-    const minutes=Math.floor(waitingSeconds/60);const seconds=waitingSeconds%60;
-    if(minutes===0)return lang==="fr"?`${seconds} secondes`:lang==="ar"?`${seconds} ثانية`:`${seconds} seconds`;
-    return lang==="fr"?`${minutes} min ${seconds}s`:lang==="ar"?`${minutes} د ${seconds}ث`:`${minutes}m ${seconds}s`;
+    const minutes=Math.floor(waitingSeconds/60);
+    if(minutes<1)return lang==="fr"?"moins d'une minute":lang==="ar"?"أقل من دقيقة":"less than a minute";
+    return lang==="fr"?`${minutes} min`:lang==="ar"?`${minutes} دقيقة`:`${minutes} min`;
   };
 
   const sendConfirmationEmail=async(booking)=>{
