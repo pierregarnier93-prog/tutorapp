@@ -13,11 +13,20 @@ const stripePromise = loadStripe("pk_live_51TagWA4l4Z2J0IZfYprxlISAh0FG5mY8jnpug
 const STUDENT_FEE = 0.06;
 const TEACHER_FEE = 0.06;
 
+function normalizeInstrLang(l:string):string{
+  if(!l) return "English";
+  const lo=l.toLowerCase();
+  if(lo.includes("english")||lo.includes("anglais")||lo.includes("الإنجليزية")) return "English";
+  if(lo.includes("arabic")||lo.includes("arabe")||lo.includes("العربية")) return "Arabic";
+  if(lo.includes("french")||lo.includes("français")||lo.includes("الفرنسية")) return "French";
+  return l;
+}
+
 async function postRequest({ subject, instrLang, curriculum, level, cycle, durationMin, message, countryCode }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
   const { data, error } = await supabase.from("requests").insert({
-    poster_id: user.id, subject, instr_lang: instrLang, curriculum, level,
+    poster_id: user.id, subject, instr_lang: normalizeInstrLang(instrLang), curriculum, level,
     cycle: Array.isArray(cycle) ? cycle.join(", ") : cycle,
     duration_min: durationMin || 60,
     budget_min_aed: 0, budget_max_aed: 9999,
