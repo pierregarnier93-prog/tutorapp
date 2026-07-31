@@ -2076,7 +2076,7 @@ export default function TutorApp() {
             {studentState==="waiting"&&<div style={{maxWidth:520,margin:"0 auto",textAlign:"center",padding:"2rem 0"}}>
               <div style={{fontSize:56,marginBottom:"1rem",animation:"pulse 2s infinite"}}>🔍</div>
               <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Recherche en cours...":lang==="ar"?"البحث جارٍ...":"Searching for tutors..."}</div>
-              <div style={{fontSize:13,color:"#64748B",marginBottom:"1rem",lineHeight:1.7}}>{lang==="fr"?"Les enseignants vont proposer leurs tarifs. En général moins de 15 minutes.":lang==="ar"?"سيقترح المدرسون أسعارهم. عادةً أقل من 15 دقيقة.":"Tutors will propose their rates. Usually under 15 minutes."}</div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:"1rem",lineHeight:1.7}}>{lang==="fr"?"Détendez-vous — les enseignants se disputent votre cours en ce moment.":lang==="ar"?"استرخِ — المدرسون يتنافسون على حصتك الآن.":"Sit back — tutors are competing for your lesson right now."}</div>
               <div style={{background:"#EEF2FF",border:"1.5px solid #D8DBFE",borderRadius:12,padding:"10px 20px",display:"inline-block",marginBottom:"1rem",fontSize:13,fontWeight:700,color:"#5B4FE8"}}>
                 ⏱ {lang==="fr"?"Annonce publiée il y a":lang==="ar"?"نُشر الإعلان منذ":"Posted"} {formatWaitingTime()}{lang==="en"?" ago":""}
               </div>
