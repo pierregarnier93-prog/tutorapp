@@ -1237,6 +1237,7 @@ export default function TutorApp() {
   const [selectedRequestForBid,setSelectedRequestForBid]=useState(null);
   const [liveStats,setLiveStats]=useState({todayLessons:0,avgResponseMin:12,activeTeachers:0});
   const [requestViews,setRequestViews]=useState(0);
+  const [suggestedTeachers,setSuggestedTeachers]=useState<any[]>([]);
   const [currentTestimonial,setCurrentTestimonial]=useState(0);
   const [lastCompletedTeacher,setLastCompletedTeacher]=useState<{name:string,id:string,subject:string}|null>(null);
   const [showStudentOnboard,setShowStudentOnboard]=useState(false);
@@ -1673,14 +1674,16 @@ export default function TutorApp() {
       setAllRequests(prev=>[newEntry,...prev]);
       setActiveRequest(req);setActiveOffers([]);setWaitingSeconds(0);setStudentState("waiting");setStudentView("detail");
       showToast("✅ "+(lang==="fr"?"Annonce publiée !":lang==="ar"?"تم نشر الإعلان !":"Request posted!"));
-      // Notify matching teachers via push
+      // Notify matching teachers via push + fetch their profiles
       supabase.from("profiles")
-        .select("id")
+        .select("id,full_name,bio,photo_url,teaching_subjects,hourly_rate_aed,rating,rating_count,teaching_langs")
         .eq("role","teacher")
         .eq("verified",true)
         .contains("teaching_subjects",[form.subject])
-        .then(({data:matchingTeachers})=>{
-          (matchingTeachers||[]).forEach(t=>{
+        .limit(6)
+        .then(({data:matched})=>{
+          setSuggestedTeachers(matched||[]);
+          (matched||[]).forEach(t=>{
             sendPushTo(
               t.id,
               lang==="fr"?"📋 Nouvelle demande !":lang==="ar"?"📋 طلب جديد!":"📋 New request!",
@@ -2290,9 +2293,33 @@ export default function TutorApp() {
                 <div style={{fontSize:12,color:"#64748B",fontWeight:700}}>— {TESTIMONIALS[currentTestimonial].name}</div>
               </div>
               <div style={{fontSize:12,color:"#9CA3AF",marginBottom:"1.5rem",fontWeight:600}}>🔄 {lang==="fr"?"Mise à jour automatique toutes les 10 secondes":lang==="ar"?"تحديث تلقائي كل 10 ثوانٍ":"Auto-refreshing every 10 seconds"}</div>
+              {suggestedTeachers.length>0&&(
+                <div style={{textAlign:"start",marginBottom:"1.5rem"}}>
+                  <div style={{fontWeight:800,fontSize:15,marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
+                      ⚡ {lang==="fr"?"Profs disponibles — déjà notifiés !":lang==="ar"?"المدرسون المتاحون — تم إخطارهم!":"Available tutors — already notified!"}
+                    </span>
+                  </div>
+                  {suggestedTeachers.map(t=>(
+                    <div key={t.id} style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+                      <div style={{width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",flexShrink:0,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {t.photo_url?<img src={t.photo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:20,color:"#fff"}}>👤</span>}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:800,fontSize:14,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.full_name||"Tutor"}</div>
+                        <div style={{fontSize:12,color:"#64748B",marginTop:2,display:"flex",gap:6,flexWrap:"wrap"}}>
+                          {t.rating>0&&<span>⭐ {Number(t.rating).toFixed(1)} ({t.rating_count||0})</span>}
+                          {t.hourly_rate_aed&&<span style={{color:"#5B4FE8",fontWeight:700}}>{t.hourly_rate_aed} AED/h</span>}
+                        </div>
+                      </div>
+                      <div style={{flexShrink:0,fontSize:11,color:"#0ABFA3",fontWeight:700,background:"#F0FDF4",borderRadius:8,padding:"4px 10px"}}>✓ {lang==="fr"?"Notifié":lang==="ar"?"تم الإخطار":"Notified"}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <button className="btn-ghost" onClick={async()=>{
                 if(activeRequest?.id){await supabase.from("requests").update({status:"cancelled"}).eq("id",activeRequest.id);}
-                setStudentState("idle");setActiveRequest(null);setActiveOffers([]);setWaitingSeconds(0);setRequestViews(0);
+                setStudentState("idle");setActiveRequest(null);setActiveOffers([]);setWaitingSeconds(0);setRequestViews(0);setSuggestedTeachers([]);
               }}>{lang==="fr"?"Annuler l'annonce":lang==="ar"?"إلغاء الإعلان":"Cancel request"}</button>
             </div>}
 
