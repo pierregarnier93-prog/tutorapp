@@ -115,6 +115,28 @@ function timeAgo(date, lang) {
   return `${Math.floor(diff/86400)} ${lang==="fr"?"j":lang==="ar"?"ي":"d"}`;
 }
 
+function scoreTeacherForRequest(teacher: any, form: any): number {
+  let score = 0;
+  if (teacher.teaching_curricula?.includes(form.curriculum)) score += 30;
+  if (teacher.teaching_langs?.includes(form.instrLang||form.instr_lang)) score += 20;
+  if (teacher.rating > 0) score += Math.round((teacher.rating / 5) * 30);
+  if (teacher.rating_count > 0) score += 10;
+  if (teacher.hourly_rate_aed && teacher.hourly_rate_aed <= (form.budget||500)) score += 10;
+  return score;
+}
+
+function scoreRequestForTeacher(request: any, profile: any): number {
+  let score = 0;
+  if (profile?.teaching_curricula?.includes(request.curriculum)) score += 30;
+  if (profile?.teaching_langs?.includes(request.instr_lang)) score += 20;
+  const bidCount = request.bids?.[0]?.count || 0;
+  if (bidCount === 0) score += 20;
+  else if (bidCount < 3) score += 10;
+  const ageMin = Math.floor((Date.now() - new Date(request.created_at).getTime()) / 60000);
+  if (ageMin < 30) score += 10;
+  return score;
+}
+
 async function getMatchedRequests(profile) {
   let query = supabase
     .from("requests")
@@ -125,7 +147,10 @@ async function getMatchedRequests(profile) {
     query = query.in("subject", profile.teaching_subjects);
   }
   const { data } = await query;
-  return data || [];
+  const requests = data || [];
+  return requests
+    .map(r => ({ ...r, _score: scoreRequestForTeacher(r, profile) }))
+    .sort((a, b) => b._score - a._score);
 }
 
 async function getTeacherRevenueStats(userId) {
@@ -1719,8 +1744,11 @@ export default function TutorApp() {
         .contains("teaching_subjects",[form.subject])
         .limit(6)
         .then(({data:matched})=>{
-          setSuggestedTeachers(matched||[]);
-          (matched||[]).forEach(t=>{
+          const scored=(matched||[])
+            .map(t=>({...t,_score:scoreTeacherForRequest(t,form)}))
+            .sort((a,b)=>b._score-a._score);
+          setSuggestedTeachers(scored);
+          scored.forEach(t=>{
             sendPushTo(
               t.id,
               lang==="fr"?"📋 Nouvelle demande !":lang==="ar"?"📋 طلب جديد!":"📋 New request!",
@@ -2364,7 +2392,10 @@ export default function TutorApp() {
                           {t.hourly_rate_aed&&<span style={{color:"#5B4FE8",fontWeight:700}}>{t.hourly_rate_aed} AED/h</span>}
                         </div>
                       </div>
-                      <div style={{flexShrink:0,fontSize:11,color:"#0ABFA3",fontWeight:700,background:"#F0FDF4",borderRadius:8,padding:"4px 10px"}}>✓ {lang==="fr"?"Notifié":lang==="ar"?"تم الإخطار":"Notified"}</div>
+                      <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                        {t._score>=60&&<div style={{fontSize:11,color:"#0F6E56",fontWeight:800,background:"#D1FAE5",borderRadius:8,padding:"3px 8px"}}>{Math.min(100,Math.round(t._score/100*100+40))}% match</div>}
+                        <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700,background:"#F0FDF4",borderRadius:8,padding:"3px 8px"}}>✓ {lang==="fr"?"Notifié":lang==="ar"?"تم الإخطار":"Notified"}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -3122,6 +3153,7 @@ export default function TutorApp() {
                       <span style={{fontSize:20}}>📋</span>
                       <div className="req-title">{r.subject}</div>
                       {i===0&&<span className="badge badge-green" style={{fontSize:10}}>NEW</span>}
+                      {r._score>=50&&<span style={{fontSize:10,fontWeight:800,background:"#D1FAE5",color:"#0F6E56",borderRadius:8,padding:"2px 7px"}}>{Math.min(99,Math.round(r._score/80*100))}% match</span>}
                     </div>
                     <span style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>{timeAgo(r.created_at,lang)}</span>
                   </div>
