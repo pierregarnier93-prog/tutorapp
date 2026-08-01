@@ -857,6 +857,29 @@ function AdminPage({ user, lang, onBack }) {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("pending");
+  const [adminTab, setAdminTab] = useState<"teachers"|"bookings"|"stats">("teachers");
+  const [recentBookings, setRecentBookings] = useState<any[]>([]);
+  const [adminStats, setAdminStats] = useState({totalRevenue:0,totalBookings:0,totalStudents:0,totalTeachers:0,pendingBookings:0,completedBookings:0});
+  const [loadingBookings, setLoadingBookings] = useState(false);
+
+  const loadAdminStats = async () => {
+    const [{data:bookings},{data:students},{data:allTeachers}] = await Promise.all([
+      supabase.from("bookings").select("gross_price_aed,commission_aed,status,created_at,subject,poster_id,teacher_id,teacher:profiles!teacher_id(full_name),student:profiles!poster_id(full_name)").order("created_at",{ascending:false}).limit(50),
+      supabase.from("profiles").select("id").eq("role","student"),
+      supabase.from("profiles").select("id").eq("role","teacher"),
+    ]);
+    const completed=(bookings||[]).filter(b=>b.status==="completed");
+    const totalRevenue=completed.reduce((s,b)=>s+(b.commission_aed||0),0);
+    setAdminStats({
+      totalRevenue,
+      totalBookings:(bookings||[]).length,
+      completedBookings:completed.length,
+      pendingBookings:(bookings||[]).filter(b=>b.status==="pending_payment").length,
+      totalStudents:(students||[]).length,
+      totalTeachers:(allTeachers||[]).length,
+    });
+    setRecentBookings(bookings||[]);
+  };
 
   const loadTeachers = async () => {
     setLoading(true);
@@ -870,6 +893,7 @@ function AdminPage({ user, lang, onBack }) {
   };
 
   useEffect(() => { loadTeachers(); }, [filter]);
+  useEffect(() => { if(adminTab==="stats"||adminTab==="bookings") loadAdminStats(); }, [adminTab]);
 
   const notify = async (payload) => {
     try {
@@ -900,14 +924,59 @@ function AdminPage({ user, lang, onBack }) {
 
   return (
     <div style={{maxWidth:900, margin:"0 auto", padding:"2rem"}}>
-      <div style={{display:"flex", alignItems:"center", gap:16, marginBottom:"2rem"}}>
+      <div style={{display:"flex", alignItems:"center", gap:16, marginBottom:"1.5rem"}}>
         <button onClick={onBack} className="btn-ghost">← Retour</button>
         <div>
           <div className="page-title">⚙️ Interface Admin</div>
-          <div className="page-sub" style={{marginBottom:0}}>Gestion des enseignants TutorApp</div>
+          <div className="page-sub" style={{marginBottom:0}}>TutorApp Gulf</div>
         </div>
       </div>
 
+      {/* Onglets admin */}
+      <div style={{display:"flex",gap:8,marginBottom:"1.5rem",borderBottom:"2px solid #E2E8F0",paddingBottom:0}}>
+        {([["teachers","👨‍🏫 Enseignants"],["bookings","📋 Bookings"],["stats","📊 Revenus"]] as [string,string][]).map(([k,v])=>(
+          <button key={k} onClick={()=>setAdminTab(k as any)} style={{padding:"10px 18px",fontWeight:700,fontSize:13,border:"none",background:"none",cursor:"pointer",borderBottom:adminTab===k?"3px solid #5B4FE8":"3px solid transparent",color:adminTab===k?"#5B4FE8":"#6B7280",marginBottom:-2}}>{v}</button>
+        ))}
+      </div>
+
+      {/* TAB: STATS */}
+      {adminTab==="stats"&&<>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:"1.5rem"}}>
+          <div className="stat-card"><div className="stat-val" style={{color:"#5B4FE8"}}>{adminStats.totalRevenue} AED</div><div className="stat-lbl">💰 Revenus plateforme</div></div>
+          <div className="stat-card"><div className="stat-val">{adminStats.completedBookings}</div><div className="stat-lbl">✅ Cours terminés</div></div>
+          <div className="stat-card"><div className="stat-val" style={{color:"#F59E0B"}}>{adminStats.pendingBookings}</div><div className="stat-lbl">⏳ En cours</div></div>
+          <div className="stat-card"><div className="stat-val">{adminStats.totalStudents}</div><div className="stat-lbl">👨‍🎓 Élèves</div></div>
+          <div className="stat-card"><div className="stat-val">{adminStats.totalTeachers}</div><div className="stat-lbl">👨‍🏫 Enseignants</div></div>
+          <div className="stat-card"><div className="stat-val">{adminStats.totalBookings}</div><div className="stat-lbl">📋 Total bookings</div></div>
+        </div>
+      </>}
+
+      {/* TAB: BOOKINGS */}
+      {adminTab==="bookings"&&<>
+        <div style={{marginBottom:"1rem",fontWeight:700,color:"#374151"}}>50 derniers bookings</div>
+        {recentBookings.map(b=>(
+          <div key={b.id} style={{border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+            <div>
+              <div style={{fontWeight:800,fontSize:14}}>{b.subject||"—"}</div>
+              <div style={{fontSize:12,color:"#6B7280",marginTop:2}}>
+                👨‍🎓 {b.student?.full_name||"?"} → 👨‍🏫 {b.teacher?.full_name||"?"}
+              </div>
+              <div style={{fontSize:11,color:"#9CA3AF",marginTop:2}}>{new Date(b.created_at).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}</div>
+            </div>
+            <div style={{textAlign:"end"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:16,fontWeight:900,color:"#5B4FE8"}}>{b.gross_price_aed} AED</div>
+              <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>+{b.commission_aed||0} AED comm.</div>
+              <span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:20,background:b.status==="completed"?"#DCFCE7":b.status==="pending_payment"?"#FEF3C7":"#F3F4F6",color:b.status==="completed"?"#166534":b.status==="pending_payment"?"#92400E":"#6B7280",marginTop:4,display:"inline-block"}}>
+                {b.status==="completed"?"✅ Terminé":b.status==="pending_payment"?"⏳ En cours":b.status==="cancelled"?"❌ Annulé":b.status}
+              </span>
+            </div>
+          </div>
+        ))}
+        {recentBookings.length===0&&<div className="empty"><div className="empty-icon">📋</div><div style={{fontWeight:700}}>Aucun booking</div></div>}
+      </>}
+
+      {/* TAB: ENSEIGNANTS */}
+      {adminTab==="teachers"&&<>
       <div style={{display:"flex", gap:10, marginBottom:"1.5rem"}}>
         {[["pending","⏳ En attente"],["verified","✅ Vérifiés"],["all","Tous"]].map(([k,v]) => (
           <div key={k} className={`chip${filter===k?" selected":""}`} onClick={() => setFilter(k)}>{v}</div>
@@ -929,7 +998,7 @@ function AdminPage({ user, lang, onBack }) {
         </div>
       )}
 
-      {!loading && teachers.map(teacher => (
+      {!loading && teachers.map((teacher,_ti) => (
         <div key={teacher.id} className="req-card" style={{marginBottom:16}}>
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12}}>
             <div style={{flex:1}}>
@@ -979,6 +1048,7 @@ function AdminPage({ user, lang, onBack }) {
           </div>
         </div>
       ))}
+      </>}
     </div>
   );
 }
@@ -1181,6 +1251,7 @@ export default function TutorApp() {
   const [showChat,setShowChat]=useState(false);
   const [sendingMsg,setSendingMsg]=useState(false);
   const [onboardStep,setOnboardStep]=useState(1);
+  const [teacherOnboardStep,setTeacherOnboardStep]=useState(1);
   const [expandedOffer,setExpandedOffer]=useState<string|null>(null);
   const [reviewComment,setReviewComment]=useState("");
   const [offerRatings,setOfferRatings]=useState<Record<string,{avg:string,count:number}>>({});
@@ -1264,7 +1335,7 @@ export default function TutorApp() {
 
           setPage("app");
           setAppTab("teacher-home");
-          if (!profile?.bank_iban) setShowOnboard(true);
+          if (!profile?.bank_iban) setShowOnboard(true);setTeacherOnboardStep(1);
           setProfileLoading(false);
           return profile;
         }
@@ -1600,6 +1671,21 @@ export default function TutorApp() {
       setAllRequests(prev=>[newEntry,...prev]);
       setActiveRequest(req);setActiveOffers([]);setWaitingSeconds(0);setStudentState("waiting");setStudentView("detail");
       showToast("✅ "+(lang==="fr"?"Annonce publiée !":lang==="ar"?"تم نشر الإعلان !":"Request posted!"));
+      // Notify matching teachers via push
+      supabase.from("profiles")
+        .select("id")
+        .eq("role","teacher")
+        .eq("verified",true)
+        .contains("teaching_subjects",[form.subject])
+        .then(({data:matchingTeachers})=>{
+          (matchingTeachers||[]).forEach(t=>{
+            sendPushTo(
+              t.id,
+              lang==="fr"?"📋 Nouvelle demande !":lang==="ar"?"📋 طلب جديد!":"📋 New request!",
+              lang==="fr"?`${form.subject} · ${form.level} — Fais une offre maintenant !`:lang==="ar"?`${form.subject} · ${form.level} — قدّم عرضاً الآن!`:`${form.subject} · ${form.level} — Make an offer now!`
+            );
+          });
+        });
     }catch(e){showToast("❌ "+e.message);}
     finally{setPublishing(false);}
   };
@@ -1763,7 +1849,7 @@ export default function TutorApp() {
       setPage("app");
       if(role==="teacher"){
         setAppTab("teacher-home");
-        if(!profile?.bank_iban) setShowOnboard(true);
+        if(!profile?.bank_iban) setShowOnboard(true);setTeacherOnboardStep(1);
         const revenue = await getTeacherRevenueStats(u.id);
         setTeacherRevenue(revenue);
         const requests = await getMatchedRequests(profile);
@@ -1823,7 +1909,7 @@ export default function TutorApp() {
           <p>{t.hero.sub}</p>
           <div className="hero-btns">
             <button className="btn-big btn-big-primary" onClick={()=>go("student-home")}>{t.hero.cta1}</button>
-            <button className="btn-big btn-big-outline" onClick={()=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab("teacher-home");setShowOnboard(true);}}>{t.hero.cta2}</button>
+            <button className="btn-big btn-big-outline" onClick={()=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab("teacher-home");setShowOnboard(true);setTeacherOnboardStep(1);}}>{t.hero.cta2}</button>
           </div>
           <div className="hero-stats">{[
             {v:landingStats.teachers>0?`${landingStats.teachers}+`:t.hero.s1v,l:t.hero.s1l},
@@ -2030,7 +2116,7 @@ export default function TutorApp() {
         </div>
 
         <div className="app-body">
-          {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} country={country} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} onEditTeachingProfile={()=>{setAppTab("teacher-home");setShowOnboard(true);}} />}
+          {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} country={country} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} onEditTeachingProfile={()=>{setAppTab("teacher-home");setShowOnboard(true);setTeacherOnboardStep(1);}} />}
 
           {appTab==="student-home"&&<div style={{maxWidth:560,margin:"0 auto"}}>
 
@@ -2625,100 +2711,152 @@ export default function TutorApp() {
 
 
           {appTab==="teacher-home"&&showOnboard&&<>
-            <div className="page-title">{t.onboard.title}</div>
-            <div className="page-sub">{t.onboard.sub}</div>
-            <div className="form-row">
-              <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.name}</label><input className="form-input" placeholder="Sarah Al-Mansouri" value={teacherForm.name} onChange={e=>setTeacherForm({...teacherForm,name:e.target.value})} /></div>
-              <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.email}</label><input className="form-input" type="email" placeholder="sarah@email.com" value={teacherForm.email} onChange={e=>setTeacherForm({...teacherForm,email:e.target.value})} /></div>
-            </div>
-            <div className="form-group"><label className="form-label">{t.onboard.cycle}</label><div className="chips-row">{t.cycles.map(c=><div key={c} className={`chip${teacherForm.cycles.includes(c)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,cycles:[c]})}>{c}</div>)}</div></div>
-            <div className="form-group"><label className="form-label">{t.onboard.curriculum}</label><div className="chips-row">{Object.entries(CURRICULA).map(([k,v])=><div key={k} className={`chip${teacherForm.curricula.includes(k)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,curricula:toggleArr(teacherForm.curricula,k)})}>{v.label[lang]}</div>)}</div></div>
-            <div className="form-group"><label className="form-label">{t.onboard.subjects}</label><div className="chips-row">{SUBJECTS.map(s=><div key={s.en} className={`chip${teacherForm.subjects.includes(s.en)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,subjects:toggleArr(teacherForm.subjects,s.en)})}>{s[lang]}</div>)}</div></div>
-            <div className="form-group"><label className="form-label">{t.onboard.langTeach}</label><div className="chips-row">{t.instrLangs.map(l=><div key={l} className={`chip${teacherForm.instrLangs.includes(l)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,instrLangs:toggleArr(teacherForm.instrLangs,l)})}>{l}</div>)}</div></div>
-            <div className="form-group">
-              <label className="form-label">{t.onboard.rate}</label>
-              <div className="rate-chips">{TEACHER_RATES.map(r=><div key={r} className={`rate-chip${teacherForm.rate===r?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,rate:r})}>{fmtPrice(r,country)}/h</div>)}</div>
-              <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>{t.teacher.rateHint} → {fmtPrice(Math.round(teacherForm.rate*(1-TEACHER_FEE)),country)}/h</div>
-            </div>
-            <div className="form-group"><label className="form-label">{t.onboard.bio}</label><textarea className="form-textarea" placeholder={t.onboard.bioPh} value={teacherForm.bio} onChange={e=>setTeacherForm({...teacherForm,bio:e.target.value})} /></div>
-            <div className="form-group">
-              <label className="form-label">💬 WhatsApp {lang==="fr"?"(optionnel, visible sur votre profil)":lang==="ar"?"(اختياري، مرئي في ملفك)":"(optional, shown on your profile)"}</label>
-              <input className="form-input" placeholder="+971 50 123 4567" value={teacherForm.whatsapp} onChange={e=>setTeacherForm({...teacherForm,whatsapp:e.target.value.replace(/\s/g,"")})} />
-              <div style={{fontSize:11,color:"#6B7280",marginTop:4}}>{lang==="fr"?"Format international : +971XXXXXXXXX":lang==="ar"?"الصيغة الدولية: +971XXXXXXXXX":"International format: +971XXXXXXXXX"}</div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">📸 {lang==="fr"?"Photo de profil (optionnel)":lang==="ar"?"صورة الملف الشخصي (اختياري)":"Profile photo (optional)"}</label>
-              <div className="upload-zone" onClick={()=>document.getElementById('photo-upload').click()} style={{textAlign:"center"}}>
-                {teacherForm.photoFile
-                  ?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{(teacherForm.photoFile as File).name}</div></>
-                  :<><div style={{fontSize:28}}>👤</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{lang==="fr"?"Clique pour ajouter ta photo":lang==="ar"?"انقر لإضافة صورتك":"Click to add your photo"}</div></>}
+            {/* Progress bar */}
+            <div style={{marginBottom:"1.5rem"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                {[
+                  lang==="fr"?"Profil":lang==="ar"?"الملف":"Profile",
+                  lang==="fr"?"Matières":lang==="ar"?"المواد":"Subjects",
+                  lang==="fr"?"Documents":lang==="ar"?"الوثائق":"Documents",
+                ].map((label,i)=>(
+                  <div key={i} style={{flex:1,textAlign:"center",fontSize:11,fontWeight:700,color:teacherOnboardStep>i+1?"#0ABFA3":teacherOnboardStep===i+1?"#5B4FE8":"#9CA3AF"}}>
+                    <div style={{width:28,height:28,borderRadius:"50%",margin:"0 auto 4px",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:13,background:teacherOnboardStep>i+1?"#0ABFA3":teacherOnboardStep===i+1?"#5B4FE8":"#E5E7EB",color:teacherOnboardStep>=i+1?"#fff":"#9CA3AF",transition:"all .3s"}}>
+                      {teacherOnboardStep>i+1?"✓":i+1}
+                    </div>
+                    {label}
+                  </div>
+                ))}
               </div>
-              <input id="photo-upload" type="file" accept="image/*" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,photoFile:e.target.files?.[0]||null})} />
+              <div style={{height:4,background:"#E5E7EB",borderRadius:2,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${((teacherOnboardStep-1)/2)*100}%`,background:"linear-gradient(90deg,#5B4FE8,#0ABFA3)",borderRadius:2,transition:"width .4s ease"}}/>
+              </div>
             </div>
 
-            <div className="section-divider">🪪 {t.onboard.idDoc}</div>
-            <div style={{fontSize:12,color:"#6B7280",marginBottom:12,fontWeight:600}}>ℹ️ {t.onboard.idDocHint}</div>
-            <div className="form-row">
-              <div className="form-group" style={{marginBottom:0}}>
-                <label className="form-label">{t.onboard.idDoc}</label>
-                <div className="upload-zone" onClick={()=>document.getElementById('id-upload').click()}>
-                  {teacherForm.idFile?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{teacherForm.idFile.name}</div></>:<><div style={{fontSize:28}}>🪪</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{t.onboard.idPh}</div></>}
+            {/* STEP 1 — Profil */}
+            {teacherOnboardStep===1&&<>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+                {lang==="fr"?"Parle-nous de toi":lang==="ar"?"أخبرنا عنك":"Tell us about yourself"}
+              </div>
+              <div style={{fontSize:14,color:"#6B7280",marginBottom:"1.5rem"}}>{lang==="fr"?"Ces infos apparaîtront sur ton profil":lang==="ar"?"ستظهر هذه المعلومات في ملفك":"This info will appear on your profile"}</div>
+              <div className="form-row">
+                <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.name}</label><input className="form-input" placeholder="Sarah Al-Mansouri" value={teacherForm.name} onChange={e=>setTeacherForm({...teacherForm,name:e.target.value})} /></div>
+                <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.email}</label><input className="form-input" type="email" placeholder="sarah@email.com" value={teacherForm.email} onChange={e=>setTeacherForm({...teacherForm,email:e.target.value})} /></div>
+              </div>
+              <div className="form-group"><label className="form-label">{t.onboard.bio}</label><textarea className="form-textarea" placeholder={t.onboard.bioPh} value={teacherForm.bio} onChange={e=>setTeacherForm({...teacherForm,bio:e.target.value})} /></div>
+              <div className="form-group">
+                <label className="form-label">📸 {lang==="fr"?"Photo de profil (optionnel)":lang==="ar"?"صورة الملف الشخصي (اختياري)":"Profile photo (optional)"}</label>
+                <div className="upload-zone" onClick={()=>document.getElementById('photo-upload').click()} style={{textAlign:"center"}}>
+                  {teacherForm.photoFile
+                    ?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{(teacherForm.photoFile as File).name}</div></>
+                    :<><div style={{fontSize:28}}>👤</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{lang==="fr"?"Clique pour ajouter ta photo":lang==="ar"?"انقر لإضافة صورتك":"Click to add your photo"}</div></>}
                 </div>
-                <input id="id-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,idFile:e.target.files[0]})} />
+                <input id="photo-upload" type="file" accept="image/*" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,photoFile:e.target.files?.[0]||null})} />
               </div>
-              <div className="form-group" style={{marginBottom:0}}>
-                <label className="form-label">{t.onboard.diploma}</label>
-                <div className="upload-zone" onClick={()=>document.getElementById('diploma-upload').click()}>
-                  {teacherForm.diplomaFile?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{teacherForm.diplomaFile.name}</div></>:<><div style={{fontSize:28}}>📜</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{t.onboard.diplomaPh}</div></>}
+              <div className="form-group">
+                <label className="form-label">💬 WhatsApp {lang==="fr"?"(optionnel)":lang==="ar"?"(اختياري)":"(optional)"}</label>
+                <input className="form-input" placeholder="+971 50 123 4567" value={teacherForm.whatsapp} onChange={e=>setTeacherForm({...teacherForm,whatsapp:e.target.value.replace(/\s/g,"")})} />
+              </div>
+              <button className="submit-btn" onClick={()=>{
+                if(!teacherForm.name||!teacherForm.email){showToast("⚠️ "+(lang==="fr"?"Nom et email requis":lang==="ar"?"الاسم والبريد مطلوبان":"Name and email required"));return;}
+                setTeacherOnboardStep(2);window.scrollTo(0,0);
+              }}>{lang==="fr"?"Continuer →":lang==="ar"?"متابعة ←":"Continue →"}</button>
+            </>}
+
+            {/* STEP 2 — Matières & Tarif */}
+            {teacherOnboardStep===2&&<>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+                {lang==="fr"?"Que vas-tu enseigner ?":lang==="ar"?"ماذا ستدرّس؟":"What will you teach?"}
+              </div>
+              <div style={{fontSize:14,color:"#6B7280",marginBottom:"1.5rem"}}>{lang==="fr"?"Sélectionne tout ce qui correspond":lang==="ar"?"اختر كل ما ينطبق عليك":"Select everything that applies"}</div>
+              <div className="form-group"><label className="form-label">{t.onboard.cycle}</label><div className="chips-row">{t.cycles.map(c=><div key={c} className={`chip${teacherForm.cycles.includes(c)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,cycles:[c]})}>{c}</div>)}</div></div>
+              <div className="form-group"><label className="form-label">{t.onboard.curriculum}</label><div className="chips-row">{Object.entries(CURRICULA).map(([k,v])=><div key={k} className={`chip${teacherForm.curricula.includes(k)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,curricula:toggleArr(teacherForm.curricula,k)})}>{v.label[lang]}</div>)}</div></div>
+              <div className="form-group"><label className="form-label">{t.onboard.subjects}</label><div className="chips-row">{SUBJECTS.map(s=><div key={s.en} className={`chip${teacherForm.subjects.includes(s.en)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,subjects:toggleArr(teacherForm.subjects,s.en)})}>{s[lang]}</div>)}</div></div>
+              <div className="form-group"><label className="form-label">{t.onboard.langTeach}</label><div className="chips-row">{t.instrLangs.map(l=><div key={l} className={`chip${teacherForm.instrLangs.includes(l)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,instrLangs:toggleArr(teacherForm.instrLangs,l)})}>{l}</div>)}</div></div>
+              <div className="form-group">
+                <label className="form-label">{t.onboard.rate}</label>
+                <div className="rate-chips">{TEACHER_RATES.map(r=><div key={r} className={`rate-chip${teacherForm.rate===r?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,rate:r})}>{fmtPrice(r,country)}/h</div>)}</div>
+                <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>{t.teacher.rateHint} → {fmtPrice(Math.round(teacherForm.rate*(1-TEACHER_FEE)),country)}/h</div>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <button className="btn-ghost" style={{flex:1}} onClick={()=>{setTeacherOnboardStep(1);window.scrollTo(0,0);}}>← {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Back"}</button>
+                <button className="submit-btn" style={{flex:2,marginTop:0}} onClick={()=>{
+                  if(!teacherForm.subjects.length||!teacherForm.instrLangs.length){showToast("⚠️ "+(lang==="fr"?"Choisis au moins une matière et une langue":lang==="ar"?"اختر مادة ولغة على الأقل":"Choose at least one subject and language"));return;}
+                  setTeacherOnboardStep(3);window.scrollTo(0,0);
+                }}>{lang==="fr"?"Continuer →":lang==="ar"?"متابعة ←":"Continue →"}</button>
+              </div>
+            </>}
+
+            {/* STEP 3 — Documents & Paiement */}
+            {teacherOnboardStep===3&&<>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+                {lang==="fr"?"Documents & paiement":lang==="ar"?"الوثائق والدفع":"Documents & payment"}
+              </div>
+              <div style={{fontSize:14,color:"#6B7280",marginBottom:"1.5rem"}}>{lang==="fr"?"Dernière étape — sécurisée et chiffrée":lang==="ar"?"الخطوة الأخيرة — آمنة ومشفّرة":"Last step — secure and encrypted"}</div>
+              <div style={{fontSize:12,color:"#6B7280",marginBottom:12,fontWeight:600}}>ℹ️ {t.onboard.idDocHint}</div>
+              <div className="form-row">
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label">{t.onboard.idDoc}</label>
+                  <div className="upload-zone" onClick={()=>document.getElementById('id-upload').click()}>
+                    {teacherForm.idFile?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{teacherForm.idFile.name}</div></>:<><div style={{fontSize:28}}>🪪</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{t.onboard.idPh}</div></>}
+                  </div>
+                  <input id="id-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,idFile:e.target.files[0]})} />
                 </div>
-                <input id="diploma-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,diplomaFile:e.target.files[0]})} />
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label">{t.onboard.diploma}</label>
+                  <div className="upload-zone" onClick={()=>document.getElementById('diploma-upload').click()}>
+                    {teacherForm.diplomaFile?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{teacherForm.diplomaFile.name}</div></>:<><div style={{fontSize:28}}>📜</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{t.onboard.diplomaPh}</div></>}
+                  </div>
+                  <input id="diploma-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,diplomaFile:e.target.files[0]})} />
+                </div>
               </div>
-            </div>
-
-            <div className="section-divider">🏦 {t.onboard.banking}</div>
-            <div className="banking-card">
-              <div style={{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:"1rem"}}>🔒 {t.onboard.bankHint}</div>
-              <div className="form-group"><label className="form-label">{t.onboard.bankName}</label><input className="form-input" placeholder="Wio Bank, Emirates NBD, QNB, ADCB..." value={teacherForm.bankName} onChange={e=>setTeacherForm({...teacherForm,bankName:e.target.value})} /></div>
-              <div className="form-group"><label className="form-label">{t.onboard.bankIban}</label><input className="form-input" placeholder="AE07 0331 2345 6789 0123 456" value={teacherForm.bankIban} onChange={e=>setTeacherForm({...teacherForm,bankIban:e.target.value})} /></div>
-              <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.bankHolder}</label><input className="form-input" placeholder="Sarah Al-Mansouri" value={teacherForm.bankHolder} onChange={e=>setTeacherForm({...teacherForm,bankHolder:e.target.value})} /></div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">💳 {t.onboard.withdrawal}</label>
-              <div className="chips-row">{[["wI",t.onboard.wI],["wW",t.onboard.wW],["wM",t.onboard.wM]].map(([k,v])=><div key={k} className={`chip${teacherForm.withdrawal===k?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,withdrawal:k})}>{v}</div>)}</div>
-              <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>⚠️ {t.onboard.wInfo}</div>
-            </div>
-            <div className="section-divider">📄 {lang==="fr"?"Conditions générales":lang==="ar"?"الشروط والأحكام":"Terms & Conditions"}</div>
-            <div style={{background:"#FAFBFF",border:"1.5px solid #E8EAF6",borderRadius:14,padding:"1.25rem",marginBottom:"1rem"}}>
-              <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",marginBottom:12}}>
-                <input type="checkbox" checked={teacherForm.cguAccepted} onChange={e=>setTeacherForm({...teacherForm,cguAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
-                <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
-                  {lang==="fr"?"J'ai lu et j'accepte les ":lang==="ar"?"لقد قرأت وأوافق على ":"I have read and accept the "}
-                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
-                    {lang==="fr"?"Conditions Générales d'Utilisation":lang==="ar"?"شروط الخدمة":"Terms of Service"}
+              <div className="section-divider">🏦 {t.onboard.banking}</div>
+              <div className="banking-card">
+                <div style={{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:"1rem"}}>🔒 {t.onboard.bankHint}</div>
+                <div className="form-group"><label className="form-label">{t.onboard.bankName}</label><input className="form-input" placeholder="Wio Bank, Emirates NBD, QNB, ADCB..." value={teacherForm.bankName} onChange={e=>setTeacherForm({...teacherForm,bankName:e.target.value})} /></div>
+                <div className="form-group"><label className="form-label">{t.onboard.bankIban}</label><input className="form-input" placeholder="AE07 0331 2345 6789 0123 456" value={teacherForm.bankIban} onChange={e=>setTeacherForm({...teacherForm,bankIban:e.target.value})} /></div>
+                <div className="form-group" style={{marginBottom:0}}><label className="form-label">{t.onboard.bankHolder}</label><input className="form-input" placeholder="Sarah Al-Mansouri" value={teacherForm.bankHolder} onChange={e=>setTeacherForm({...teacherForm,bankHolder:e.target.value})} /></div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">💳 {t.onboard.withdrawal}</label>
+                <div className="chips-row">{[["wI",t.onboard.wI],["wW",t.onboard.wW],["wM",t.onboard.wM]].map(([k,v])=><div key={k} className={`chip${teacherForm.withdrawal===k?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,withdrawal:k})}>{v}</div>)}</div>
+                <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>⚠️ {t.onboard.wInfo}</div>
+              </div>
+              <div className="section-divider">📄 {lang==="fr"?"Conditions générales":lang==="ar"?"الشروط والأحكام":"Terms & Conditions"}</div>
+              <div style={{background:"#FAFBFF",border:"1.5px solid #E8EAF6",borderRadius:14,padding:"1.25rem",marginBottom:"1rem"}}>
+                <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",marginBottom:12}}>
+                  <input type="checkbox" checked={teacherForm.cguAccepted} onChange={e=>setTeacherForm({...teacherForm,cguAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
+                  <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
+                    {lang==="fr"?"J'ai lu et j'accepte les ":lang==="ar"?"لقد قرأت وأوافق على ":"I have read and accept the "}
+                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
+                      {lang==="fr"?"Conditions Générales d'Utilisation":lang==="ar"?"شروط الخدمة":"Terms of Service"}
+                    </span>
+                    {lang==="fr"?" et la ":" and the "}
+                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
+                      {lang==="fr"?"Politique de Confidentialité":lang==="ar"?"سياسة الخصوصية":"Privacy Policy"}
+                    </span>
                   </span>
-                  {lang==="fr"?" et la ":" and the "}
-                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
-                    {lang==="fr"?"Politique de Confidentialité":lang==="ar"?"سياسة الخصوصية":"Privacy Policy"}
+                </label>
+                <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer"}}>
+                  <input type="checkbox" checked={teacherForm.childProtectionAccepted} onChange={e=>setTeacherForm({...teacherForm,childProtectionAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
+                  <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
+                    {lang==="fr"?"J'accepte la ":lang==="ar"?"أوافق على ":"I accept the "}
+                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
+                      {lang==="fr"?"Charte de Protection des Mineurs":lang==="ar"?"ميثاق حماية الأطفال":"Child Protection Charter"}
+                    </span>
+                    {lang==="fr"?" et l'":"  and the "}
+                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
+                      {lang==="fr"?"Accord Enseignant":"Tutor Agreement"}
+                    </span>
                   </span>
-                </span>
-              </label>
-              <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer"}}>
-                <input type="checkbox" checked={teacherForm.childProtectionAccepted} onChange={e=>setTeacherForm({...teacherForm,childProtectionAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
-                <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
-                  {lang==="fr"?"J'accepte la ":lang==="ar"?"أوافق على ":"I accept the "}
-                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
-                    {lang==="fr"?"Charte de Protection des Mineurs":lang==="ar"?"ميثاق حماية الأطفال":"Child Protection Charter"}
-                  </span>
-                  {lang==="fr"?" et l'":"  and the "}
-                  <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
-                    {lang==="fr"?"Accord Enseignant":"Tutor Agreement"}
-                  </span>
-                </span>
-              </label>
-            </div>
-            <button className="submit-btn" onClick={handleTeacherSubmit} disabled={!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted} style={{opacity:(!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted)?0.5:1}}>{t.onboard.submit}</button>
+                </label>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <button className="btn-ghost" style={{flex:1}} onClick={()=>{setTeacherOnboardStep(2);window.scrollTo(0,0);}}>← {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Back"}</button>
+                <button className="submit-btn" style={{flex:2,marginTop:0,opacity:(!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted)?0.5:1}} onClick={handleTeacherSubmit} disabled={!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted}>
+                  {t.onboard.submit}
+                </button>
+              </div>
+            </>}
           </>}
 
           {/* ÉTAT A — idle */}
@@ -2729,7 +2867,7 @@ export default function TutorApp() {
                 <div className="page-sub">{lang==="fr"?"Aucune nouvelle annonce pour l'instant.":lang==="ar"?"لا توجد إعلانات جديدة الآن.":"No new requests right now."}</div>
               </div>
               {(!userProfile?.teaching_subjects?.length||!userProfile?.teaching_langs?.length)&&(
-                <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={()=>setShowOnboard(true)}>
+                <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={()=>setShowOnboard(true);setTeacherOnboardStep(1)}>
                   <div>
                     <div style={{fontWeight:800,marginBottom:4}}>⚠️ {lang==="fr"?"Profil incomplet":lang==="ar"?"ملف غير مكتمل":"Incomplete profile"}</div>
                     <div style={{fontSize:12}}>{lang==="fr"?"Complète ton profil pour recevoir des annonces →":lang==="ar"?"أكمل ملفك لتستلم إعلانات →":"Complete your profile to receive matching requests →"}</div>
@@ -2773,7 +2911,7 @@ export default function TutorApp() {
                     bankHolder: userProfile?.bank_holder || "",
                     withdrawal: userProfile?.withdrawal_frequency || "wW",
                   }));
-                  setShowOnboard(true);
+                  setShowOnboard(true);setTeacherOnboardStep(1);
                 }}>✏️ {lang==="fr"?"Modifier mon profil":lang==="ar"?"تعديل ملفي":"Edit my profile"}</button>
               </div>
             </div>
