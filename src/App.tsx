@@ -1335,7 +1335,7 @@ export default function TutorApp() {
 
           setPage("app");
           setAppTab("teacher-home");
-          if (!profile?.bank_iban) setShowOnboard(true);setTeacherOnboardStep(1);
+          if (!profile?.bank_iban) { setShowOnboard(true);setTeacherOnboardStep(1); }
           setProfileLoading(false);
           return profile;
         }
@@ -1849,7 +1849,7 @@ export default function TutorApp() {
       setPage("app");
       if(role==="teacher"){
         setAppTab("teacher-home");
-        if(!profile?.bank_iban) setShowOnboard(true);setTeacherOnboardStep(1);
+        if(!profile?.bank_iban) { setShowOnboard(true);setTeacherOnboardStep(1); }
         const revenue = await getTeacherRevenueStats(u.id);
         setTeacherRevenue(revenue);
         const requests = await getMatchedRequests(profile);
@@ -2867,7 +2867,7 @@ export default function TutorApp() {
                 <div className="page-sub">{lang==="fr"?"Aucune nouvelle annonce pour l'instant.":lang==="ar"?"لا توجد إعلانات جديدة الآن.":"No new requests right now."}</div>
               </div>
               {(!userProfile?.teaching_subjects?.length||!userProfile?.teaching_langs?.length)&&(
-                <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={()=>setShowOnboard(true);setTeacherOnboardStep(1)}>
+                <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={()=>{setShowOnboard(true);setTeacherOnboardStep(1)}}>
                   <div>
                     <div style={{fontWeight:800,marginBottom:4}}>⚠️ {lang==="fr"?"Profil incomplet":lang==="ar"?"ملف غير مكتمل":"Incomplete profile"}</div>
                     <div style={{fontSize:12}}>{lang==="fr"?"Complète ton profil pour recevoir des annonces →":lang==="ar"?"أكمل ملفك لتستلم إعلانات →":"Complete your profile to receive matching requests →"}</div>
