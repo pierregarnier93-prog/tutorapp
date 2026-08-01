@@ -1242,6 +1242,10 @@ export default function TutorApp() {
   const [lastCompletedTeacher,setLastCompletedTeacher]=useState<{name:string,id:string,subject:string}|null>(null);
   const [showStudentOnboard,setShowStudentOnboard]=useState(false);
   const [showCancelConfirm,setShowCancelConfirm]=useState(false);
+  const [activePack,setActivePack]=useState<any>(null);
+  const [showPackModal,setShowPackModal]=useState(false);
+  const [showCancelPackConfirm,setShowCancelPackConfirm]=useState(false);
+  const [packCreating,setPackCreating]=useState(false);
   const [cancellingBooking,setCancellingBooking]=useState(false);
   const [showRecurringModal,setShowRecurringModal]=useState(false);
   const [recurringSetup,setRecurringSetup]=useState<"weekly"|"biweekly"|null>(null);
@@ -2549,6 +2553,33 @@ export default function TutorApp() {
                   <div style={{fontSize:12,color:"#6366F1",lineHeight:1.5}}>{lang==="fr"?`Tu recevras un rappel avant chaque prochain cours avec ${activeBooking?.teacher?.full_name}.`:lang==="ar"?`ستتلقى تذكيراً قبل كل حصة قادمة مع ${activeBooking?.teacher?.full_name}.`:`You'll get a reminder before each upcoming lesson with ${activeBooking?.teacher?.full_name}.`}</div>
                 </div>
               )}
+              {activePack&&activePack.status==="active"?(
+                <div style={{background:"linear-gradient(135deg,#EEF2FF,#F0FDF4)",border:"1.5px solid #C7D2FE",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1.25rem",textAlign:"start"}}>
+                  <div style={{fontWeight:800,fontSize:14,color:"#4338CA",marginBottom:6}}>📦 {lang==="fr"?"Pack actif":lang==="ar"?"الباقة النشطة":"Active pack"}</div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                    <div style={{fontSize:13,color:"#374151"}}>
+                      {lang==="fr"?`${activePack.total_lessons - activePack.lessons_done} cours restant(s) sur ${activePack.total_lessons}`:lang==="ar"?`${activePack.total_lessons - activePack.lessons_done} درس متبقٍ من ${activePack.total_lessons}`:`${activePack.total_lessons - activePack.lessons_done} lesson(s) left of ${activePack.total_lessons}`}
+                    </div>
+                    <div style={{fontWeight:900,fontSize:15,color:"#5B4FE8"}}>{(activePack.total_lessons - activePack.lessons_done) * activePack.price_per_lesson_aed} AED</div>
+                  </div>
+                  <div style={{background:"#E2E8F0",borderRadius:4,height:6,overflow:"hidden",marginBottom:10}}>
+                    <div style={{background:"linear-gradient(90deg,#5B4FE8,#0ABFA3)",height:"100%",width:`${(activePack.lessons_done/activePack.total_lessons)*100}%`,borderRadius:4,transition:"width .5s ease"}}/>
+                  </div>
+                  <button onClick={()=>setShowCancelPackConfirm(true)} style={{fontSize:12,color:"#DC2626",background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0}}>
+                    🗑 {lang==="fr"?"Annuler le pack":lang==="ar"?"إلغاء الباقة":"Cancel pack"}
+                  </button>
+                </div>
+              ):(
+                !activePack&&<div style={{background:"linear-gradient(135deg,#EEF2FF,#F5F3FF)",border:"1.5px dashed #A5B4FC",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1.25rem",cursor:"pointer"}} onClick={()=>setShowPackModal(true)}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <div>
+                      <div style={{fontWeight:800,fontSize:14,color:"#4338CA",marginBottom:3}}>📦 {lang==="fr"?"Prendre un pack de cours ?":lang==="ar"?"هل تريد باقة دروس؟":"Get a lesson pack?"}</div>
+                      <div style={{fontSize:12,color:"#6366F1"}}>{lang==="fr"?"4, 8 ou 12 cours — économise jusqu'à 10%":lang==="ar"?"4 أو 8 أو 12 درساً — وفّر حتى 10%":"4, 8 or 12 lessons — save up to 10%"}</div>
+                    </div>
+                    <div style={{fontSize:22}}>→</div>
+                  </div>
+                </div>
+              )}
               <div style={{background:"#FEF3C7",border:"1.5px solid #FCD34D",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13,color:"#92400E",fontWeight:600}}>
                 ⚠️ {lang==="fr"?"Clique 'Confirmer' UNIQUEMENT après le cours.":lang==="ar"?"انقر 'تأكيد' فقط بعد انتهاء الحصة.":"Click 'Confirm' ONLY after the lesson."}
               </div>
@@ -2569,6 +2600,85 @@ export default function TutorApp() {
                 🗑 {lang==="fr"?"Annuler la réservation":lang==="ar"?"إلغاء الحجز":"Cancel booking"}
               </button>
             </div>}
+
+            {/* MODAL PACK */}
+            {showPackModal&&activeBooking&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"1rem"}}>
+                <div style={{background:"#fff",borderRadius:20,padding:"1.75rem",maxWidth:440,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:4,color:"#1A1A2E"}}>📦 {lang==="fr"?"Choisir un pack":lang==="ar"?"اختر الباقة":"Choose a pack"}</div>
+                  <div style={{fontSize:13,color:"#64748B",marginBottom:"1.25rem"}}>{lang==="fr"?`Avec ${activeBooking.teacher?.full_name} · ${activeRequest?.subject}`:lang==="ar"?`مع ${activeBooking.teacher?.full_name} · ${activeRequest?.subject}`:`With ${activeBooking.teacher?.full_name} · ${activeRequest?.subject}`}</div>
+                  {([4,8,12] as const).map(n=>{
+                    const pricePerLesson=activeBooking.gross_price_aed;
+                    const discount=n===4?0:n===8?0.05:0.10;
+                    const discountedPrice=Math.round(pricePerLesson*(1-discount));
+                    const total=discountedPrice*n;
+                    return(
+                      <button key={n} onClick={async()=>{
+                        setPackCreating(true);
+                        try{
+                          const pi=await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/create-payment-intent",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({amountAed:total,bookingId:activeBooking.id,packLessons:n})});
+                          const {clientSecret,paymentIntentId}=await pi.json();
+                          // Confirm payment (for simplicity, store intent — in prod use Stripe.js)
+                          const {data:pack}=await supabase.from("packs").insert({
+                            student_id:user?.id,
+                            teacher_id:activeBooking.teacher_id,
+                            subject:activeRequest?.subject,
+                            total_lessons:n,
+                            lessons_done:0,
+                            price_per_lesson_aed:discountedPrice,
+                            stripe_payment_intent_id:paymentIntentId,
+                            status:"active"
+                          }).select().single();
+                          setActivePack(pack);
+                          setShowPackModal(false);
+                          showToast("✅ "+(lang==="fr"?`Pack de ${n} cours activé !`:lang==="ar"?`تم تفعيل باقة ${n} دروس!`:`${n}-lesson pack activated!`));
+                        }catch(e){showToast("❌ "+e.message);}
+                        finally{setPackCreating(false);}
+                      }} style={{width:"100%",background:n===8?"linear-gradient(135deg,#5B4FE8,#0ABFA3)":"#F8FAFF",border:n===8?"none":"1.5px solid #E2E8F0",borderRadius:14,padding:"14px 16px",marginBottom:10,textAlign:"start",cursor:"pointer",position:"relative"}}>
+                        {n===8&&<div style={{position:"absolute",top:-8,right:12,background:"#F59E0B",color:"#fff",fontSize:11,fontWeight:800,padding:"2px 10px",borderRadius:20}}>⭐ {lang==="fr"?"Populaire":lang==="ar"?"الأكثر طلباً":"Most popular"}</div>}
+                        <div style={{fontWeight:800,fontSize:15,color:n===8?"#fff":"#1A1A2E",marginBottom:4}}>{n} {lang==="fr"?"cours":lang==="ar"?"دروس":"lessons"}{discount>0&&<span style={{fontSize:12,marginLeft:8,background:n===8?"rgba(255,255,255,.2)":"#EEF2FF",color:n===8?"#fff":"#5B4FE8",borderRadius:10,padding:"1px 8px"}}>-{discount*100}%</span>}</div>
+                        <div style={{fontSize:13,color:n===8?"rgba(255,255,255,.85)":"#64748B"}}>{discountedPrice} AED {lang==="fr"?"/ cours":lang==="ar"?"/ درس":"/ lesson"} · <strong style={{color:n===8?"#fff":"#1A1A2E"}}>{total} AED {lang==="fr"?"au total":lang==="ar"?"الإجمالي":"total"}</strong></div>
+                      </button>
+                    );
+                  })}
+                  <button className="btn-ghost" style={{width:"100%",marginTop:4}} onClick={()=>setShowPackModal(false)}>{lang==="fr"?"Annuler":lang==="ar"?"إلغاء":"Cancel"}</button>
+                  {packCreating&&<div style={{textAlign:"center",marginTop:8,fontSize:13,color:"#64748B"}}>⏳ {lang==="fr"?"Création du pack...":lang==="ar"?"جاري إنشاء الباقة...":"Creating pack..."}</div>}
+                </div>
+              </div>
+            )}
+
+            {/* MODAL ANNULATION PACK */}
+            {showCancelPackConfirm&&activePack&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
+                <div style={{background:"#fff",borderRadius:20,padding:"2rem",maxWidth:400,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)",textAlign:"center"}}>
+                  <div style={{fontSize:40,marginBottom:12}}>📦</div>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:8,color:"#1A1A2E"}}>
+                    {lang==="fr"?"Annuler le pack ?":lang==="ar"?"إلغاء الباقة؟":"Cancel the pack?"}
+                  </div>
+                  <div style={{fontSize:13,color:"#64748B",marginBottom:6,lineHeight:1.6}}>
+                    {lang==="fr"?`Tu seras remboursé(e) pour ${activePack.total_lessons-activePack.lessons_done} cours non-utilisés.`:lang==="ar"?`سيتم استرداد ${activePack.total_lessons-activePack.lessons_done} درس غير مستخدم.`:`You'll be refunded for ${activePack.total_lessons-activePack.lessons_done} unused lessons.`}
+                  </div>
+                  <div style={{fontWeight:900,fontSize:22,color:"#0ABFA3",marginBottom:"1.5rem"}}>
+                    {(activePack.total_lessons-activePack.lessons_done)*activePack.price_per_lesson_aed} AED
+                  </div>
+                  <div style={{display:"flex",gap:10}}>
+                    <button className="btn-ghost" style={{flex:1}} onClick={()=>setShowCancelPackConfirm(false)}>
+                      {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Go back"}
+                    </button>
+                    <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer"}} onClick={async()=>{
+                      try{
+                        await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/cancel-pack",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({packId:activePack.id})});
+                        await supabase.from("packs").update({status:"cancelled"}).eq("id",activePack.id);
+                        setActivePack(null);setShowCancelPackConfirm(false);
+                        showToast("✅ "+(lang==="fr"?"Pack annulé — remboursement en cours":lang==="ar"?"تم إلغاء الباقة — الاسترداد قيد المعالجة":"Pack cancelled — refund processing"));
+                      }catch(e){showToast("❌ "+e.message);}
+                    }}>
+                      {lang==="fr"?"Confirmer l'annulation":lang==="ar"?"تأكيد الإلغاء":"Confirm cancellation"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* MODAL CONFIRMATION ANNULATION */}
             {showCancelConfirm&&(
