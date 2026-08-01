@@ -861,6 +861,8 @@ function AdminPage({ user, lang, onBack }) {
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [adminStats, setAdminStats] = useState({totalRevenue:0,totalBookings:0,totalStudents:0,totalTeachers:0,pendingBookings:0,completedBookings:0});
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<any>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const loadAdminStats = async () => {
     const [{data:bookings},{data:students},{data:allTeachers}] = await Promise.all([
@@ -915,11 +917,20 @@ function AdminPage({ user, lang, onBack }) {
     alert(`✅ ${teacher.full_name || "Teacher"} vérifié !`);
   };
 
-  const handleReject = async (teacher) => {
-    if (!confirm(`Refuser ${teacher.full_name || "ce profil"} ?`)) return;
-    const { error } = await supabase.from("profiles").update({ verified: false, role: "rejected" }).eq("id", teacher.id);
-    if (error) { console.error("AdminPage: reject failed", error); alert("❌ " + error.message); return; }
-    loadTeachers();
+  const handleReject = (teacher) => { setRejectTarget(teacher); setRejectReason(""); };
+
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    const { error } = await supabase.from("profiles").update({ verified: false, role: "rejected" }).eq("id", rejectTarget.id);
+    if (error) { alert("❌ " + error.message); return; }
+    if (rejectTarget.email) {
+      await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/send-email", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "teacher_rejected", teacherEmail: rejectTarget.email, teacherName: rejectTarget.full_name, reason: rejectReason }),
+      }).catch(()=>{});
+    }
+    setRejectTarget(null); setRejectReason(""); loadTeachers();
+    alert(`❌ ${rejectTarget.full_name || "Profil"} refusé — email envoyé.`);
   };
 
   return (
@@ -998,6 +1009,21 @@ function AdminPage({ user, lang, onBack }) {
         </div>
       )}
 
+      {rejectTarget&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
+          <div style={{background:"#fff",borderRadius:20,padding:"2rem",maxWidth:440,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:4}}>❌ Refuser {rejectTarget.full_name} ?</div>
+            <div style={{fontSize:13,color:"#64748B",marginBottom:"1rem"}}>Le prof recevra un email avec le motif. Il ne pourra plus apparaître sur la plateforme.</div>
+            <label style={{fontSize:13,fontWeight:700,color:"#374151",display:"block",marginBottom:6}}>Motif du refus <span style={{color:"#9CA3AF",fontWeight:400}}>(optionnel mais recommandé)</span></label>
+            <textarea value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="Ex : Documents illisibles, diplôme non conforme, profil incomplet..." style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:13,fontFamily:"inherit",resize:"vertical",minHeight:80,boxSizing:"border-box",marginBottom:"1.25rem"}}/>
+            <div style={{display:"flex",gap:10}}>
+              <button className="btn-ghost" style={{flex:1}} onClick={()=>{setRejectTarget(null);setRejectReason("");}}>Annuler</button>
+              <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer"}} onClick={confirmReject}>Confirmer le refus</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!loading && teachers.map((teacher,_ti) => (
         <div key={teacher.id} className="req-card" style={{marginBottom:16}}>
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12}}>
@@ -1035,6 +1061,12 @@ function AdminPage({ user, lang, onBack }) {
               {teacher.teaching_bio && (
                 <div style={{marginTop:8, fontSize:13, color:"#374151", fontStyle:"italic", background:"#FAFBFF", borderRadius:8, padding:"8px 12px"}}>
                   "{teacher.teaching_bio}"
+                </div>
+              )}
+              {(teacher.id_doc_url||teacher.diploma_url)&&(
+                <div style={{marginTop:10,display:"flex",gap:10,flexWrap:"wrap"}}>
+                  {teacher.id_doc_url&&<a href={teacher.id_doc_url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:700,color:"#5B4FE8",background:"#EEF2FF",padding:"5px 12px",borderRadius:8,textDecoration:"none"}}>🪪 Voir pièce d'identité</a>}
+                  {teacher.diploma_url&&<a href={teacher.diploma_url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:700,color:"#0F766E",background:"#ECFDF5",padding:"5px 12px",borderRadius:8,textDecoration:"none"}}>📜 Voir diplôme</a>}
                 </div>
               )}
             </div>
@@ -1811,10 +1843,23 @@ export default function TutorApp() {
         const ext=(teacherForm.photoFile as File).name.split(".").pop();
         const path=`${user.id}/avatar.${ext}`;
         const {error:upErr}=await supabase.storage.from("avatars").upload(path,teacherForm.photoFile as File,{upsert:true,contentType:(teacherForm.photoFile as File).type});
-        if(!upErr){
-          const {data:pub}=supabase.storage.from("avatars").getPublicUrl(path);
-          avatarUrl=pub.publicUrl;
-        }
+        if(!upErr){const {data:pub}=supabase.storage.from("avatars").getPublicUrl(path);avatarUrl=pub.publicUrl;}
+      }
+      let idDocUrl:string|null=null;
+      if(teacherForm.idFile){
+        const ext=(teacherForm.idFile as File).name.split(".").pop();
+        const path=`${user.id}/id_doc.${ext}`;
+        await supabase.storage.from("teacher-docs").upload(path,teacherForm.idFile as File,{upsert:true,contentType:(teacherForm.idFile as File).type});
+        const {data:pub}=supabase.storage.from("teacher-docs").getPublicUrl(path);
+        idDocUrl=pub.publicUrl;
+      }
+      let diplomaUrl:string|null=null;
+      if(teacherForm.diplomaFile){
+        const ext=(teacherForm.diplomaFile as File).name.split(".").pop();
+        const path=`${user.id}/diploma.${ext}`;
+        await supabase.storage.from("teacher-docs").upload(path,teacherForm.diplomaFile as File,{upsert:true,contentType:(teacherForm.diplomaFile as File).type});
+        const {data:pub}=supabase.storage.from("teacher-docs").getPublicUrl(path);
+        diplomaUrl=pub.publicUrl;
       }
       await supabase.from("profiles").update({
         full_name:teacherForm.name,email:teacherForm.email,withdrawal_frequency:teacherForm.withdrawal,
@@ -1825,6 +1870,8 @@ export default function TutorApp() {
         teaching_bio:teacherForm.bio||"",teaching_curricula:teacherForm.curricula,
         teaching_whatsapp:teacherForm.whatsapp||null,
         ...(avatarUrl?{avatar_url:avatarUrl}:{}),
+        ...(idDocUrl?{id_doc_url:idDocUrl}:{}),
+        ...(diplomaUrl?{diploma_url:diplomaUrl}:{}),
       }).eq("id",user.id);
 
       try{

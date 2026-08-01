@@ -56,6 +56,25 @@ serve(async (req) => {
     };
   }
 
+  if (body.type === "teacher_rejected") {
+    emailData = {
+      from: "TutorApp <noreply@tutorapp.online>",
+      to: [body.teacherEmail],
+      subject: `Votre candidature TutorApp — décision`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto">
+          <h2 style="color:#DC2626">Votre profil n'a pas été retenu</h2>
+          <p>Bonjour ${body.teacherName},</p>
+          <p>Après examen de votre dossier, nous ne sommes pas en mesure de valider votre profil enseignant pour le moment.</p>
+          ${body.reason ? `<div style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:12px 16px;margin:16px 0;font-size:14px;color:#B91C1C"><strong>Motif :</strong> ${body.reason}</div>` : ""}
+          <p style="color:#6B7280;font-size:13px">Si vous pensez qu'il s'agit d'une erreur ou si vous souhaitez soumettre des documents corrigés, répondez directement à cet email.</p>
+          <br/>
+          <p style="color:#6B7280;font-size:13px">L'équipe TutorApp · tutorapp.online</p>
+        </div>
+      `,
+    };
+  }
+
   if (body.type === "lesson_confirmed") {
     emailData = {
       from: "TutorApp <noreply@tutorapp.online>",
