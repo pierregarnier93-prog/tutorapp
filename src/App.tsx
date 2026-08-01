@@ -1250,6 +1250,8 @@ export default function TutorApp() {
   const [chatInput,setChatInput]=useState("");
   const [showChat,setShowChat]=useState(false);
   const [sendingMsg,setSendingMsg]=useState(false);
+  const [showVideoCall,setShowVideoCall]=useState(false);
+  const [videoCallUrl,setVideoCallUrl]=useState<string|null>(null);
   const [onboardStep,setOnboardStep]=useState(1);
   const [teacherOnboardStep,setTeacherOnboardStep]=useState(1);
   const [expandedOffer,setExpandedOffer]=useState<string|null>(null);
@@ -2499,17 +2501,16 @@ export default function TutorApp() {
                 const jitsiLink=jitsiRoom?`https://meet.jit.si/${jitsiRoom}`:null;
                 return jitsiLink?(
                   <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem"}}>
-                    <div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Ton lien visioconférence":lang==="ar"?"رابط الفيديو الخاص بك":"Your video link"}</div>
-                    <div style={{fontSize:12,color:"#64748B",marginBottom:10,fontFamily:"monospace",wordBreak:"break-all",background:"#fff",padding:"8px 12px",borderRadius:8,border:"1px solid #A7F3D0"}}>{jitsiLink}</div>
+                    <div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Visioconférence":lang==="ar"?"مكالمة فيديو":"Video call"}</div>
+                    <button onClick={()=>{setVideoCallUrl(jitsiLink);setShowVideoCall(true);}} style={{width:"100%",background:"#0ABFA3",color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
+                      🎥 {lang==="fr"?"Lancer le cours maintenant":lang==="ar"?"ابدأ الحصة الآن":"Start lesson now"}
+                    </button>
                     <div style={{display:"flex",gap:8}}>
-                      <a href={jitsiLink} target="_blank" rel="noopener noreferrer" style={{flex:2,background:"#0ABFA3",color:"#fff",borderRadius:12,padding:"10px",fontSize:13,fontWeight:800,cursor:"pointer",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                        🎥 {lang==="fr"?"Rejoindre le cours":lang==="ar"?"الانضمام للحصة":"Join lesson"}
-                      </a>
-                      <button style={{flex:1,background:"transparent",border:"1.5px solid #0ABFA3",color:"#0ABFA3",borderRadius:12,padding:"10px",fontSize:12,fontWeight:700,cursor:"pointer"}} onClick={()=>{navigator.clipboard?.writeText(jitsiLink);showToast("📋 "+(lang==="fr"?"Lien copié !":lang==="ar"?"تم نسخ الرابط !":"Link copied!"));}}>
-                        📋 {lang==="fr"?"Copier":lang==="ar"?"نسخ":"Copy"}
+                      <button style={{flex:1,background:"transparent",border:"1.5px solid #0ABFA3",color:"#0ABFA3",borderRadius:10,padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer"}} onClick={()=>{navigator.clipboard?.writeText(jitsiLink);showToast("📋 "+(lang==="fr"?"Lien copié !":lang==="ar"?"تم نسخ الرابط !":"Link copied!"));}}>
+                        📋 {lang==="fr"?"Copier le lien":lang==="ar"?"نسخ الرابط":"Copy link"}
                       </button>
-                      <a href={`https://wa.me/?text=${encodeURIComponent((lang==="fr"?"Lien de ton cours :":lang==="ar"?"رابط حصتك:":`Your lesson link:`)+" "+jitsiLink)}`} target="_blank" rel="noopener noreferrer" style={{flex:1,background:"#25D366",color:"#fff",borderRadius:12,padding:"10px",fontSize:18,textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        💬
+                      <a href={`https://wa.me/?text=${encodeURIComponent((lang==="fr"?"Lien de ton cours :":lang==="ar"?"رابط حصتك:":`Your lesson link:`)+" "+jitsiLink)}`} target="_blank" rel="noopener noreferrer" style={{flex:1,background:"#25D366",color:"#fff",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                        💬 {lang==="fr"?"WhatsApp":lang==="ar"?"واتساب":"WhatsApp"}
                       </a>
                     </div>
                   </div>
@@ -3046,12 +3047,11 @@ export default function TutorApp() {
                 const jLink=jRoom?`https://meet.jit.si/${jRoom}`:null;
                 return jLink?(
                   <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
-                    <div style={{fontWeight:800,fontSize:13,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Lien visioconférence":lang==="ar"?"رابط الفيديو":"Video link"}</div>
-                    <div style={{fontSize:12,fontFamily:"monospace",background:"#fff",borderRadius:8,padding:"8px 10px",color:"#0F6E56",fontWeight:700,marginBottom:10,wordBreak:"break-all"}}>{jLink}</div>
-                    <div style={{display:"flex",gap:8}}>
-                      <a href={jLink} target="_blank" rel="noopener" style={{flex:2,background:"#0ABFA3",color:"#fff",borderRadius:8,padding:"9px 14px",fontWeight:800,fontSize:13,textDecoration:"none",textAlign:"center"}}>🎥 {lang==="fr"?"Rejoindre":lang==="ar"?"الانضمام":"Join"}</a>
-                      <button onClick={()=>{navigator.clipboard?.writeText(jLink);showToast("📋 "+(lang==="fr"?"Lien copié !":lang==="ar"?"تم نسخ الرابط !":"Link copied!"));}} style={{flex:1,background:"#fff",border:"1.5px solid #A7F3D0",borderRadius:8,padding:"9px 14px",fontWeight:700,fontSize:13,cursor:"pointer",color:"#0F6E56"}}>📋 {lang==="fr"?"Copier":lang==="ar"?"نسخ":"Copy"}</button>
-                    </div>
+                    <div style={{fontWeight:800,fontSize:13,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Visioconférence":lang==="ar"?"مكالمة فيديو":"Video call"}</div>
+                    <button onClick={()=>{setVideoCallUrl(jLink);setShowVideoCall(true);}} style={{width:"100%",background:"#0ABFA3",color:"#fff",border:"none",borderRadius:10,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
+                      🎥 {lang==="fr"?"Lancer le cours":lang==="ar"?"ابدأ الحصة":"Start lesson"}
+                    </button>
+                    <button onClick={()=>{navigator.clipboard?.writeText(jLink);showToast("📋 "+(lang==="fr"?"Lien copié !":lang==="ar"?"تم نسخ الرابط !":"Link copied!"));}} style={{width:"100%",background:"#fff",border:"1.5px solid #A7F3D0",borderRadius:10,padding:"8px",fontWeight:700,fontSize:12,cursor:"pointer",color:"#0F6E56"}}>📋 {lang==="fr"?"Copier le lien":lang==="ar"?"نسخ الرابط":"Copy link"}</button>
                   </div>
                 ):null;
               })()}
@@ -3185,6 +3185,27 @@ export default function TutorApp() {
 
       {showAuth&&<Auth onClose={()=>setShowAuth(false)} onSuccess={handleLoginSuccess} lang={lang} />}
       {toast&&<div className="toast">{toast}</div>}
+
+      {/* VIDEO CALL MODAL */}
+      {showVideoCall&&videoCallUrl&&(
+        <div style={{position:"fixed",inset:0,zIndex:3000,background:"#000",display:"flex",flexDirection:"column"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",background:"#1A1A2E",flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:"#0ABFA3",animation:"pulse 1.5s infinite"}}/>
+              <span style={{color:"#fff",fontWeight:700,fontSize:14}}>🎥 {lang==="fr"?"Cours en cours":lang==="ar"?"الحصة جارية":"Lesson in progress"}</span>
+            </div>
+            <button onClick={()=>setShowVideoCall(false)} style={{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontWeight:800,fontSize:13,cursor:"pointer"}}>
+              ✕ {lang==="fr"?"Quitter":lang==="ar"?"خروج":"Leave"}
+            </button>
+          </div>
+          <iframe
+            src={videoCallUrl}
+            style={{flex:1,border:"none",width:"100%"}}
+            allow="camera; microphone; fullscreen; display-capture; autoplay"
+            title="Video lesson"
+          />
+        </div>
+      )}
 
       {showReportModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
