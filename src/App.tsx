@@ -2339,7 +2339,7 @@ export default function TutorApp() {
                   <span className="badge badge-teal">📹 Online</span>
                 </div>
               </div>
-              <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start",transition:"all .5s ease"}}>
+              <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start",minHeight:110,overflow:"hidden"}}>
                 <div style={{display:"flex",gap:4,marginBottom:8}}>{"⭐".repeat(TESTIMONIALS[currentTestimonial].stars)}</div>
                 <div style={{fontSize:13,color:"#1A1A2E",fontStyle:"italic",lineHeight:1.6,marginBottom:8}}>"{TESTIMONIALS[currentTestimonial].text[lang]||TESTIMONIALS[currentTestimonial].text.en}"</div>
                 <div style={{fontSize:12,color:"#64748B",fontWeight:700}}>— {TESTIMONIALS[currentTestimonial].name}</div>
