@@ -328,8 +328,9 @@ img,svg{max-width:100%;display:block}
 .app-dot-row{display:flex;gap:8px}
 .app-dot{width:10px;height:10px;border-radius:50%;background:#A78BFA}
 .app-url{flex:1;background:#1F2937;border-radius:10px;padding:8px 14px;font-size:11px;color:#94A3B8;font-family:monospace}
-.app-tabs{display:flex;border-bottom:1.5px solid #E2E8F0;background:#F8FAFF}
-.app-tab{padding:14px 22px;font-size:13px;font-weight:800;cursor:pointer;border-bottom:2.5px solid transparent;color:#667085;transition:all .25s;white-space:nowrap}
+.app-tabs{display:flex;border-bottom:1.5px solid #E2E8F0;background:#F8FAFF;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.app-tabs::-webkit-scrollbar{display:none}
+.app-tab{padding:14px 20px;font-size:13px;font-weight:800;cursor:pointer;border-bottom:2.5px solid transparent;color:#667085;transition:all .25s;white-space:nowrap;flex-shrink:0}
 .app-tab.active{color:#5B4FE8;border-bottom-color:#5B4FE8;background:#fff}
 .app-body{padding:2rem;min-height:520px}
 .page-title{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:#111827;margin-bottom:.4rem}
@@ -446,7 +447,7 @@ img,svg{max-width:100%;display:block}
 .payout-info{background:#ECFDF5;border:1.5px solid #6EE7B7;border-radius:16px;padding:14px 18px;margin-bottom:1.25rem;font-size:13px;font-weight:700;color:#0F766E}
 .missing-bank{background:#FEF3C7;border:1.5px solid #FBBF24;border-radius:16px;padding:14px 18px;margin-bottom:1.25rem;cursor:pointer}
 .missing-bank:hover{background:#FEEAB7}
-@media(max-width:900px){.app-body{padding:1.5rem}.section{padding:4rem 1.25rem}.hero{padding:3.5rem 1.25rem}.app-topbar{flex-direction:column;align-items:flex-start;padding:18px 20px}.app-tabs{flex-wrap:wrap}.app-tab{flex:1;justify-content:center}.nav{padding:0 1rem;gap:10px;row-gap:8px;column-gap:8px}.hero-stats{gap:1.5rem}.form-row{grid-template-columns:1fr}.submit-btn{padding:14px}.hero h1{font-size:clamp(2.2rem,8vw,3.6rem)}}
+@media(max-width:900px){.app-body{padding:1.5rem}.section{padding:4rem 1.25rem}.hero{padding:3.5rem 1.25rem}.app-topbar{flex-direction:column;align-items:flex-start;padding:18px 20px}.nav{padding:0 1rem;gap:10px;row-gap:8px;column-gap:8px}.hero-stats{gap:1.5rem}.form-row{grid-template-columns:1fr}.submit-btn{padding:14px}.hero h1{font-size:clamp(2.2rem,8vw,3.6rem)}}
 @media(max-width:700px){.nav-links{display:none}.nav{justify-content:space-between}.hero{min-height:auto;padding:3rem 1rem}.section{padding:3rem 1rem}.app-body{padding:1rem}.app-container{border-radius:22px}.teacher-card,.offer-card,.payment-card,.profile-card{padding:1.25rem}.app-tab{padding:12px 14px;font-size:12px}.page-title{font-size:1.5rem}.hero-btns{flex-direction:column;gap:12px}.hero-stat-val{font-size:1.4rem}.hero p{max-width:100%}}
 .btn-full{width:100%;padding:15px;background:#5B4FE8;color:#fff;border:none;border-radius:18px;font-size:15px;font-weight:800;cursor:pointer;transition:background .25s,transform .25s;box-shadow:0 18px 36px rgba(91,79,232,.16)}
 .btn-full:hover{background:#3D34C4;transform:translateY(-1px)}
