@@ -1335,7 +1335,7 @@ export default function TutorApp() {
 
           setPage("app");
           setAppTab("teacher-home");
-          if (!profile?.bank_iban) { setShowOnboard(true);setTeacherOnboardStep(1); }
+          if (!profile?.bank_iban) openTeacherOnboard();
           setProfileLoading(false);
           return profile;
         }
@@ -1787,6 +1787,8 @@ export default function TutorApp() {
     }
   };
 
+  const openTeacherOnboard=()=>{setShowOnboard(true);setTeacherOnboardStep(1);};
+
   const handleTeacherSubmit=async()=>{
     if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.idFile||!teacherForm.diplomaFile||!teacherForm.bankIban||!teacherForm.bankName||!teacherForm.bankHolder){
       showToast("⚠️ Please complete all fields including banking details");return;
@@ -1849,7 +1851,7 @@ export default function TutorApp() {
       setPage("app");
       if(role==="teacher"){
         setAppTab("teacher-home");
-        if(!profile?.bank_iban) { setShowOnboard(true);setTeacherOnboardStep(1); }
+        if(!profile?.bank_iban) openTeacherOnboard();
         const revenue = await getTeacherRevenueStats(u.id);
         setTeacherRevenue(revenue);
         const requests = await getMatchedRequests(profile);
@@ -1909,7 +1911,7 @@ export default function TutorApp() {
           <p>{t.hero.sub}</p>
           <div className="hero-btns">
             <button className="btn-big btn-big-primary" onClick={()=>go("student-home")}>{t.hero.cta1}</button>
-            <button className="btn-big btn-big-outline" onClick={()=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab("teacher-home");setShowOnboard(true);setTeacherOnboardStep(1);}}>{t.hero.cta2}</button>
+            <button className="btn-big btn-big-outline" onClick={()=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab("teacher-home");openTeacherOnboard();}}>{t.hero.cta2}</button>
           </div>
           <div className="hero-stats">{[
             {v:landingStats.teachers>0?`${landingStats.teachers}+`:t.hero.s1v,l:t.hero.s1l},
@@ -2116,7 +2118,7 @@ export default function TutorApp() {
         </div>
 
         <div className="app-body">
-          {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} country={country} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} onEditTeachingProfile={()=>{setAppTab("teacher-home");setShowOnboard(true);setTeacherOnboardStep(1);}} />}
+          {appTab==="profile"&&<ProfilePage user={user} userProfile={userProfile} profileLoading={profileLoading} lang={lang} country={country} onSaved={(name)=>{setUserProfile(p=>({...p,full_name:name}));}} onEditTeachingProfile={()=>{setAppTab("teacher-home");openTeacherOnboard();}} />}
 
           {appTab==="student-home"&&<div style={{maxWidth:560,margin:"0 auto"}}>
 
@@ -2867,7 +2869,7 @@ export default function TutorApp() {
                 <div className="page-sub">{lang==="fr"?"Aucune nouvelle annonce pour l'instant.":lang==="ar"?"لا توجد إعلانات جديدة الآن.":"No new requests right now."}</div>
               </div>
               {(!userProfile?.teaching_subjects?.length||!userProfile?.teaching_langs?.length)&&(
-                <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={()=>{setShowOnboard(true);setTeacherOnboardStep(1)}}>
+                <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={openTeacherOnboard}>
                   <div>
                     <div style={{fontWeight:800,marginBottom:4}}>⚠️ {lang==="fr"?"Profil incomplet":lang==="ar"?"ملف غير مكتمل":"Incomplete profile"}</div>
                     <div style={{fontSize:12}}>{lang==="fr"?"Complète ton profil pour recevoir des annonces →":lang==="ar"?"أكمل ملفك لتستلم إعلانات →":"Complete your profile to receive matching requests →"}</div>
@@ -2911,7 +2913,7 @@ export default function TutorApp() {
                     bankHolder: userProfile?.bank_holder || "",
                     withdrawal: userProfile?.withdrawal_frequency || "wW",
                   }));
-                  setShowOnboard(true);setTeacherOnboardStep(1);
+                  openTeacherOnboard();
                 }}>✏️ {lang==="fr"?"Modifier mon profil":lang==="ar"?"تعديل ملفي":"Edit my profile"}</button>
               </div>
             </div>
