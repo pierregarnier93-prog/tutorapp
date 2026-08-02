@@ -1878,8 +1878,9 @@ export default function TutorApp() {
   const openTeacherOnboard=()=>{setShowOnboard(true);setTeacherOnboardStep(1);};
 
   const handleTeacherSubmit=async()=>{
-    if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.idFile||!teacherForm.diplomaFile||!teacherForm.permitFile||!teacherForm.bankIban||!teacherForm.bankName||!teacherForm.bankHolder){
-      showToast("⚠️ "+(lang==="fr"?"Merci de compléter tous les champs, y compris le permis UAE et les coordonnées bancaires":lang==="ar"?"يرجى إكمال جميع الحقول بما فيها رخصة التدريس والبيانات البنكية":"Please complete all fields including the UAE permit and banking details"));return;
+    const permitRequired=country==="UAE";
+    if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.idFile||!teacherForm.diplomaFile||(permitRequired&&!teacherForm.permitFile)||!teacherForm.bankIban||!teacherForm.bankName||!teacherForm.bankHolder){
+      showToast("⚠️ "+(lang==="fr"?"Merci de compléter tous les champs obligatoires":lang==="ar"?"يرجى إكمال جميع الحقول الإلزامية":"Please complete all required fields"));return;
     }
     if(!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted){
       showToast("⚠️ Please accept the Terms of Service and Child Protection Charter");return;
@@ -3095,20 +3096,21 @@ export default function TutorApp() {
                   <input id="diploma-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,diplomaFile:e.target.files[0]})} />
                 </div>
               </div>
+              {country==="UAE"&&<>
               <div className="section-divider">🏛️ {lang==="fr"?"Permis d'enseignement UAE":lang==="ar"?"رخصة التدريس الإماراتية":"UAE Tutoring Permit"}</div>
               <div style={{background:"#EFF6FF",border:"1.5px solid #BFDBFE",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1rem"}}>
                 <div style={{fontWeight:700,fontSize:13,color:"#1D4ED8",marginBottom:6}}>
                   {lang==="fr"?"🆓 Permis officiel gratuit — 2 ans de validité":lang==="ar"?"🆓 رخصة رسمية مجانية — صالحة لمدة سنتين":"🆓 Free official permit — valid 2 years"}
                 </div>
                 <div style={{fontSize:12,color:"#3B82F6",lineHeight:1.6,marginBottom:8}}>
-                  {lang==="fr"?"Les UAE exigent désormais un permis pour donner des cours particuliers. Il est gratuit, délivré en 24h et valable 2 ans. Les enseignants certifiés apparaissent en priorité.":lang==="ar"?"تشترط الإمارات الآن الحصول على رخصة لتقديم الدروس الخصوصية. الرخصة مجانية وتصدر خلال 24 ساعة وصالحة لمدة سنتين.":"UAE now requires an official permit to offer private tutoring. It's free, issued in 24h, valid 2 years. Certified tutors appear first in search results."}
+                  {lang==="fr"?"Les UAE exigent un permis pour donner des cours particuliers. Gratuit, délivré en 24h, valable 2 ans. Les enseignants certifiés apparaissent en priorité.":lang==="ar"?"تشترط الإمارات الحصول على رخصة لتقديم الدروس الخصوصية. مجانية وتصدر خلال 24 ساعة وصالحة لمدة سنتين.":"UAE requires an official permit to offer private tutoring. Free, issued in 24h, valid 2 years. Certified tutors appear first."}
                 </div>
                 <a href="https://www.moe.gov.ae" target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:700,color:"#1D4ED8",textDecoration:"underline"}}>
                   {lang==="fr"?"→ Obtenir mon permis (site officiel UAE)":lang==="ar"?"← الحصول على الرخصة (الموقع الرسمي)":"→ Get my permit (official UAE site)"}
                 </a>
               </div>
               <div className="form-group">
-                <label className="form-label">📋 {lang==="fr"?"Permis d'enseignement * (obligatoire UAE)":lang==="ar"?"رخصة التدريس * (إلزامية في الإمارات)":"Tutoring permit * (required in UAE)"}</label>
+                <label className="form-label">📋 {lang==="fr"?"Permis d'enseignement *":lang==="ar"?"رخصة التدريس *":"Tutoring permit *"}</label>
                 <div className="upload-zone" onClick={()=>document.getElementById('permit-upload').click()}>
                   {teacherForm.permitFile
                     ?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{(teacherForm.permitFile as File).name}</div></>
@@ -3116,6 +3118,7 @@ export default function TutorApp() {
                 </div>
                 <input id="permit-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,permitFile:e.target.files?.[0]||null})} />
               </div>
+              </>}
               <div className="section-divider">🏦 {t.onboard.banking}</div>
               <div className="banking-card">
                 <div style={{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:"1rem"}}>🔒 {t.onboard.bankHint}</div>
