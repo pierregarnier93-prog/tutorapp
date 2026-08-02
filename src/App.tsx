@@ -50,7 +50,7 @@ async function getBidsForRequest(requestId) {
 async function submitBid({ requestId, netPriceAed, message, proposedSlots }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
-  const slots = (proposedSlots||[]).filter(s=>s).map(s=>new Date(s).toISOString());
+  const slots = (proposedSlots||[]).filter(s=>s);
   const { data, error } = await supabase.from("bids").insert({
     request_id: requestId, teacher_id: user.id,
     net_price_aed: netPriceAed, message, status: "pending",
