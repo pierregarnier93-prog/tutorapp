@@ -22,7 +22,7 @@ function normalizeInstrLang(l:string):string{
   return l;
 }
 
-async function postRequest({ subject, instrLang, curriculum, level, cycle, durationMin, message, countryCode }) {
+async function postRequest({ subject, instrLang, curriculum, level, cycle, durationMin, message, countryCode, proposedSlots }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
   const { data, error } = await supabase.from("requests").insert({
@@ -31,6 +31,7 @@ async function postRequest({ subject, instrLang, curriculum, level, cycle, durat
     duration_min: durationMin || 60,
     budget_min_aed: 0, budget_max_aed: 9999,
     message, country_code: countryCode || "UAE", status: "open",
+    proposed_slots: proposedSlots?.length ? proposedSlots : null,
   }).select().single();
   if (error) throw error;
   return data;
@@ -1263,7 +1264,9 @@ export default function TutorApp() {
   const [submittingBid,setSubmittingBid]=useState(false);
   const [selectedRate,setSelectedRate]=useState(150);
   const [teacherStats,setTeacherStats]=useState({revenue:0,courses:0,rating:"—"});
-  const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:""});
+  const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:"",slots:[] as string[]});
+  const [slotDay,setSlotDay]=useState("");
+  const [slotTime,setSlotTime]=useState("17:00");
   const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,photoFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",whatsapp:"",cguAccepted:false,childProtectionAccepted:false});
   const [pushSubscribed,setPushSubscribed]=useState(false);
   const [firstOfferJustArrived,setFirstOfferJustArrived]=useState(false);
@@ -1731,7 +1734,7 @@ export default function TutorApp() {
     setPublishing(true);
     try{
       const dm={"30 min":30,"1h":60,"1h30":90,"2h":120,"2h30":150,"3h":180};
-      const req=await postRequest({subject:form.subject,instrLang:form.instrLang||"English",curriculum:form.curriculum||"british",level:form.level,durationMin:dm[form.duration]||60,message:form.message,countryCode:"UAE"});
+      const req=await postRequest({subject:form.subject,instrLang:form.instrLang||"English",curriculum:form.curriculum||"british",level:form.level,durationMin:dm[form.duration]||60,message:form.message,countryCode:"UAE",proposedSlots:form.slots});
       const newEntry={request:req,booking:null,offers:[],reqState:"waiting"};
       setAllRequests(prev=>[newEntry,...prev]);
       setActiveRequest(req);setActiveOffers([]);setWaitingSeconds(0);setStudentState("waiting");setStudentView("detail");
@@ -2317,6 +2320,47 @@ export default function TutorApp() {
                   <div className="form-group"><label className="form-label">{t.form.duration}</label><div className="chips-row">{t.durations.map(d=><div key={d} className={`chip${form.duration===d?" selected":""}`} onClick={()=>setForm({...form,duration:d})}>{d}</div>)}</div></div>
                   <div className="form-group"><label className="form-label">{t.form.msg}</label><textarea className="form-textarea" placeholder={t.form.msgPh} value={form.message} onChange={e=>setForm({...form,message:e.target.value})}/></div>
                 </>)}
+
+                <div className="form-group">
+                  <label className="form-label">📅 {lang==="fr"?"Tes disponibilités (jusqu'à 4 créneaux)":lang==="ar"?"أوقات توفرك (حتى 4 مواعيد)":"Your availability (up to 4 slots)"}</label>
+                  {(()=>{
+                    const days=lang==="fr"?["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"]:lang==="ar"?["إث","ثل","أر","خم","جم","سب","أح"]:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+                    const daysFull=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+                    return(
+                      <>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                          {days.map((d,i)=>(
+                            <div key={d} className={`chip${slotDay===daysFull[i]?" selected":""}`} onClick={()=>setSlotDay(daysFull[i])} style={{fontSize:12,padding:"6px 10px"}}>{d}</div>
+                          ))}
+                        </div>
+                        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
+                          <input type="time" value={slotTime} onChange={e=>setSlotTime(e.target.value)} style={{border:"1.5px solid #E2E8F0",borderRadius:8,padding:"8px 10px",fontSize:14,flex:1}}/>
+                          <button onClick={()=>{
+                            if(!slotDay){showToast("⚠️ "+(lang==="fr"?"Choisis un jour":"Choose a day"));return;}
+                            if(form.slots.length>=4){showToast("⚠️ "+(lang==="fr"?"Maximum 4 créneaux":"Max 4 slots"));return;}
+                            const label=`${slotDay} ${slotTime}`;
+                            if(form.slots.includes(label)){showToast("⚠️ "+(lang==="fr"?"Créneau déjà ajouté":"Slot already added"));return;}
+                            setForm({...form,slots:[...form.slots,label]});
+                            setSlotDay("");
+                          }} style={{background:"#5B4FE8",color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontWeight:700,fontSize:13,cursor:"pointer",whiteSpace:"nowrap"}}>
+                            + {lang==="fr"?"Ajouter":lang==="ar"?"إضافة":"Add"}
+                          </button>
+                        </div>
+                        {form.slots.length>0&&(
+                          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                            {form.slots.map((s,i)=>(
+                              <div key={i} style={{background:"#EEF2FF",border:"1.5px solid #C7D2FE",borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:700,color:"#4338CA",display:"flex",alignItems:"center",gap:6}}>
+                                📅 {s}
+                                <span onClick={()=>setForm({...form,slots:form.slots.filter((_,j)=>j!==i)})} style={{cursor:"pointer",color:"#9CA3AF",fontWeight:900}}>×</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {form.slots.length===0&&<div style={{fontSize:12,color:"#9CA3AF"}}>{lang==="fr"?"Aucun créneau ajouté — les profs pourront quand même faire une offre":lang==="ar"?"لم تُضف أي موعد — يمكن للمدرسين تقديم عرض على أي حال":"No slots added — tutors can still make an offer"}</div>}
+                      </>
+                    );
+                  })()}
+                </div>
 
                 {form.subject&&form.level&&(
                   <div style={{background:"#F8FAFF",border:"1.5px solid #C7D2FE",borderRadius:14,padding:"1rem",marginBottom:14}}>
@@ -3331,18 +3375,26 @@ export default function TutorApp() {
                 <label className="form-label">{lang==="fr"?"Ton message à l'élève":lang==="ar"?"رسالتك للطالب":"Your message to the student"}</label>
                 <textarea className="form-textarea" style={{minHeight:110}} placeholder={lang==="fr"?"Présente-toi, ton expérience, ta disponibilité...":lang==="ar"?"عرّف بنفسك وخبرتك وتوفرك...":"Introduce yourself, experience, availability..."} value={bidForm.message} onChange={e=>setBidForm({...bidForm,message:e.target.value})} />
               </div>
-              <div className="form-group">
-                <label className="form-label">📅 {lang==="fr"?"Propose des créneaux (optionnel)":lang==="ar"?"اقترح مواعيد (اختياري)":"Propose time slots (optional)"}</label>
-                <div style={{fontSize:12,color:"#6B7280",marginBottom:8}}>{lang==="fr"?"La famille choisira parmi tes créneaux.":lang==="ar"?"ستختار العائلة من بين مواعيدك.":"The family will pick one of your slots."}</div>
-                {bidSlots.map((slot,si)=>(
-                  <input key={si} type="datetime-local" className="form-input" style={{marginBottom:8}} value={slot} min={new Date(Date.now()+3600000).toISOString().slice(0,16)} onChange={e=>{const s=[...bidSlots];s[si]=e.target.value;setBidSlots(s);}} />
-                ))}
-                {bidSlots.length<3&&(
-                  <button type="button" style={{background:"none",border:"none",color:"#5B4FE8",fontSize:12,fontWeight:700,cursor:"pointer",padding:0,textDecoration:"underline"}} onClick={()=>setBidSlots([...bidSlots,""])}>
-                    + {lang==="fr"?"Ajouter un créneau":lang==="ar"?"أضف موعداً":"Add a slot"}
-                  </button>
-                )}
-              </div>
+              {selectedRequestForBid?.proposed_slots?.length>0&&(
+                <div className="form-group">
+                  <label className="form-label">📅 {lang==="fr"?"Disponibilités de l'élève":lang==="ar"?"أوقات توفر الطالب":"Student's availability"}</label>
+                  <div style={{fontSize:12,color:"#6B7280",marginBottom:10}}>{lang==="fr"?"Coche les créneaux qui te conviennent :":lang==="ar"?"اختر المواعيد المناسبة لك:":"Select the slots that work for you:"}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {selectedRequestForBid.proposed_slots.map((s,si)=>{
+                      const label=String(s);
+                      const checked=bidSlots.includes(label);
+                      return(
+                        <div key={si} onClick={()=>setBidSlots(checked?bidSlots.filter(x=>x!==label):[...bidSlots,label])} style={{display:"flex",alignItems:"center",gap:10,background:checked?"#EEF2FF":"#F8FAFF",border:`1.5px solid ${checked?"#5B4FE8":"#E2E8F0"}`,borderRadius:10,padding:"10px 14px",cursor:"pointer"}}>
+                          <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?"#5B4FE8":"#CBD5E1"}`,background:checked?"#5B4FE8":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            {checked&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
+                          </div>
+                          <span style={{fontSize:13,fontWeight:700,color:checked?"#4338CA":"#374151"}}>📅 {label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <button className="btn-full" onClick={async()=>{
                 if(!bidForm.message){showToast("⚠️ "+(lang==="fr"?"Écris un message":"Write a message"));return;}
                 setSubmittingBid(true);
