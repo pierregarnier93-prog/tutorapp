@@ -1878,8 +1878,8 @@ export default function TutorApp() {
   const openTeacherOnboard=()=>{setShowOnboard(true);setTeacherOnboardStep(1);};
 
   const handleTeacherSubmit=async()=>{
-    if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.idFile||!teacherForm.diplomaFile||!teacherForm.bankIban||!teacherForm.bankName||!teacherForm.bankHolder){
-      showToast("⚠️ Please complete all fields including banking details");return;
+    if(!teacherForm.name||!teacherForm.email||!teacherForm.cycles.length||!teacherForm.subjects.length||!teacherForm.idFile||!teacherForm.diplomaFile||!teacherForm.permitFile||!teacherForm.bankIban||!teacherForm.bankName||!teacherForm.bankHolder){
+      showToast("⚠️ "+(lang==="fr"?"Merci de compléter tous les champs, y compris le permis UAE et les coordonnées bancaires":lang==="ar"?"يرجى إكمال جميع الحقول بما فيها رخصة التدريس والبيانات البنكية":"Please complete all fields including the UAE permit and banking details"));return;
     }
     if(!teacherForm.cguAccepted||!teacherForm.childProtectionAccepted){
       showToast("⚠️ Please accept the Terms of Service and Child Protection Charter");return;
@@ -3107,23 +3107,15 @@ export default function TutorApp() {
                   {lang==="fr"?"→ Obtenir mon permis (site officiel UAE)":lang==="ar"?"← الحصول على الرخصة (الموقع الرسمي)":"→ Get my permit (official UAE site)"}
                 </a>
               </div>
-              {!teacherForm.noPermit?(
-                <div className="form-group">
-                  <label className="form-label">📋 {lang==="fr"?"Permis d'enseignement (PDF ou photo)":lang==="ar"?"رخصة التدريس (PDF أو صورة)":"Tutoring permit (PDF or photo)"}</label>
-                  <div className="upload-zone" onClick={()=>document.getElementById('permit-upload').click()}>
-                    {teacherForm.permitFile
-                      ?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{(teacherForm.permitFile as File).name}</div></>
-                      :<><div style={{fontSize:28}}>🏛️</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{lang==="fr"?"Uploader mon permis":lang==="ar"?"رفع الرخصة":"Upload my permit"}</div></>}
-                  </div>
-                  <input id="permit-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,permitFile:e.target.files?.[0]||null})} />
+              <div className="form-group">
+                <label className="form-label">📋 {lang==="fr"?"Permis d'enseignement * (obligatoire UAE)":lang==="ar"?"رخصة التدريس * (إلزامية في الإمارات)":"Tutoring permit * (required in UAE)"}</label>
+                <div className="upload-zone" onClick={()=>document.getElementById('permit-upload').click()}>
+                  {teacherForm.permitFile
+                    ?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{(teacherForm.permitFile as File).name}</div></>
+                    :<><div style={{fontSize:28}}>🏛️</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{lang==="fr"?"Uploader mon permis":lang==="ar"?"رفع الرخصة":"Upload my permit"}</div></>}
                 </div>
-              ):null}
-              <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",marginBottom:"1.25rem",marginTop:teacherForm.noPermit?0:-4}}>
-                <input type="checkbox" checked={teacherForm.noPermit} onChange={e=>setTeacherForm({...teacherForm,noPermit:e.target.checked,permitFile:null})} style={{width:16,height:16,accentColor:"#6B7280"}} />
-                <span style={{fontSize:13,color:"#6B7280",fontWeight:600}}>
-                  {lang==="fr"?"Je n'ai pas encore ce permis (le profil sera moins mis en avant)":lang==="ar"?"لا أمتلك هذه الرخصة بعد (سيظهر ملفي بأولوية أقل)":"I don't have this permit yet (profile will rank lower)"}
-                </span>
-              </label>
+                <input id="permit-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,permitFile:e.target.files?.[0]||null})} />
+              </div>
               <div className="section-divider">🏦 {t.onboard.banking}</div>
               <div className="banking-card">
                 <div style={{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:"1rem"}}>🔒 {t.onboard.bankHint}</div>
