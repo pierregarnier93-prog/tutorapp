@@ -228,7 +228,7 @@ const T = {
     subjects:{label:"All subjects",title:"Maths in ",titleSpan:"English, Arabic or French"},
     form:{title:"Post your request",sub:"Your profile is pre-filled — just select a subject and post!",subject:"Subject *",lang:"Language of instruction",curriculum:"Curriculum",level:"Level *",duration:"Duration",msg:"Message to tutors",msgPh:"Describe difficulties, goals, availability...",publish:"Post request →",onlineBanner:"All lessons via video call — link sent automatically after booking."},
     bids:{title:"Offers received",new:"offers",payAfter:"💳 Pay ONLY after the lesson — 6% service fee applies",accept:"Accept & Book →",decline:"Decline",noOffers:"Waiting for tutor offers...",noOffersDesc:"Tutors will submit their offers shortly."},
-    payment:{title:"Confirm & Pay",sub:"Your card will be authorized but NOT charged until after the lesson.",lessonPrice:"Lesson price",serviceFee:"Service fee (6%)",total:"Total",teacherReceives:"Teacher receives",platformFee:"Platform fee",payBtn:"Confirm booking →",payNote:"💳 Your card will be charged AFTER the lesson is completed."},
+    payment:{title:"Confirm & Pay",sub:"Your card will be authorized but NOT charged until after the lesson.",lessonPrice:"Lesson price",serviceFee:"Service fee",total:"Total",teacherReceives:"Teacher receives",platformFee:"Platform fee",payBtn:"Confirm booking →",payNote:"💳 Your card will be charged AFTER the lesson is completed."},
     confirm:{title:"Booking confirmed! 🎉",sub1:"Your lesson with ",sub2:" is confirmed.",subject:"Subject",teacher:"Tutor",price:"You pay",teacherGets:"Teacher receives",jitsi:"Video link",jitsiNote:"Will be sent by email before the lesson.",pay:"Payment after lesson",secured:"✓ Secured by Stripe",newReq:"Post another request"},
     teacher:{hello:"Welcome back",sub:"New student requests matching your profile.",revenue:"this month",courses:"Lessons",rating:"Rating",newAds:"Student requests",bid:"Make offer →",ignore:"Ignore",profile:"My profile",yourRate:"Your rate",rateHint:"You receive 94% after 6% platform fee",dashboard:"Dashboard",requests:"Requests",verifiedBadge:"✓ Verified",pendingBadge:"⏳ Pending verification"},
     bidForm:{back:"← Back",price:"Your rate (AED/h)",msg:"Your message to the student",msgPh:"Introduce yourself, experience, availability...",send:"Send offer →",recv:"✓ You receive",afterC:"after 6% fee"},
@@ -248,7 +248,7 @@ const T = {
     subjects:{label:"جميع المواد",title:"الرياضيات بـ",titleSpan:"العربية أو الإنجليزية أو الفرنسية"},
     form:{title:"انشر طلبك",sub:"ملفك مُعبأ مسبقاً — اختر المادة وانشر!",subject:"المادة *",lang:"لغة التدريس",curriculum:"المنهج",level:"المستوى *",duration:"المدة",msg:"رسالة للمدرسين",msgPh:"صف الصعوبات والأهداف...",publish:"نشر الطلب ←",onlineBanner:"جميع الحصص عبر مكالمة فيديو."},
     bids:{title:"العروض المستلمة",new:"عروض",payAfter:"💳 تدفع بعد الحصة — رسوم خدمة 6%",accept:"قبول وحجز ←",decline:"رفض",noOffers:"في انتظار عروض المدرسين...",noOffersDesc:"سيقدم المدرسون عروضهم قريباً."},
-    payment:{title:"تأكيد والدفع",sub:"سيتم التحقق من بطاقتك فقط، لن يتم الخصم إلا بعد الحصة.",lessonPrice:"سعر الحصة",serviceFee:"رسوم الخدمة (6%)",total:"المجموع",teacherReceives:"يستلم المدرس",platformFee:"رسوم المنصة",payBtn:"تأكيد الحجز ←",payNote:"💳 ستُخصم من بطاقتك بعد انتهاء الحصة."},
+    payment:{title:"تأكيد والدفع",sub:"سيتم التحقق من بطاقتك فقط، لن يتم الخصم إلا بعد الحصة.",lessonPrice:"سعر الحصة",serviceFee:"رسوم الخدمة",total:"المجموع",teacherReceives:"يستلم المدرس",platformFee:"رسوم المنصة",payBtn:"تأكيد الحجز ←",payNote:"💳 ستُخصم من بطاقتك بعد انتهاء الحصة."},
     confirm:{title:"تم تأكيد الحجز! 🎉",sub1:"حصتك مع ",sub2:" مؤكدة.",subject:"المادة",teacher:"المدرس",price:"ستدفع",teacherGets:"يستلم المدرس",jitsi:"رابط الفيديو",jitsiNote:"سيُرسل بالبريد قبل الحصة.",pay:"الدفع بعد الحصة",secured:"✓ مؤمّن بـ Stripe",newReq:"نشر طلب جديد"},
     teacher:{hello:"مرحباً بعودتك",sub:"طلبات جديدة تتناسب مع ملفك.",revenue:"هذا الشهر",courses:"الحصص",rating:"التقييم",newAds:"طلبات الطلاب",bid:"تقديم عرض ←",ignore:"تجاهل",profile:"ملفي",yourRate:"سعرك",rateHint:"تستلم 94% بعد رسوم 6%",dashboard:"لوحة التحكم",requests:"الطلبات",verifiedBadge:"✓ موثّق",pendingBadge:"⏳ قيد المراجعة"},
     bidForm:{back:"← رجوع",price:"سعرك (AED/ساعة)",msg:"رسالتك للطالب",msgPh:"عرّف بنفسك وخبرتك...",send:"إرسال العرض ←",recv:"✓ ستحصل على",afterC:"بعد رسوم 6%"},
@@ -268,7 +268,7 @@ const T = {
     subjects:{label:"Toutes les matières",title:"Les maths en ",titleSpan:"anglais, arabe ou français"},
     form:{title:"Poste ton annonce",sub:"Ton profil est pré-rempli — choisis juste une matière et publie !",subject:"Matière *",lang:"Langue d'enseignement",curriculum:"Cursus",level:"Niveau *",duration:"Durée",msg:"Message pour les enseignants",msgPh:"Décris les difficultés et objectifs...",publish:"Publier l'annonce →",onlineBanner:"Tous les cours en visioconférence."},
     bids:{title:"Offres reçues",new:"offres",payAfter:"💳 Paiement APRÈS le cours — frais de service 6%",accept:"Accepter & Réserver →",decline:"Refuser",noOffers:"En attente d'offres...",noOffersDesc:"Les enseignants vont soumettre leurs offres sous peu."},
-    payment:{title:"Confirmer & Payer",sub:"Ta carte sera autorisée mais NON débitée avant le cours.",lessonPrice:"Prix du cours",serviceFee:"Frais de service (6%)",total:"Total",teacherReceives:"L'enseignant reçoit",platformFee:"Commission plateforme",payBtn:"Confirmer la réservation →",payNote:"💳 Ta carte sera débitée APRÈS le cours."},
+    payment:{title:"Confirmer & Payer",sub:"Ta carte sera autorisée mais NON débitée avant le cours.",lessonPrice:"Prix du cours",serviceFee:"Frais de service",total:"Total",teacherReceives:"L'enseignant reçoit",platformFee:"Commission plateforme",payBtn:"Confirmer la réservation →",payNote:"💳 Ta carte sera débitée APRÈS le cours."},
     confirm:{title:"Réservation confirmée ! 🎉",sub1:"Ton cours avec ",sub2:" est confirmé.",subject:"Matière",teacher:"Enseignant",price:"Tu paieras",teacherGets:"L'enseignant reçoit",jitsi:"Lien visio",jitsiNote:"Sera envoyé par email avant le cours.",pay:"Paiement après le cours",secured:"✓ Sécurisé par Stripe",newReq:"Poster une nouvelle annonce"},
     teacher:{hello:"Bon retour",sub:"Nouvelles annonces correspondant à ton profil.",revenue:"ce mois",courses:"Cours",rating:"Note",newAds:"Annonces élèves",bid:"Faire une offre →",ignore:"Ignorer",profile:"Mon profil",yourRate:"Ton tarif",rateHint:"Tu reçois 94% après 6% de frais plateforme",dashboard:"Tableau de bord",requests:"Annonces",verifiedBadge:"✓ Vérifié",pendingBadge:"⏳ En cours de vérification"},
     bidForm:{back:"← Retour",price:"Ton tarif (AED/h)",msg:"Ton message à l'élève",msgPh:"Présente-toi et ton expérience...",send:"Envoyer mon offre →",recv:"✓ Tu recevras",afterC:"après 6% de frais"},
@@ -713,7 +713,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
               <label className="form-label">{t.teacher.yourRate}</label>
               <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#5B4FE8"}}>
                 {fmtPrice(userProfile.teaching_rate,country)}/h
-                <span style={{fontSize:13,fontWeight:500,color:"#6B7280",marginInlineStart:8}}>→ {fmtPrice(Math.round(userProfile.teaching_rate*(1-TEACHER_FEE)),country)}/h ({t.teacher.rateHint})</span>
+                <span style={{fontSize:13,fontWeight:500,color:"#6B7280",marginInlineStart:8}}>→ {fmtPrice(userProfile.teaching_rate,country)}/h</span>
               </div>
             </div>
           )}
@@ -861,10 +861,6 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
           <span style={{fontWeight:800,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
           <span className="payment-total">{fmtPrice(studentTotal,country)}</span>
         </div>
-      </div>
-      <div style={{background:"#FAFBFF",border:"1.5px solid #E8EAF6",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#6B7280"}}>{t.payment.teacherReceives}</span><span style={{fontWeight:700,color:"#0ABFA3"}}>{fmtPrice(teacherPayout,country)}</span></div>
-        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#6B7280"}}>{t.payment.platformFee}</span><span style={{fontWeight:700,color:"#9CA3AF"}}>{fmtPrice(studentFee+(lessonPrice-teacherPayout),country)}</span></div>
       </div>
       <div className="payment-note">⚠️ {t.payment.payNote}</div>
       <Elements stripe={stripePromise}>
@@ -2483,7 +2479,7 @@ export default function TutorApp() {
                   })()}
                 </div>
               </div>
-              <div className="banner banner-teal">💳 {lang==="fr"?"Tu paies UNIQUEMENT après le cours — 6% de frais de service":lang==="ar"?"تدفع فقط بعد الحصة — رسوم خدمة 6٪":"Pay ONLY after the lesson — 6% service fee"}</div>
+              <div className="banner banner-teal">💳 {lang==="fr"?"Tu paies UNIQUEMENT après le cours":lang==="ar"?"تدفع فقط بعد الحصة":"Pay ONLY after the lesson"}</div>
               <div style={{textAlign:"end",marginBottom:8}}>
                 <button className="btn-ghost" style={{fontSize:12,color:"#DC2626",borderColor:"#FCA5A5"}} onClick={async()=>{
                   if(!confirm(lang==="fr"?"Annuler l'annonce et toutes les offres reçues ?":lang==="ar"?"إلغاء الإعلان وجميع العروض المستلمة؟":"Cancel request and all received offers?")) return;
@@ -3038,7 +3034,7 @@ export default function TutorApp() {
               <div className="form-group">
                 <label className="form-label">{t.onboard.rate}</label>
                 <div className="rate-chips">{TEACHER_RATES.map(r=><div key={r} className={`rate-chip${teacherForm.rate===r?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,rate:r})}>{fmtPrice(r,country)}/h</div>)}</div>
-                <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>{t.teacher.rateHint} → {fmtPrice(Math.round(teacherForm.rate*(1-TEACHER_FEE)),country)}/h</div>
+                <div style={{fontSize:12,color:"#6B7280",marginTop:6}}>{fmtPrice(teacherForm.rate,country)}/h</div>
               </div>
               <div style={{display:"flex",gap:10}}>
                 <button className="btn-ghost" style={{flex:1}} onClick={()=>{setTeacherOnboardStep(1);window.scrollTo(0,0);}}>← {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Back"}</button>
@@ -3157,7 +3153,7 @@ export default function TutorApp() {
                 )}
                 {userProfile?.teaching_rate&&(
                   <div style={{fontSize:13,color:"#64748B",fontWeight:600,marginBottom:12}}>
-                    💰 {userProfile.teaching_rate} AED/h → <strong style={{color:"#0ABFA3"}}>{Math.round(userProfile.teaching_rate*0.94)} AED</strong>{lang==="fr"?" après commission":" after fee"}
+                    💰 {lang==="fr"?"Ton tarif :":lang==="ar"?"سعرك:":"Your rate:"} <strong style={{color:"#0ABFA3"}}>{userProfile.teaching_rate} AED/h</strong>
                   </div>
                 )}
                 <button className="btn-ghost" style={{width:"100%"}} onClick={()=>{
@@ -3369,7 +3365,7 @@ export default function TutorApp() {
               <div className="form-group">
                 <label className="form-label">{lang==="fr"?"Ton tarif (AED/h)":lang==="ar"?"سعرك (AED/ساعة)":"Your rate (AED/h)"}</label>
                 <div className="rate-chips">{TEACHER_RATES.map(r=><div key={r} className={`rate-chip${selectedRate===r?" selected":""}`} onClick={()=>setSelectedRate(r)}>{r} AED/h</div>)}</div>
-                <div style={{fontSize:13,color:"#0ABFA3",marginTop:8,fontWeight:700}}>✓ {lang==="fr"?"Tu recevras":lang==="ar"?"ستحصل على":"You receive"} <strong>{Math.round(selectedRate*0.94)} AED/h</strong> {lang==="fr"?"après 6% de frais":lang==="ar"?"بعد رسوم 6٪":"after 6% fee"}</div>
+                <div style={{fontSize:13,color:"#0ABFA3",marginTop:8,fontWeight:700}}>✓ {lang==="fr"?"Tu recevras":lang==="ar"?"ستحصل على":"You'll receive"} <strong>{selectedRate} AED/h</strong></div>
               </div>
               <div className="form-group">
                 <label className="form-label">{lang==="fr"?"Ton message à l'élève":lang==="ar"?"رسالتك للطالب":"Your message to the student"}</label>
