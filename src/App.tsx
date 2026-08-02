@@ -686,6 +686,11 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
           ? <div className="verified-banner">✅ {t.teacher.verifiedBadge}</div>
           : <div className="pending-banner">⏳ {t.teacher.pendingBadge} — {lang==="fr"?"Vos documents sont en cours de vérification (24h)":lang==="ar"?"جاري مراجعة وثائقك (24 ساعة)":"Your documents are under review (24h)"}</div>
         )}
+        {isTeacherProfile && userProfile?.permit_verified && (
+          <div style={{display:"flex",alignItems:"center",gap:8,background:"#EFF6FF",border:"1.5px solid #BFDBFE",borderRadius:12,padding:"10px 14px",marginBottom:10,fontWeight:700,fontSize:13,color:"#1D4ED8"}}>
+            🏛️ {lang==="fr"?"Permis UAE vérifié ✓":lang==="ar"?"رخصة إماراتية موثّقة ✓":"UAE Tutoring Permit ✓"}
+          </div>
+        )}
         <div className="form-group"><label className="form-label">{t.profile.name}</label><input className="form-input" value={fullName} onChange={e=>setFullName(e.target.value)} /></div>
         <div className="form-group"><label className="form-label">{t.profile.email}</label><input className="form-input" value={user?.email||""} disabled style={{opacity:.6}} /></div>
         <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacherProfile?(lang==="fr"?"Enseignant ✓":lang==="ar"?"مدرس ✓":"Teacher ✓"):(lang==="fr"?"Parent / Tuteur légal":lang==="ar"?"ولي أمر / وصي":"Parent / Guardian")} disabled style={{opacity:.6,background:isTeacherProfile?"#E6FAF8":"#FAFBFF",color:isTeacherProfile?"#0F6E56":"#1A1A2E",fontWeight:700}} /></div>
@@ -1095,6 +1100,15 @@ function AdminPage({ user, lang, onBack }) {
                 <div style={{marginTop:10,display:"flex",gap:10,flexWrap:"wrap"}}>
                   {teacher.id_doc_url&&<a href={teacher.id_doc_url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:700,color:"#5B4FE8",background:"#EEF2FF",padding:"5px 12px",borderRadius:8,textDecoration:"none"}}>🪪 Voir pièce d'identité</a>}
                   {teacher.diploma_url&&<a href={teacher.diploma_url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:700,color:"#0F766E",background:"#ECFDF5",padding:"5px 12px",borderRadius:8,textDecoration:"none"}}>📜 Voir diplôme</a>}
+                  {teacher.permit_doc_url&&(
+                    <a href={teacher.permit_doc_url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:700,color:"#1D4ED8",background:"#EFF6FF",padding:"5px 12px",borderRadius:8,textDecoration:"none"}}>🏛️ Voir permis UAE</a>
+                  )}
+                  {teacher.permit_doc_url&&!teacher.permit_verified&&(
+                    <button onClick={async()=>{await supabase.from("profiles").update({permit_verified:true}).eq("id",teacher.id);loadTeachers();showToast("🏛️ Permis UAE validé !");}} style={{fontSize:12,fontWeight:700,color:"#fff",background:"#1D4ED8",padding:"5px 12px",borderRadius:8,border:"none",cursor:"pointer"}}>✓ Valider permis</button>
+                  )}
+                  {teacher.permit_verified&&(
+                    <span style={{fontSize:12,fontWeight:700,color:"#1D4ED8",background:"#DBEAFE",padding:"5px 12px",borderRadius:8}}>🏛️ Permis validé ✓</span>
+                  )}
                 </div>
               )}
             </div>
@@ -1268,7 +1282,7 @@ export default function TutorApp() {
   const [form,setForm]=useState({subject:"",instrLang:"",curriculum:"",level:"",cycle:[],duration:"1h",message:"",slots:[] as string[]});
   const [slotDay,setSlotDay]=useState("");
   const [slotTime,setSlotTime]=useState("17:00");
-  const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,photoFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",whatsapp:"",cguAccepted:false,childProtectionAccepted:false});
+  const [teacherForm,setTeacherForm]=useState({name:"",email:"",bio:"",cycles:[],subjects:[],curricula:[],instrLangs:[],rate:150,idFile:null,diplomaFile:null,permitFile:null,noPermit:false,photoFile:null,withdrawal:"wW",bankName:"",bankIban:"",bankHolder:"",whatsapp:"",cguAccepted:false,childProtectionAccepted:false});
   const [pushSubscribed,setPushSubscribed]=useState(false);
   const [firstOfferJustArrived,setFirstOfferJustArrived]=useState(false);
   const [allRequests,setAllRequests]=useState<any[]>([]);
@@ -1894,6 +1908,14 @@ export default function TutorApp() {
         const {data:pub}=supabase.storage.from("teacher-docs").getPublicUrl(path);
         diplomaUrl=pub.publicUrl;
       }
+      let permitUrl:string|null=null;
+      if(teacherForm.permitFile){
+        const ext=(teacherForm.permitFile as File).name.split(".").pop();
+        const path=`${user.id}/permit.${ext}`;
+        await supabase.storage.from("teacher-docs").upload(path,teacherForm.permitFile as File,{upsert:true,contentType:(teacherForm.permitFile as File).type});
+        const {data:pub}=supabase.storage.from("teacher-docs").getPublicUrl(path);
+        permitUrl=pub.publicUrl;
+      }
       await supabase.from("profiles").update({
         full_name:teacherForm.name,email:teacherForm.email,withdrawal_frequency:teacherForm.withdrawal,
         bank_name:teacherForm.bankName,bank_iban:teacherForm.bankIban,bank_holder:teacherForm.bankHolder,
@@ -1905,6 +1927,7 @@ export default function TutorApp() {
         ...(avatarUrl?{avatar_url:avatarUrl}:{}),
         ...(idDocUrl?{id_doc_url:idDocUrl}:{}),
         ...(diplomaUrl?{diploma_url:diplomaUrl}:{}),
+        ...(permitUrl?{permit_doc_url:permitUrl,permit_verified:false}:{}),
       }).eq("id",user.id);
 
       try{
@@ -3072,6 +3095,35 @@ export default function TutorApp() {
                   <input id="diploma-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,diplomaFile:e.target.files[0]})} />
                 </div>
               </div>
+              <div className="section-divider">🏛️ {lang==="fr"?"Permis d'enseignement UAE":lang==="ar"?"رخصة التدريس الإماراتية":"UAE Tutoring Permit"}</div>
+              <div style={{background:"#EFF6FF",border:"1.5px solid #BFDBFE",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1rem"}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#1D4ED8",marginBottom:6}}>
+                  {lang==="fr"?"🆓 Permis officiel gratuit — 2 ans de validité":lang==="ar"?"🆓 رخصة رسمية مجانية — صالحة لمدة سنتين":"🆓 Free official permit — valid 2 years"}
+                </div>
+                <div style={{fontSize:12,color:"#3B82F6",lineHeight:1.6,marginBottom:8}}>
+                  {lang==="fr"?"Les UAE exigent désormais un permis pour donner des cours particuliers. Il est gratuit, délivré en 24h et valable 2 ans. Les enseignants certifiés apparaissent en priorité.":lang==="ar"?"تشترط الإمارات الآن الحصول على رخصة لتقديم الدروس الخصوصية. الرخصة مجانية وتصدر خلال 24 ساعة وصالحة لمدة سنتين.":"UAE now requires an official permit to offer private tutoring. It's free, issued in 24h, valid 2 years. Certified tutors appear first in search results."}
+                </div>
+                <a href="https://www.moe.gov.ae" target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:700,color:"#1D4ED8",textDecoration:"underline"}}>
+                  {lang==="fr"?"→ Obtenir mon permis (site officiel UAE)":lang==="ar"?"← الحصول على الرخصة (الموقع الرسمي)":"→ Get my permit (official UAE site)"}
+                </a>
+              </div>
+              {!teacherForm.noPermit?(
+                <div className="form-group">
+                  <label className="form-label">📋 {lang==="fr"?"Permis d'enseignement (PDF ou photo)":lang==="ar"?"رخصة التدريس (PDF أو صورة)":"Tutoring permit (PDF or photo)"}</label>
+                  <div className="upload-zone" onClick={()=>document.getElementById('permit-upload').click()}>
+                    {teacherForm.permitFile
+                      ?<><div style={{fontSize:28}}>✅</div><div style={{fontSize:12,fontWeight:700,color:"#0ABFA3",marginTop:4}}>{(teacherForm.permitFile as File).name}</div></>
+                      :<><div style={{fontSize:28}}>🏛️</div><div style={{fontSize:12,fontWeight:700,color:"#5B4FE8",marginTop:4}}>{lang==="fr"?"Uploader mon permis":lang==="ar"?"رفع الرخصة":"Upload my permit"}</div></>}
+                  </div>
+                  <input id="permit-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>setTeacherForm({...teacherForm,permitFile:e.target.files?.[0]||null})} />
+                </div>
+              ):null}
+              <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",marginBottom:"1.25rem",marginTop:teacherForm.noPermit?0:-4}}>
+                <input type="checkbox" checked={teacherForm.noPermit} onChange={e=>setTeacherForm({...teacherForm,noPermit:e.target.checked,permitFile:null})} style={{width:16,height:16,accentColor:"#6B7280"}} />
+                <span style={{fontSize:13,color:"#6B7280",fontWeight:600}}>
+                  {lang==="fr"?"Je n'ai pas encore ce permis (le profil sera moins mis en avant)":lang==="ar"?"لا أمتلك هذه الرخصة بعد (سيظهر ملفي بأولوية أقل)":"I don't have this permit yet (profile will rank lower)"}
+                </span>
+              </label>
               <div className="section-divider">🏦 {t.onboard.banking}</div>
               <div className="banking-card">
                 <div style={{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:"1rem"}}>🔒 {t.onboard.bankHint}</div>
