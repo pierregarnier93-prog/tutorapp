@@ -2555,8 +2555,7 @@ export default function TutorApp() {
                         <div style={{fontWeight:800,fontSize:12,color:"#0F6E56",marginBottom:8}}>📅 {lang==="fr"?"Créneaux proposés — choisis un :":lang==="ar"?"المواعيد المقترحة — اختر واحداً:":"Proposed slots — pick one:"}</div>
                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
                           {offer.proposed_slots.map((slot,si)=>{
-                            const d=new Date(slot);
-                            const label=d.toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{weekday:"short",day:"numeric",month:"short"})+" · "+d.toLocaleTimeString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{hour:"2-digit",minute:"2-digit"});
+                            const label=String(slot);
                             const isSelected=selectedSlot[offer.id]===slot;
                             return(
                               <label key={si} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:isSelected?"#D1FAE5":"#fff",border:isSelected?"1.5px solid #0ABFA3":"1.5px solid #E2E8F0",borderRadius:8,padding:"8px 12px",fontSize:13,fontWeight:isSelected?700:500,transition:"all .15s"}}>
