@@ -233,7 +233,7 @@ const T = {
     teacher:{hello:"Welcome back",sub:"New student requests matching your profile.",revenue:"this month",courses:"Lessons",rating:"Rating",newAds:"Student requests",bid:"Make offer →",ignore:"Ignore",profile:"My profile",yourRate:"Your rate",rateHint:"You receive 94% after 6% platform fee",dashboard:"Dashboard",requests:"Requests",verifiedBadge:"✓ Verified",pendingBadge:"⏳ Pending verification"},
     bidForm:{back:"← Back",price:"Your rate (AED/h)",msg:"Your message to the student",msgPh:"Introduce yourself, experience, availability...",send:"Send offer →",recv:"✓ You receive",afterC:"after 6% fee"},
     onboard:{title:"Create your tutor profile",sub:"Join 200+ verified tutors across the Gulf.",name:"Full name *",email:"Email *",bio:"Bio",bioPh:"Your background & teaching style...",cycle:"Teaching cycle *",subjects:"Subjects you teach *",curriculum:"Curriculum(s) *",langTeach:"Teaching language(s) *",rate:"Your hourly rate (AED) *",idDoc:"ID Document *",idDocHint:"Emirates ID, Qatar ID, Kuwait Civil ID, Iqama, etc.",diploma:"Diploma(s) *",idPh:"Upload your ID document",diplomaPh:"Upload your diploma(s)",submit:"Submit profile →",withdrawal:"Payout frequency *",wI:"Immediate",wW:"Weekly",wM:"Monthly",wInfo:"This can only be changed once per month from your profile.",banking:"Banking details for payouts",bankName:"Bank name *",bankIban:"IBAN *",bankHolder:"Account holder name *",bankHint:"Your payouts will be sent to this account. Encrypted and secure."},
-    signup:{role:"You are *",student:"Student / Parent",teacher:"Teacher",name:"Full name *",country:"Country *",emirate:"Emirate *",lang:"Preferred language",curriculum:"Your curriculum *",instrLang:"Language of instruction *",level:"Your current level *",age:"Your age"},
+    signup:{role:"You are *",student:"Parent / Guardian",teacher:"Teacher",name:"Your full name *",country:"Country *",emirate:"Emirate *",lang:"Preferred language",curriculum:"Child's curriculum *",instrLang:"Child's instruction language *",level:"Child's current level *",consent:"I confirm I am the parent or legal guardian of the student"},
     profile:{title:"My Profile",name:"Full name",email:"Email",role:"Role",changePassword:"Change password",newPassword:"New password",confirmPassword:"Confirm new password",savePassword:"Update password",saveProfile:"Save changes",passwordSuccess:"Password updated!",profileSuccess:"Profile updated!",banking:"Banking details",bankName:"Bank name",bankIban:"IBAN",bankHolder:"Account holder",payoutFreq:"Payout frequency",payoutNote:"Can only be changed once per month.",lastChanged:"Last changed"},
     cycles:["Primary (6-11)","Middle School (11-15)","High School (15-18)"],
     instrLangs:["English","Arabic","French"],
@@ -253,7 +253,7 @@ const T = {
     teacher:{hello:"مرحباً بعودتك",sub:"طلبات جديدة تتناسب مع ملفك.",revenue:"هذا الشهر",courses:"الحصص",rating:"التقييم",newAds:"طلبات الطلاب",bid:"تقديم عرض ←",ignore:"تجاهل",profile:"ملفي",yourRate:"سعرك",rateHint:"تستلم 94% بعد رسوم 6%",dashboard:"لوحة التحكم",requests:"الطلبات",verifiedBadge:"✓ موثّق",pendingBadge:"⏳ قيد المراجعة"},
     bidForm:{back:"← رجوع",price:"سعرك (AED/ساعة)",msg:"رسالتك للطالب",msgPh:"عرّف بنفسك وخبرتك...",send:"إرسال العرض ←",recv:"✓ ستحصل على",afterC:"بعد رسوم 6%"},
     onboard:{title:"أنشئ ملف المدرس",sub:"انضم لأكثر من 200 مدرس موثّق.",name:"الاسم الكامل *",email:"البريد الإلكتروني *",bio:"نبذة عنك",bioPh:"خلفيتك وأسلوبك...",cycle:"المرحلة التعليمية *",subjects:"المواد التي تدرّسها *",curriculum:"المناهج *",langTeach:"لغة التدريس *",rate:"سعرك بالساعة (AED) *",idDoc:"وثيقة الهوية *",idDocHint:"الهوية الإماراتية، الهوية القطرية، البطاقة المدنية الكويتية، الإقامة، إلخ.",diploma:"الشهادة *",idPh:"رفع وثيقة الهوية",diplomaPh:"رفع الشهادة",submit:"إرسال الملف ←",withdrawal:"تكرار الصرف *",wI:"فوري",wW:"أسبوعي",wM:"شهري",wInfo:"لا يمكن تغيير هذا إلا مرة واحدة في الشهر.",banking:"بيانات الحساب البنكي",bankName:"اسم البنك *",bankIban:"IBAN *",bankHolder:"اسم صاحب الحساب *",bankHint:"سيتم تحويل أرباحك إلى هذا الحساب. مشفر وآمن."},
-    signup:{role:"أنت *",student:"طالب / ولي أمر",teacher:"مدرس",name:"الاسم الكامل *",country:"الدولة *",emirate:"الإمارة *",lang:"اللغة المفضلة",curriculum:"منهجك الدراسي *",instrLang:"لغة التدريس *",level:"مستواك الحالي *",age:"عمرك"},
+    signup:{role:"أنت *",student:"ولي أمر / وصي",teacher:"مدرس",name:"اسمك الكامل *",country:"الدولة *",emirate:"الإمارة *",lang:"اللغة المفضلة",curriculum:"منهج الطفل *",instrLang:"لغة التدريس للطفل *",level:"مستوى الطفل الحالي *",consent:"أؤكد أنني ولي أمر الطالب أو وصيه القانوني"},
     profile:{title:"ملفي الشخصي",name:"الاسم الكامل",email:"البريد الإلكتروني",role:"الدور",changePassword:"تغيير كلمة المرور",newPassword:"كلمة المرور الجديدة",confirmPassword:"تأكيد كلمة المرور",savePassword:"تحديث",saveProfile:"حفظ",passwordSuccess:"تم التحديث!",profileSuccess:"تم الحفظ!",banking:"البيانات البنكية",bankName:"اسم البنك",bankIban:"IBAN",bankHolder:"اسم صاحب الحساب",payoutFreq:"تكرار الصرف",payoutNote:"لا يمكن التغيير إلا مرة في الشهر.",lastChanged:"آخر تغيير"},
     cycles:["الابتدائية (6-11)","المتوسطة (11-15)","الثانوية (15-18)"],
     instrLangs:["الإنجليزية","العربية","الفرنسية"],
@@ -273,7 +273,7 @@ const T = {
     teacher:{hello:"Bon retour",sub:"Nouvelles annonces correspondant à ton profil.",revenue:"ce mois",courses:"Cours",rating:"Note",newAds:"Annonces élèves",bid:"Faire une offre →",ignore:"Ignorer",profile:"Mon profil",yourRate:"Ton tarif",rateHint:"Tu reçois 94% après 6% de frais plateforme",dashboard:"Tableau de bord",requests:"Annonces",verifiedBadge:"✓ Vérifié",pendingBadge:"⏳ En cours de vérification"},
     bidForm:{back:"← Retour",price:"Ton tarif (AED/h)",msg:"Ton message à l'élève",msgPh:"Présente-toi et ton expérience...",send:"Envoyer mon offre →",recv:"✓ Tu recevras",afterC:"après 6% de frais"},
     onboard:{title:"Crée ton profil enseignant",sub:"Rejoins +200 enseignants vérifiés.",name:"Nom complet *",email:"Email *",bio:"Biographie",bioPh:"Ton parcours et ta pédagogie...",cycle:"Cycle enseigné *",subjects:"Matières enseignées *",curriculum:"Cursus *",langTeach:"Langue(s) d'enseignement *",rate:"Ton tarif horaire (AED) *",idDoc:"Pièce d'identité *",idDocHint:"Emirates ID, Qatar ID, Kuwait Civil ID, titre de séjour, etc.",diploma:"Diplôme(s) *",idPh:"Uploader ta pièce d'identité",diplomaPh:"Uploader ton diplôme",submit:"Soumettre mon profil →",withdrawal:"Fréquence de virement *",wI:"Immédiat",wW:"Hebdomadaire",wM:"Mensuel",wInfo:"Modifiable une seule fois par mois depuis ton profil.",banking:"Coordonnées bancaires",bankName:"Nom de la banque *",bankIban:"IBAN *",bankHolder:"Titulaire du compte *",bankHint:"Tes virements seront envoyés sur ce compte. Informations chiffrées et sécurisées."},
-    signup:{role:"Tu es *",student:"Élève / Parent",teacher:"Enseignant",name:"Nom complet *",country:"Pays *",emirate:"Émirat *",lang:"Langue préférée",curriculum:"Ton cursus *",instrLang:"Langue d'enseignement *",level:"Ton niveau actuel *",age:"Ton âge"},
+    signup:{role:"Tu es *",student:"Parent / Tuteur légal",teacher:"Enseignant",name:"Ton nom complet *",country:"Pays *",emirate:"Émirat *",lang:"Langue préférée",curriculum:"Cursus de l'enfant *",instrLang:"Langue d'enseignement de l'enfant *",level:"Niveau actuel de l'enfant *",consent:"Je confirme être le parent ou tuteur légal de l'élève"},
     profile:{title:"Mon Profil",name:"Nom complet",email:"Email",role:"Rôle",changePassword:"Changer le mot de passe",newPassword:"Nouveau mot de passe",confirmPassword:"Confirmer le mot de passe",savePassword:"Mettre à jour",saveProfile:"Enregistrer",passwordSuccess:"Mot de passe mis à jour !",profileSuccess:"Profil mis à jour !",banking:"Coordonnées bancaires",bankName:"Banque",bankIban:"IBAN",bankHolder:"Titulaire",payoutFreq:"Fréquence de virement",payoutNote:"Modifiable une fois par mois.",lastChanged:"Dernière modification"},
     cycles:["Élémentaire (6-11 ans)","Collège (11-15 ans)","Lycée (15-18 ans)"],
     instrLangs:["Anglais","Arabe","Français"],
@@ -506,6 +506,7 @@ function Auth({ onClose, onSuccess, lang }) {
   const [instrLang, setInstrLang] = useState("");
   const [level, setLevel] = useState("");
   const [age, setAge] = useState("");
+  const [parentConsent, setParentConsent] = useState(false);
   const [teachCycle, setTeachCycle] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -524,6 +525,7 @@ function Auth({ onClose, onSuccess, lang }) {
   const handleSignup = async () => {
     if (!email || !password || !fullName) { setError("Please fill in all required fields."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (role === "student" && !parentConsent) { setError(lang==="fr"?"Veuillez confirmer que vous êtes le parent ou tuteur légal de l'élève.":lang==="ar"?"يرجى تأكيد أنك ولي أمر الطالب.":"Please confirm you are the parent or legal guardian of the student."); return; }
     setLoading(true); setError("");
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, role } } });
     if (error) { console.error("Signup error:", error); setLoading(false); setError(error.message); return; }
@@ -563,7 +565,7 @@ function Auth({ onClose, onSuccess, lang }) {
         {tab==="signup" && <>
           <div className="auth-group"><div className="auth-label">{t.signup.role}</div>
             <div className="auth-role-row">
-              <div className={`auth-role-btn${role==="student"?" selected":""}`} onClick={()=>setRole("student")}><div className="auth-role-icon">🎓</div><div className="auth-role-label">{t.signup.student}</div></div>
+              <div className={`auth-role-btn${role==="student"?" selected":""}`} onClick={()=>setRole("student")}><div className="auth-role-icon">👨‍👩‍👧</div><div className="auth-role-label">{t.signup.student}</div></div>
               <div className={`auth-role-btn${role==="teacher"?" selected":""}`} onClick={()=>setRole("teacher")}><div className="auth-role-icon">📚</div><div className="auth-role-label">{t.signup.teacher}</div></div>
             </div>
           </div>
@@ -577,15 +579,18 @@ function Auth({ onClose, onSuccess, lang }) {
           {country==="UAE" && <div className="auth-group"><label className="auth-label">{t.signup.emirate}</label><select className="auth-select" value={region} onChange={e=>setRegion(e.target.value)}>{UAE_REGIONS.map(r=><option key={r.code} value={r.code}>{r.name}</option>)}</select></div>}
           <div className="auth-group"><label className="auth-label">{t.signup.lang}</label><select className="auth-select" value={prefLang} onChange={e=>setPrefLang(e.target.value)}><option value="en">🇬🇧 English</option><option value="ar">🇸🇦 العربية</option><option value="fr">🇫🇷 Français</option></select></div>
           {role==="student" && <>
-            <div className="section-divider">📚 Your learning profile</div>
+            <div className="section-divider">📚 {lang==="fr"?"Profil de l'enfant":lang==="ar"?"ملف الطفل":"Child's learning profile"}</div>
             <div className="form-row" style={{marginBottom:0}}>
               <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.curriculum}</label><select className="auth-select" value={curriculum} onChange={e=>{setCurriculum(e.target.value);setLevel("");}}><option value="">Choose...</option>{Object.entries(CURRICULA).map(([k,v])=><option key={k} value={k}>{v.label[appLang]||v.label.en}</option>)}</select></div>
               <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.instrLang}</label><select className="auth-select" value={instrLang} onChange={e=>setInstrLang(e.target.value)}><option value="">Choose...</option>{t.instrLangs.map(l=><option key={l}>{l}</option>)}</select></div>
             </div>
             <div className="form-row" style={{marginBottom:0}}>
               <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.level}</label><select className="auth-select" value={level} onChange={e=>setLevel(e.target.value)} disabled={!studentLevels.length}><option value="">{studentLevels.length?"Choose...":"Select curriculum first"}</option>{studentLevels.map(l=><option key={l}>{l}</option>)}</select></div>
-              <div className="auth-group" style={{marginBottom:0}}><label className="auth-label">{t.signup.age}</label><input className="auth-input" type="number" min="6" max="18" placeholder="ex: 14" value={age} onChange={e=>setAge(e.target.value)} /></div>
             </div>
+            <label className="auth-remember" style={{alignItems:"flex-start",gap:10,marginTop:4}}>
+              <input type="checkbox" checked={parentConsent} onChange={e=>setParentConsent(e.target.checked)} style={{marginTop:2,flexShrink:0}} />
+              <span style={{fontSize:12,color:"#64748B",lineHeight:1.5}}>{t.signup.consent}</span>
+            </label>
           </>}
           {role==="teacher" && <>
             <div className="section-divider">🎓 Your teaching profile</div>
@@ -683,7 +688,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
         )}
         <div className="form-group"><label className="form-label">{t.profile.name}</label><input className="form-input" value={fullName} onChange={e=>setFullName(e.target.value)} /></div>
         <div className="form-group"><label className="form-label">{t.profile.email}</label><input className="form-input" value={user?.email||""} disabled style={{opacity:.6}} /></div>
-        <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacherProfile?(lang==="fr"?"Enseignant ✓":lang==="ar"?"مدرس ✓":"Teacher ✓"):(lang==="fr"?"Élève / Parent":lang==="ar"?"طالب / ولي أمر":"Student / Parent")} disabled style={{opacity:.6,background:isTeacherProfile?"#E6FAF8":"#FAFBFF",color:isTeacherProfile?"#0F6E56":"#1A1A2E",fontWeight:700}} /></div>
+        <div className="form-group"><label className="form-label">{t.profile.role}</label><input className="form-input" value={isTeacherProfile?(lang==="fr"?"Enseignant ✓":lang==="ar"?"مدرس ✓":"Teacher ✓"):(lang==="fr"?"Parent / Tuteur légal":lang==="ar"?"ولي أمر / وصي":"Parent / Guardian")} disabled style={{opacity:.6,background:isTeacherProfile?"#E6FAF8":"#FAFBFF",color:isTeacherProfile?"#0F6E56":"#1A1A2E",fontWeight:700}} /></div>
         <button className="submit-btn" onClick={handleSaveProfile} disabled={saving} style={{marginTop:"1rem"}}>{saving?"⏳ Saving...":t.profile.saveProfile}</button>
       </div>
       {isTeacherProfile && userProfile?.teaching_subjects?.length > 0 && (
@@ -3515,12 +3520,12 @@ export default function TutorApp() {
             </div>
 
             {onboardStep===1&&<>
-              <div style={{fontSize:28,marginBottom:8}}>👋</div>
+              <div style={{fontSize:28,marginBottom:8}}>👨‍👩‍👧</div>
               <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
-                {lang==="fr"?"Bienvenue ! Qui apprend ?":lang==="ar"?"مرحباً! من يتعلم؟":"Welcome! Who's learning?"}
+                {lang==="fr"?"Parlez-nous de votre enfant":lang==="ar"?"أخبرنا عن طفلك":"Tell us about your child"}
               </div>
               <div style={{fontSize:13,color:"#64748B",marginBottom:"1.5rem",lineHeight:1.6}}>
-                {lang==="fr"?"Ces infos pré-remplissent tes annonces automatiquement — 30 secondes, une seule fois.":lang==="ar"?"ستملأ هذه المعلومات إعلاناتك تلقائياً — 30 ثانية، مرة واحدة فقط.":"This pre-fills your requests automatically — 30 seconds, just once."}
+                {lang==="fr"?"Ces infos pré-remplissent les annonces automatiquement. Le compte est au nom du parent.":lang==="ar"?"ستملأ هذه المعلومات الإعلانات تلقائياً. الحساب باسم ولي الأمر.":"This pre-fills requests automatically. The account is in the parent's name."}
               </div>
               <div className="form-group">
                 <label className="form-label">{lang==="fr"?"Prénom de l'élève":lang==="ar"?"اسم الطالب":"Student's first name"}</label>
