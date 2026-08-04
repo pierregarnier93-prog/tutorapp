@@ -1359,6 +1359,7 @@ export default function TutorApp() {
   const [suggestedTeachers,setSuggestedTeachers]=useState<any[]>([]);
   const [currentTestimonial,setCurrentTestimonial]=useState(0);
   const [lastCompletedTeacher,setLastCompletedTeacher]=useState<{name:string,id:string,subject:string}|null>(null);
+  const [matchingLoading,setMatchingLoading]=useState(false);
   const [teacherSub,setTeacherSub]=useState<any>(null);
   const [showPaywall,setShowPaywall]=useState(false);
   const [subPlan,setSubPlan]=useState<"monthly"|"yearly">("yearly");
@@ -1817,6 +1818,42 @@ export default function TutorApp() {
     showToast("👋 See you soon!");
   };
 
+  const runMatching=async(req:any)=>{
+    setMatchingLoading(true);
+    let matched:any[]=[];
+    try{
+      const {data:{session}}=await supabase.auth.getSession();
+      const res=await fetch(`${SUPABASE_URL}/functions/v1/ai-match`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json",Authorization:`Bearer ${session?.access_token}`},
+        body:JSON.stringify({requestId:req.id}),
+      });
+      const json=await res.json();
+      if(res.ok&&json.matches?.length) matched=json.matches;
+    }catch(e){ console.error("AI matching failed:",e); }
+
+    // Fall back to local scoring so the student always sees candidates
+    if(!matched.length){
+      const {data}=await supabase.from("profiles")
+        .select("id,full_name,teaching_bio,teaching_subjects,teaching_rate,rating,rating_count,teaching_langs,teaching_curricula")
+        .eq("role","teacher").eq("verified",true)
+        .contains("teaching_subjects",[req.subject]).limit(6);
+      matched=(data||[]).map(t=>({...t,match_score:scoreTeacherForRequest(t,form)}))
+        .sort((a,b)=>b.match_score-a.match_score);
+    }
+
+    setSuggestedTeachers(matched);
+    setMatchingLoading(false);
+
+    matched.forEach(t=>{
+      sendPushTo(
+        t.id,
+        lang==="fr"?"📋 Nouvelle demande !":lang==="ar"?"📋 طلب جديد!":"📋 New request!",
+        lang==="fr"?`${req.subject} · ${req.level} — Fais une offre maintenant !`:lang==="ar"?`${req.subject} · ${req.level} — قدّم عرضاً الآن!`:`${req.subject} · ${req.level} — Make an offer now!`
+      );
+    });
+  };
+
   const handlePublish=async()=>{
     if(!form.subject||!form.level){showToast("⚠️ "+(lang==="fr"?"Sélectionne une matière et un niveau":lang==="ar"?"اختر مادة ومستوى":"Please select subject and level"));return;}
     setPublishing(true);
@@ -1827,26 +1864,7 @@ export default function TutorApp() {
       setAllRequests(prev=>[newEntry,...prev]);
       setActiveRequest(req);setActiveOffers([]);setWaitingSeconds(0);setStudentState("waiting");setStudentView("detail");
       showToast("✅ "+(lang==="fr"?"Annonce publiée !":lang==="ar"?"تم نشر الإعلان !":"Request posted!"));
-      // Notify matching teachers via push + fetch their profiles
-      supabase.from("profiles")
-        .select("id,full_name,bio,photo_url,teaching_subjects,hourly_rate_aed,rating,rating_count,teaching_langs")
-        .eq("role","teacher")
-        .eq("verified",true)
-        .contains("teaching_subjects",[form.subject])
-        .limit(6)
-        .then(({data:matched})=>{
-          const scored=(matched||[])
-            .map(t=>({...t,_score:scoreTeacherForRequest(t,form)}))
-            .sort((a,b)=>b._score-a._score);
-          setSuggestedTeachers(scored);
-          scored.forEach(t=>{
-            sendPushTo(
-              t.id,
-              lang==="fr"?"📋 Nouvelle demande !":lang==="ar"?"📋 طلب جديد!":"📋 New request!",
-              lang==="fr"?`${form.subject} · ${form.level} — Fais une offre maintenant !`:lang==="ar"?`${form.subject} · ${form.level} — قدّم عرضاً الآن!`:`${form.subject} · ${form.level} — Make an offer now!`
-            );
-          });
-        });
+      runMatching(req);
     }catch(e){showToast("❌ "+e.message);}
     finally{setPublishing(false);}
   };
@@ -2520,29 +2538,48 @@ export default function TutorApp() {
                 <div style={{fontSize:12,color:"#64748B",fontWeight:700}}>— {TESTIMONIALS[currentTestimonial].name}</div>
               </div>
               <div style={{fontSize:12,color:"#9CA3AF",marginBottom:"1.5rem",fontWeight:600}}>🔄 {lang==="fr"?"Mise à jour automatique toutes les 10 secondes":lang==="ar"?"تحديث تلقائي كل 10 ثوانٍ":"Auto-refreshing every 10 seconds"}</div>
-              {suggestedTeachers.length>0&&(
+              {matchingLoading&&(
+                <div style={{textAlign:"center",padding:"1.5rem",marginBottom:"1rem"}}>
+                  <div style={{fontSize:26,marginBottom:8}}>🧠</div>
+                  <div style={{fontWeight:800,fontSize:14,color:"#5B4FE8"}}>
+                    {lang==="fr"?"L'IA sélectionne les meilleurs profs...":lang==="ar"?"الذكاء الاصطناعي يختار أفضل المدرسين...":"AI is selecting the best tutors..."}
+                  </div>
+                </div>
+              )}
+              {!matchingLoading&&suggestedTeachers.length>0&&(
                 <div style={{textAlign:"start",marginBottom:"1.5rem"}}>
                   <div style={{fontWeight:800,fontSize:15,marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
                     <span style={{background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
-                      ⚡ {lang==="fr"?"Profs disponibles — déjà notifiés !":lang==="ar"?"المدرسون المتاحون — تم إخطارهم!":"Available tutors — already notified!"}
+                      🧠 {lang==="fr"?"Sélectionnés par l'IA pour ton enfant":lang==="ar"?"مختارون بالذكاء الاصطناعي لطفلك":"AI-selected for your child"}
                     </span>
                   </div>
                   {suggestedTeachers.map(t=>(
-                    <div key={t.id} style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
-                      <div style={{width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",flexShrink:0,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {t.photo_url?<img src={t.photo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:20,color:"#fff"}}>👤</span>}
-                      </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:800,fontSize:14,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.full_name||"Tutor"}</div>
-                        <div style={{fontSize:12,color:"#64748B",marginTop:2,display:"flex",gap:6,flexWrap:"wrap"}}>
-                          {t.rating>0&&<span>⭐ {Number(t.rating).toFixed(1)} ({t.rating_count||0})</span>}
-                          {t.hourly_rate_aed&&<span style={{color:"#5B4FE8",fontWeight:700}}>{t.hourly_rate_aed} AED/h</span>}
+                    <div key={t.id} style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"14px 16px",marginBottom:10,boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
+                        <div style={{width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",flexShrink:0,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          {t.avatar_url?<img src={t.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:20,color:"#fff"}}>👤</span>}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:800,fontSize:14,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                            {t.full_name||"Tutor"}
+                            {t.permit_verified&&<span style={{fontSize:11,marginInlineStart:6}} title="UAE permit">🏛️</span>}
+                          </div>
+                          <div style={{fontSize:12,color:"#64748B",marginTop:2,display:"flex",gap:6,flexWrap:"wrap"}}>
+                            {t.rating>0&&<span>⭐ {Number(t.rating).toFixed(1)} ({t.rating_count||0})</span>}
+                            {t.teaching_rate&&<span style={{color:"#5B4FE8",fontWeight:700}}>{t.teaching_rate} AED/h</span>}
+                          </div>
+                        </div>
+                        <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                          {t.match_score>=60&&<div style={{fontSize:11,color:"#0F6E56",fontWeight:800,background:"#D1FAE5",borderRadius:8,padding:"3px 8px"}}>{t.match_score}% match</div>}
+                          <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700,background:"#F0FDF4",borderRadius:8,padding:"3px 8px"}}>✓ {lang==="fr"?"Notifié":lang==="ar"?"تم الإخطار":"Notified"}</div>
                         </div>
                       </div>
-                      <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-                        {t._score>=60&&<div style={{fontSize:11,color:"#0F6E56",fontWeight:800,background:"#D1FAE5",borderRadius:8,padding:"3px 8px"}}>{Math.min(100,Math.round(t._score/100*100+40))}% match</div>}
-                        <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700,background:"#F0FDF4",borderRadius:8,padding:"3px 8px"}}>✓ {lang==="fr"?"Notifié":lang==="ar"?"تم الإخطار":"Notified"}</div>
-                      </div>
+                      {t.match_reason&&(
+                        <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #F1F5F9",fontSize:12.5,color:"#4338CA",fontWeight:600,lineHeight:1.5,display:"flex",gap:6}}>
+                          <span style={{flexShrink:0}}>💡</span>
+                          <span>{t.match_reason[lang]||t.match_reason.en}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
