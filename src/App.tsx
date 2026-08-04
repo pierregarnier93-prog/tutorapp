@@ -10,8 +10,13 @@ const supabase = createClient(
 
 const stripePromise = loadStripe("pk_live_51TagWA4l4Z2J0IZfYprxlISAh0FG5mY8jnpugEHj5kVU5G55mViXn5dZUl53oZh5aLRPavhFk4sdEkyTp4eFfYKZ008mURFe7S");
 
-const STUDENT_FEE = 0.06;
-const TEACHER_FEE = 0.06;
+const STUDENT_FEE = 0;
+const TEACHER_FEE = 0;
+
+const SUB_MONTHLY_AED = 149;
+const SUB_YEARLY_AED = 999;
+const REFERRAL_DISCOUNT = 0.5;
+const TRIAL_DAYS = 14;
 
 function normalizeInstrLang(l:string):string{
   if(!l) return "English";
@@ -171,9 +176,9 @@ async function getTeacherRevenueStats(userId) {
     ? (ratings.reduce((s,r) => s+r.score, 0) / ratings.length).toFixed(1)
     : null;
   return {
-    thisMonth: thisMonth.reduce((s,b) => s + Math.round(b.net_price_aed * 0.94), 0),
-    total: completed.reduce((s,b) => s + Math.round(b.net_price_aed * 0.94), 0),
-    pending: pending.reduce((s,b) => s + Math.round(b.net_price_aed * 0.94), 0),
+    thisMonth: thisMonth.reduce((s,b) => s + b.net_price_aed, 0),
+    total: completed.reduce((s,b) => s + b.net_price_aed, 0),
+    pending: pending.reduce((s,b) => s + b.net_price_aed, 0),
     courses: completed.length,
     rating: avg
   };
@@ -227,11 +232,11 @@ const T = {
     how:{label:"How it works",title:"As simple as ",titleSpan:"booking a ride",steps:[{icon:"📋",t:"Post your request",d:"Subject and level. No budget needed."},{icon:"⚡",t:"Tutors propose prices",d:"Each tutor submits their own rate."},{icon:"👆",t:"Accept or decline",d:"See the price, accept if it suits you."},{icon:"🎓",t:"Lesson + Pay after",d:"Video link sent automatically. Pay after."}]},
     subjects:{label:"All subjects",title:"Maths in ",titleSpan:"English, Arabic or French"},
     form:{title:"Post your request",sub:"Your profile is pre-filled — just select a subject and post!",subject:"Subject *",lang:"Language of instruction",curriculum:"Curriculum",level:"Level *",duration:"Duration",msg:"Message to tutors",msgPh:"Describe difficulties, goals, availability...",publish:"Post request →",onlineBanner:"All lessons via video call — link sent automatically after booking."},
-    bids:{title:"Offers received",new:"offers",payAfter:"💳 Pay ONLY after the lesson — 6% service fee applies",accept:"Accept & Book →",decline:"Decline",noOffers:"Waiting for tutor offers...",noOffersDesc:"Tutors will submit their offers shortly."},
+    bids:{title:"Offers received",new:"offers",payAfter:"💳 Pay ONLY after the lesson — 0 commission, 100% free for parents",accept:"Accept & Book →",decline:"Decline",noOffers:"Waiting for tutor offers...",noOffersDesc:"Tutors will submit their offers shortly."},
     payment:{title:"Confirm & Pay",sub:"Your card will be authorized but NOT charged until after the lesson.",lessonPrice:"Lesson price",serviceFee:"Service fee",total:"Total",teacherReceives:"Teacher receives",platformFee:"Platform fee",payBtn:"Confirm booking →",payNote:"💳 Your card will be charged AFTER the lesson is completed."},
     confirm:{title:"Booking confirmed! 🎉",sub1:"Your lesson with ",sub2:" is confirmed.",subject:"Subject",teacher:"Tutor",price:"You pay",teacherGets:"Teacher receives",jitsi:"Video link",jitsiNote:"Will be sent by email before the lesson.",pay:"Payment after lesson",secured:"✓ Secured by Stripe",newReq:"Post another request"},
-    teacher:{hello:"Welcome back",sub:"New student requests matching your profile.",revenue:"this month",courses:"Lessons",rating:"Rating",newAds:"Student requests",bid:"Make offer →",ignore:"Ignore",profile:"My profile",yourRate:"Your rate",rateHint:"You receive 94% after 6% platform fee",dashboard:"Dashboard",requests:"Requests",verifiedBadge:"✓ Verified",pendingBadge:"⏳ Pending verification"},
-    bidForm:{back:"← Back",price:"Your rate (AED/h)",msg:"Your message to the student",msgPh:"Introduce yourself, experience, availability...",send:"Send offer →",recv:"✓ You receive",afterC:"after 6% fee"},
+    teacher:{hello:"Welcome back",sub:"New student requests matching your profile.",revenue:"this month",courses:"Lessons",rating:"Rating",newAds:"Student requests",bid:"Make offer →",ignore:"Ignore",profile:"My profile",yourRate:"Your rate",rateHint:"You keep 100% — no commission on lessons",dashboard:"Dashboard",requests:"Requests",verifiedBadge:"✓ Verified",pendingBadge:"⏳ Pending verification"},
+    bidForm:{back:"← Back",price:"Your rate (AED/h)",msg:"Your message to the student",msgPh:"Introduce yourself, experience, availability...",send:"Send offer →",recv:"✓ You receive",afterC:"100% — no commission"},
     onboard:{title:"Create your tutor profile",sub:"Join 200+ verified tutors across the Gulf.",name:"Full name *",email:"Email *",bio:"Bio",bioPh:"Your background & teaching style...",cycle:"Teaching cycle *",subjects:"Subjects you teach *",curriculum:"Curriculum(s) *",langTeach:"Teaching language(s) *",rate:"Your hourly rate (AED) *",idDoc:"ID Document *",idDocHint:"Emirates ID, Qatar ID, Kuwait Civil ID, Iqama, etc.",diploma:"Diploma(s) *",idPh:"Upload your ID document",diplomaPh:"Upload your diploma(s)",submit:"Submit profile →",withdrawal:"Payout frequency *",wI:"Immediate",wW:"Weekly",wM:"Monthly",wInfo:"This can only be changed once per month from your profile.",banking:"Banking details for payouts",bankName:"Bank name *",bankIban:"IBAN *",bankHolder:"Account holder name *",bankHint:"Your payouts will be sent to this account. Encrypted and secure."},
     signup:{role:"You are *",student:"Parent / Guardian",teacher:"Teacher",name:"Your full name *",country:"Country *",emirate:"Emirate *",lang:"Preferred language",curriculum:"Child's curriculum *",instrLang:"Child's instruction language *",level:"Child's current level *",consent:"I confirm I am the parent or legal guardian of the student"},
     profile:{title:"My Profile",name:"Full name",email:"Email",role:"Role",changePassword:"Change password",newPassword:"New password",confirmPassword:"Confirm new password",savePassword:"Update password",saveProfile:"Save changes",passwordSuccess:"Password updated!",profileSuccess:"Profile updated!",banking:"Banking details",bankName:"Bank name",bankIban:"IBAN",bankHolder:"Account holder",payoutFreq:"Payout frequency",payoutNote:"Can only be changed once per month.",lastChanged:"Last changed"},
@@ -247,11 +252,11 @@ const T = {
     how:{label:"كيف يعمل",title:"بسيط مثل ",titleSpan:"حجز سيارة أجرة",steps:[{icon:"📋",t:"انشر طلبك",d:"المادة والمستوى فقط."},{icon:"⚡",t:"المدرسون يقترحون أسعارهم",d:"كل مدرس يقدم سعره."},{icon:"👆",t:"اقبل أو ارفض",d:"شاهد السعر واقبله إن ناسبك."},{icon:"🎓",t:"حصة + دفع بعدها",d:"رابط الفيديو يُرسل تلقائياً."}]},
     subjects:{label:"جميع المواد",title:"الرياضيات بـ",titleSpan:"العربية أو الإنجليزية أو الفرنسية"},
     form:{title:"انشر طلبك",sub:"ملفك مُعبأ مسبقاً — اختر المادة وانشر!",subject:"المادة *",lang:"لغة التدريس",curriculum:"المنهج",level:"المستوى *",duration:"المدة",msg:"رسالة للمدرسين",msgPh:"صف الصعوبات والأهداف...",publish:"نشر الطلب ←",onlineBanner:"جميع الحصص عبر مكالمة فيديو."},
-    bids:{title:"العروض المستلمة",new:"عروض",payAfter:"💳 تدفع بعد الحصة — رسوم خدمة 6%",accept:"قبول وحجز ←",decline:"رفض",noOffers:"في انتظار عروض المدرسين...",noOffersDesc:"سيقدم المدرسون عروضهم قريباً."},
+    bids:{title:"العروض المستلمة",new:"عروض",payAfter:"💳 ادفع بعد الحصة — بدون عمولة، مجاني تماماً لأولياء الأمور",accept:"قبول وحجز ←",decline:"رفض",noOffers:"في انتظار عروض المدرسين...",noOffersDesc:"سيقدم المدرسون عروضهم قريباً."},
     payment:{title:"تأكيد والدفع",sub:"سيتم التحقق من بطاقتك فقط، لن يتم الخصم إلا بعد الحصة.",lessonPrice:"سعر الحصة",serviceFee:"رسوم الخدمة",total:"المجموع",teacherReceives:"يستلم المدرس",platformFee:"رسوم المنصة",payBtn:"تأكيد الحجز ←",payNote:"💳 ستُخصم من بطاقتك بعد انتهاء الحصة."},
     confirm:{title:"تم تأكيد الحجز! 🎉",sub1:"حصتك مع ",sub2:" مؤكدة.",subject:"المادة",teacher:"المدرس",price:"ستدفع",teacherGets:"يستلم المدرس",jitsi:"رابط الفيديو",jitsiNote:"سيُرسل بالبريد قبل الحصة.",pay:"الدفع بعد الحصة",secured:"✓ مؤمّن بـ Stripe",newReq:"نشر طلب جديد"},
-    teacher:{hello:"مرحباً بعودتك",sub:"طلبات جديدة تتناسب مع ملفك.",revenue:"هذا الشهر",courses:"الحصص",rating:"التقييم",newAds:"طلبات الطلاب",bid:"تقديم عرض ←",ignore:"تجاهل",profile:"ملفي",yourRate:"سعرك",rateHint:"تستلم 94% بعد رسوم 6%",dashboard:"لوحة التحكم",requests:"الطلبات",verifiedBadge:"✓ موثّق",pendingBadge:"⏳ قيد المراجعة"},
-    bidForm:{back:"← رجوع",price:"سعرك (AED/ساعة)",msg:"رسالتك للطالب",msgPh:"عرّف بنفسك وخبرتك...",send:"إرسال العرض ←",recv:"✓ ستحصل على",afterC:"بعد رسوم 6%"},
+    teacher:{hello:"مرحباً بعودتك",sub:"طلبات جديدة تتناسب مع ملفك.",revenue:"هذا الشهر",courses:"الحصص",rating:"التقييم",newAds:"طلبات الطلاب",bid:"تقديم عرض ←",ignore:"تجاهل",profile:"ملفي",yourRate:"سعرك",rateHint:"تحتفظ بـ 100% — بدون عمولة على الحصص",dashboard:"لوحة التحكم",requests:"الطلبات",verifiedBadge:"✓ موثّق",pendingBadge:"⏳ قيد المراجعة"},
+    bidForm:{back:"← رجوع",price:"سعرك (AED/ساعة)",msg:"رسالتك للطالب",msgPh:"عرّف بنفسك وخبرتك...",send:"إرسال العرض ←",recv:"✓ ستحصل على",afterC:"100% — بدون عمولة"},
     onboard:{title:"أنشئ ملف المدرس",sub:"انضم لأكثر من 200 مدرس موثّق.",name:"الاسم الكامل *",email:"البريد الإلكتروني *",bio:"نبذة عنك",bioPh:"خلفيتك وأسلوبك...",cycle:"المرحلة التعليمية *",subjects:"المواد التي تدرّسها *",curriculum:"المناهج *",langTeach:"لغة التدريس *",rate:"سعرك بالساعة (AED) *",idDoc:"وثيقة الهوية *",idDocHint:"الهوية الإماراتية، الهوية القطرية، البطاقة المدنية الكويتية، الإقامة، إلخ.",diploma:"الشهادة *",idPh:"رفع وثيقة الهوية",diplomaPh:"رفع الشهادة",submit:"إرسال الملف ←",withdrawal:"تكرار الصرف *",wI:"فوري",wW:"أسبوعي",wM:"شهري",wInfo:"لا يمكن تغيير هذا إلا مرة واحدة في الشهر.",banking:"بيانات الحساب البنكي",bankName:"اسم البنك *",bankIban:"IBAN *",bankHolder:"اسم صاحب الحساب *",bankHint:"سيتم تحويل أرباحك إلى هذا الحساب. مشفر وآمن."},
     signup:{role:"أنت *",student:"ولي أمر / وصي",teacher:"مدرس",name:"اسمك الكامل *",country:"الدولة *",emirate:"الإمارة *",lang:"اللغة المفضلة",curriculum:"منهج الطفل *",instrLang:"لغة التدريس للطفل *",level:"مستوى الطفل الحالي *",consent:"أؤكد أنني ولي أمر الطالب أو وصيه القانوني"},
     profile:{title:"ملفي الشخصي",name:"الاسم الكامل",email:"البريد الإلكتروني",role:"الدور",changePassword:"تغيير كلمة المرور",newPassword:"كلمة المرور الجديدة",confirmPassword:"تأكيد كلمة المرور",savePassword:"تحديث",saveProfile:"حفظ",passwordSuccess:"تم التحديث!",profileSuccess:"تم الحفظ!",banking:"البيانات البنكية",bankName:"اسم البنك",bankIban:"IBAN",bankHolder:"اسم صاحب الحساب",payoutFreq:"تكرار الصرف",payoutNote:"لا يمكن التغيير إلا مرة في الشهر.",lastChanged:"آخر تغيير"},
@@ -267,11 +272,11 @@ const T = {
     how:{label:"Comment ça marche",title:"Aussi simple que ",titleSpan:"commander un taxi",steps:[{icon:"📋",t:"Tu postes ton besoin",d:"Matière et niveau. Pas de budget."},{icon:"⚡",t:"Les profs proposent leurs prix",d:"Chaque enseignant soumet son tarif."},{icon:"👆",t:"Tu acceptes ou refuses",d:"Tu vois le prix et tu décides."},{icon:"🎓",t:"Cours + Paiement après",d:"Lien visio automatique. Tu paies après."}]},
     subjects:{label:"Toutes les matières",title:"Les maths en ",titleSpan:"anglais, arabe ou français"},
     form:{title:"Poste ton annonce",sub:"Ton profil est pré-rempli — choisis juste une matière et publie !",subject:"Matière *",lang:"Langue d'enseignement",curriculum:"Cursus",level:"Niveau *",duration:"Durée",msg:"Message pour les enseignants",msgPh:"Décris les difficultés et objectifs...",publish:"Publier l'annonce →",onlineBanner:"Tous les cours en visioconférence."},
-    bids:{title:"Offres reçues",new:"offres",payAfter:"💳 Paiement APRÈS le cours — frais de service 6%",accept:"Accepter & Réserver →",decline:"Refuser",noOffers:"En attente d'offres...",noOffersDesc:"Les enseignants vont soumettre leurs offres sous peu."},
+    bids:{title:"Offres reçues",new:"offres",payAfter:"💳 Paiement APRÈS le cours — 0 commission, 100% gratuit pour les parents",accept:"Accepter & Réserver →",decline:"Refuser",noOffers:"En attente d'offres...",noOffersDesc:"Les enseignants vont soumettre leurs offres sous peu."},
     payment:{title:"Confirmer & Payer",sub:"Ta carte sera autorisée mais NON débitée avant le cours.",lessonPrice:"Prix du cours",serviceFee:"Frais de service",total:"Total",teacherReceives:"L'enseignant reçoit",platformFee:"Commission plateforme",payBtn:"Confirmer la réservation →",payNote:"💳 Ta carte sera débitée APRÈS le cours."},
     confirm:{title:"Réservation confirmée ! 🎉",sub1:"Ton cours avec ",sub2:" est confirmé.",subject:"Matière",teacher:"Enseignant",price:"Tu paieras",teacherGets:"L'enseignant reçoit",jitsi:"Lien visio",jitsiNote:"Sera envoyé par email avant le cours.",pay:"Paiement après le cours",secured:"✓ Sécurisé par Stripe",newReq:"Poster une nouvelle annonce"},
-    teacher:{hello:"Bon retour",sub:"Nouvelles annonces correspondant à ton profil.",revenue:"ce mois",courses:"Cours",rating:"Note",newAds:"Annonces élèves",bid:"Faire une offre →",ignore:"Ignorer",profile:"Mon profil",yourRate:"Ton tarif",rateHint:"Tu reçois 94% après 6% de frais plateforme",dashboard:"Tableau de bord",requests:"Annonces",verifiedBadge:"✓ Vérifié",pendingBadge:"⏳ En cours de vérification"},
-    bidForm:{back:"← Retour",price:"Ton tarif (AED/h)",msg:"Ton message à l'élève",msgPh:"Présente-toi et ton expérience...",send:"Envoyer mon offre →",recv:"✓ Tu recevras",afterC:"après 6% de frais"},
+    teacher:{hello:"Bon retour",sub:"Nouvelles annonces correspondant à ton profil.",revenue:"ce mois",courses:"Cours",rating:"Note",newAds:"Annonces élèves",bid:"Faire une offre →",ignore:"Ignorer",profile:"Mon profil",yourRate:"Ton tarif",rateHint:"Tu gardes 100% — aucune commission sur les cours",dashboard:"Tableau de bord",requests:"Annonces",verifiedBadge:"✓ Vérifié",pendingBadge:"⏳ En cours de vérification"},
+    bidForm:{back:"← Retour",price:"Ton tarif (AED/h)",msg:"Ton message à l'élève",msgPh:"Présente-toi et ton expérience...",send:"Envoyer mon offre →",recv:"✓ Tu recevras",afterC:"100% — aucune commission"},
     onboard:{title:"Crée ton profil enseignant",sub:"Rejoins +200 enseignants vérifiés.",name:"Nom complet *",email:"Email *",bio:"Biographie",bioPh:"Ton parcours et ta pédagogie...",cycle:"Cycle enseigné *",subjects:"Matières enseignées *",curriculum:"Cursus *",langTeach:"Langue(s) d'enseignement *",rate:"Ton tarif horaire (AED) *",idDoc:"Pièce d'identité *",idDocHint:"Emirates ID, Qatar ID, Kuwait Civil ID, titre de séjour, etc.",diploma:"Diplôme(s) *",idPh:"Uploader ta pièce d'identité",diplomaPh:"Uploader ton diplôme",submit:"Soumettre mon profil →",withdrawal:"Fréquence de virement *",wI:"Immédiat",wW:"Hebdomadaire",wM:"Mensuel",wInfo:"Modifiable une seule fois par mois depuis ton profil.",banking:"Coordonnées bancaires",bankName:"Nom de la banque *",bankIban:"IBAN *",bankHolder:"Titulaire du compte *",bankHint:"Tes virements seront envoyés sur ce compte. Informations chiffrées et sécurisées."},
     signup:{role:"Tu es *",student:"Parent / Tuteur légal",teacher:"Enseignant",name:"Ton nom complet *",country:"Pays *",emirate:"Émirat *",lang:"Langue préférée",curriculum:"Cursus de l'enfant *",instrLang:"Langue d'enseignement de l'enfant *",level:"Niveau actuel de l'enfant *",consent:"Je confirme être le parent ou tuteur légal de l'élève"},
     profile:{title:"Mon Profil",name:"Nom complet",email:"Email",role:"Rôle",changePassword:"Changer le mot de passe",newPassword:"Nouveau mot de passe",confirmPassword:"Confirmer le mot de passe",savePassword:"Mettre à jour",saveProfile:"Enregistrer",passwordSuccess:"Mot de passe mis à jour !",profileSuccess:"Profil mis à jour !",banking:"Coordonnées bancaires",bankName:"Banque",bankIban:"IBAN",bankHolder:"Titulaire",payoutFreq:"Fréquence de virement",payoutNote:"Modifiable une fois par mois.",lastChanged:"Dernière modification"},
@@ -866,7 +871,7 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
       <div className="page-sub">{t.payment.sub}</div>
       <div className="payment-card">
         <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.lessonPrice}</span><span style={{fontWeight:700}}>{fmtPrice(lessonPrice,country)}</span></div>
-        <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.serviceFee}</span><span style={{fontWeight:700,color:"#9CA3AF"}}>+ {fmtPrice(studentFee,country)}</span></div>
+        <div className="payment-row"><span style={{color:"#0F6E56",fontWeight:700}}>🎁 {lang==="fr"?"Frais de service":lang==="ar"?"رسوم الخدمة":"Service fee"}</span><span style={{fontWeight:800,color:"#0ABFA3"}}>{lang==="fr"?"GRATUIT":lang==="ar"?"مجاناً":"FREE"}</span></div>
         <div className="payment-row" style={{borderTop:"2px solid #E8EAF6",paddingTop:12,marginTop:4}}>
           <span style={{fontWeight:800,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
           <span className="payment-total">{fmtPrice(studentTotal,country)}</span>
@@ -1206,7 +1211,7 @@ function TeacherHistory({ userId, lang }: { userId: string, lang: string }) {
   if(loading) return <div className="loading">⏳ {lang==="fr"?"Chargement...":lang==="ar"?"جار التحميل...":"Loading..."}</div>;
 
   const completed = bookings.filter(b=>b.status==="completed");
-  const totalEarned = completed.reduce((s,b)=>s+Math.round((b.net_price_aed||0)*0.94),0);
+  const totalEarned = completed.reduce((s,b)=>s+(b.net_price_aed||0),0);
 
   return (
     <div>
@@ -1225,7 +1230,7 @@ function TeacherHistory({ userId, lang }: { userId: string, lang: string }) {
       )}
       {bookings.map((b,i)=>{
         const subject=b.request?.subject||b.subject||"Cours";
-        const netEarned=Math.round((b.net_price_aed||0)*0.94);
+        const netEarned=(b.net_price_aed||0);
         const dateStr=new Date(b.created_at).toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{day:"numeric",month:"long",year:"numeric"});
         return(
           <div key={b.id||i} style={{border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:12}}>
@@ -2118,7 +2123,7 @@ export default function TutorApp() {
         const bgColors=["#EEF0FF","#E6FAF8","#FEF6E4","#FEE2E2","#F0FDF4"];
         const fgColors=["#5B4FE8","#0ABFA3","#B45309","#B91C1C","#16A34A"];
         const ci=(tc.full_name||"").charCodeAt(0)%5;
-        const netRate=Math.round((tc.teaching_rate||0)*0.94);
+        const netRate=(tc.teaching_rate||0);
         return(
           <div className="section" style={{maxWidth:680}}>
             <button className="btn-ghost" style={{marginBottom:"1.5rem"}} onClick={()=>setPage("teachers")}>← {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Back"}</button>
@@ -2554,9 +2559,9 @@ export default function TutorApp() {
                     <div style={{fontSize:13,color:"#64748B",lineHeight:1.65,margin:"10px 0 12px",fontStyle:"italic",background:"#F8FAFF",borderRadius:10,padding:"10px 14px",borderLeft:"3px solid #D8DBFE"}}>"{offer.message}"</div>
                     <div style={{background:"#F8FAFF",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#64748B",fontWeight:600}}>
                       {lang==="fr"?"Tu paieras":lang==="ar"?"ستدفع":"You'll pay"}{" "}
-                      <strong style={{color:"#5B4FE8",fontFamily:"Fraunces,serif",fontSize:15}}>{Math.round(offer.net_price_aed*1.06)} AED</strong>
+                      <strong style={{color:"#5B4FE8",fontFamily:"Fraunces,serif",fontSize:15}}>{offer.net_price_aed} AED</strong>
                       {" · "}{lang==="fr"?"Prof reçoit":lang==="ar"?"يستلم المدرس":"Tutor receives"}{" "}
-                      <strong style={{color:"#0ABFA3"}}>{Math.round(offer.net_price_aed*0.94)} AED</strong>
+                      <strong style={{color:"#0ABFA3"}}>{offer.net_price_aed} AED</strong>
                     </div>
                     <div style={{fontSize:11,color:"#9CA3AF",fontWeight:600,marginBottom:12,display:"flex",alignItems:"center",gap:4}}>
                       🛡 {lang==="fr"?"Si le cours n'a pas lieu, remboursement 100%":lang==="ar"?"إذا لم تتم الحصة، استرداد 100%":"If lesson doesn't happen, 100% refund"}
@@ -2606,7 +2611,7 @@ export default function TutorApp() {
               <div className="page-sub">{t.payment.sub}</div>
               <div className="payment-card">
                 <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.lessonPrice}</span><span style={{fontWeight:700}}>{selectedOffer.net_price_aed} AED</span></div>
-                <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.serviceFee}</span><span style={{fontWeight:700,color:"#9CA3AF"}}>+ {Math.round(selectedOffer.net_price_aed*0.06)} AED</span></div>
+                <div className="payment-row"><span style={{color:"#0F6E56",fontWeight:700}}>🎁 {t.payment.serviceFee}</span><span style={{fontWeight:800,color:"#0ABFA3"}}>{lang==="fr"?"GRATUIT":lang==="ar"?"مجاناً":"FREE"}</span></div>
                 <div className="payment-row" style={{borderTop:"2px solid #E8EAF6",paddingTop:12,marginTop:4}}>
                   <span style={{fontWeight:800,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
                   <span className="payment-total">{activeBooking.gross_price_aed} AED</span>
@@ -3259,7 +3264,7 @@ export default function TutorApp() {
                     <div style={{fontSize:13,color:"#64748B",marginBottom:12,fontStyle:"italic",background:"#F8FAFF",borderRadius:8,padding:"8px 12px",borderLeft:"3px solid #D8DBFE"}}>"{r.message}"</div>
                   )}
                   <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:10,padding:"8px 12px",marginBottom:8,fontSize:13,fontWeight:700,color:"#0F6E56"}}>
-                    💰 {lang==="fr"?"Gain potentiel":lang==="ar"?"الربح المحتمل":"Potential earning"} <strong>{Math.round((userProfile?.teaching_rate||150)*0.94)} AED</strong>{lang==="fr"?" avec ton tarif actuel":lang==="ar"?" بتعريفتك الحالية":" at your current rate"}
+                    💰 {lang==="fr"?"Gain potentiel":lang==="ar"?"الربح المحتمل":"Potential earning"} <strong>{(userProfile?.teaching_rate||150)} AED</strong>{lang==="fr"?" avec ton tarif actuel":lang==="ar"?" بتعريفتك الحالية":" at your current rate"}
                   </div>
                   {(()=>{const bidCount=(r.bids?.[0]?.count)||0;return bidCount>0?(
                     <div style={{fontSize:11,color:bidCount>=3?"#DC2626":"#92400E",fontWeight:700,background:bidCount>=3?"#FEE2E2":"#FEF3C7",borderRadius:8,padding:"4px 10px",marginBottom:12,display:"inline-flex",alignItems:"center",gap:4}}>
@@ -3343,7 +3348,7 @@ export default function TutorApp() {
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #E2E8F0",fontSize:14}}>
                   <span style={{color:"#64748B"}}>{lang==="fr"?"Tu recevras":lang==="ar"?"ستستلم":"You'll receive"}</span>
-                  <span style={{fontWeight:900,color:"#0ABFA3",fontFamily:"'Fraunces',serif",fontSize:17}}>{Math.round((teacherActiveBooking?.net_price_aed||0)*0.94)} AED</span>
+                  <span style={{fontWeight:900,color:"#0ABFA3",fontFamily:"'Fraunces',serif",fontSize:17}}>{(teacherActiveBooking?.net_price_aed||0)} AED</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:14}}>
                   <span style={{color:"#64748B"}}>{lang==="fr"?"Paiement":lang==="ar"?"الدفع":"Payment"}</span>
@@ -3376,7 +3381,7 @@ export default function TutorApp() {
               <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Paiement en route !":lang==="ar"?"الدفعة في الطريق !":"Payment on its way!"}</div>
               <div style={{fontSize:14,color:"#64748B",marginBottom:"1.5rem"}}>{lang==="fr"?"Le cours est confirmé. Ton virement arrive bientôt.":lang==="ar"?"تم تأكيد الحصة. تحويلك قادم قريباً.":"Lesson confirmed. Your payout is coming soon."}</div>
               <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:16,padding:"1.5rem",marginBottom:"1.5rem"}}>
-                <div style={{fontSize:32,fontFamily:"'Fraunces',serif",fontWeight:900,color:"#0ABFA3",marginBottom:8}}>+{Math.round((teacherActiveBooking?.net_price_aed||0)*0.94)} AED</div>
+                <div style={{fontSize:32,fontFamily:"'Fraunces',serif",fontWeight:900,color:"#0ABFA3",marginBottom:8}}>+{(teacherActiveBooking?.net_price_aed||0)} AED</div>
                 <div style={{fontSize:13,color:"#0F6E56",fontWeight:600}}>
                   {userProfile?.withdrawal_frequency==="wI"?(lang==="fr"?"Virement immédiat":"Immediate payout"):userProfile?.withdrawal_frequency==="wW"?(lang==="fr"?"Cette semaine":"This week"):(lang==="fr"?"Ce mois":"This month")}
                 </div>
@@ -3471,7 +3476,7 @@ export default function TutorApp() {
           {appTab==="teacher-revenue"&&!showOnboard&&(
             <div style={{maxWidth:560,margin:"0 auto"}}>
               <div className="page-title">💰 {lang==="fr"?"Mes revenus":lang==="ar"?"إيراداتي":"My revenue"}</div>
-              <div className="page-sub">{lang==="fr"?"Après 6% de commission TutorApp":lang==="ar"?"بعد عمولة TutorApp 6٪":"After 6% TutorApp commission"}</div>
+              <div className="page-sub">{lang==="fr"?"100% de tes revenus — aucune commission":lang==="ar"?"100% من أرباحك — بدون عمولة":"100% of your earnings — no commission"}</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginBottom:"1.5rem"}}>
                 <div className="stat-card"><div className="stat-val">{teacherRevenue.thisMonth} AED</div><div className="stat-lbl">{lang==="fr"?"Ce mois-ci":"This month"}</div></div>
                 <div className="stat-card"><div className="stat-val">{teacherRevenue.total} AED</div><div className="stat-lbl">{lang==="fr"?"Total cumulé":"Total earned"}</div></div>
