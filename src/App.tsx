@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import LegalPage from "./Legal";
 
 const SUPABASE_URL = "https://ihtcmemyrwejeetybepg.supabase.co";
 
@@ -1359,6 +1360,7 @@ export default function TutorApp() {
   const [suggestedTeachers,setSuggestedTeachers]=useState<any[]>([]);
   const [currentTestimonial,setCurrentTestimonial]=useState(0);
   const [lastCompletedTeacher,setLastCompletedTeacher]=useState<{name:string,id:string,subject:string}|null>(null);
+  const [legalDoc,setLegalDoc]=useState("terms");
   const [matchingLoading,setMatchingLoading]=useState(false);
   const [teacherSub,setTeacherSub]=useState<any>(null);
   const [showPaywall,setShowPaywall]=useState(false);
@@ -2304,6 +2306,8 @@ export default function TutorApp() {
           </div>
         );
       })()}
+
+      {page==="legal"&&<LegalPage lang={lang} activeDoc={legalDoc} onSelectDoc={setLegalDoc} onBack={()=>setPage("home")} />}
 
       {page==="admin"&&user?.email==="pierre.garnier93@gmail.com"&&<AdminPage user={user} lang={lang} onBack={()=>setPage("home")} />}
       {page==="admin"&&user?.email!=="pierre.garnier93@gmail.com"&&<div style={{textAlign:"center",padding:"4rem 2rem",fontWeight:800,fontSize:18,color:"#EF4444"}}>⛔ Accès refusé</div>}
@@ -3252,11 +3256,11 @@ export default function TutorApp() {
                   <input type="checkbox" checked={teacherForm.cguAccepted} onChange={e=>setTeacherForm({...teacherForm,cguAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
                   <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
                     {lang==="fr"?"J'ai lu et j'accepte les ":lang==="ar"?"لقد قرأت وأوافق على ":"I have read and accept the "}
-                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
+                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setLegalDoc("terms");setPage("legal");}}>
                       {lang==="fr"?"Conditions Générales d'Utilisation":lang==="ar"?"شروط الخدمة":"Terms of Service"}
                     </span>
                     {lang==="fr"?" et la ":" and the "}
-                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
+                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setLegalDoc("privacy");setPage("legal");}}>
                       {lang==="fr"?"Politique de Confidentialité":lang==="ar"?"سياسة الخصوصية":"Privacy Policy"}
                     </span>
                   </span>
@@ -3265,11 +3269,11 @@ export default function TutorApp() {
                   <input type="checkbox" checked={teacherForm.childProtectionAccepted} onChange={e=>setTeacherForm({...teacherForm,childProtectionAccepted:e.target.checked})} style={{width:18,height:18,marginTop:2,accentColor:"#5B4FE8",flexShrink:0}} />
                   <span style={{fontSize:13,color:"#374151",fontWeight:600,lineHeight:1.5}}>
                     {lang==="fr"?"J'accepte la ":lang==="ar"?"أوافق على ":"I accept the "}
-                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
+                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setLegalDoc("child");setPage("legal");}}>
                       {lang==="fr"?"Charte de Protection des Mineurs":lang==="ar"?"ميثاق حماية الأطفال":"Child Protection Charter"}
                     </span>
                     {lang==="fr"?" et l'":"  and the "}
-                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setPage("legal")}>
+                    <span style={{color:"#5B4FE8",cursor:"pointer",textDecoration:"underline"}} onClick={()=>{setLegalDoc("terms");setPage("legal");}}>
                       {lang==="fr"?"Accord Enseignant":"Tutor Agreement"}
                     </span>
                   </span>
@@ -3654,7 +3658,18 @@ export default function TutorApp() {
       <footer className="footer">
         <div className="footer-logo">TutorApp</div>
         <div style={{fontSize:13,lineHeight:1.65,maxWidth:500,margin:"0 auto"}}>{t.footer}</div>
-        <div style={{marginTop:"1.5rem",fontSize:12,color:"#4B5563"}}>© 2026 TutorApp · {COUNTRIES.map(c=>`${c.flag} ${c.name[lang]}`).join(" · ")}</div>
+        <div style={{marginTop:"1.25rem",display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap",fontSize:12}}>
+          {[
+            ["terms",lang==="fr"?"CGU":lang==="ar"?"الشروط":"Terms"],
+            ["privacy",lang==="fr"?"Confidentialité":lang==="ar"?"الخصوصية":"Privacy"],
+            ["child",lang==="fr"?"Protection des mineurs":lang==="ar"?"حماية الأطفال":"Child Protection"],
+            ["refund",lang==="fr"?"Remboursements":lang==="ar"?"الاسترداد":"Refunds"],
+          ].map(([k,label])=>(
+            <span key={k} onClick={()=>{setLegalDoc(k);setPage("legal");window.scrollTo(0,0);}}
+              style={{color:"#6B7280",cursor:"pointer",textDecoration:"underline",fontWeight:600}}>{label}</span>
+          ))}
+        </div>
+        <div style={{marginTop:"1.25rem",fontSize:12,color:"#4B5563"}}>© 2026 TutorApp · {COUNTRIES.map(c=>`${c.flag} ${c.name[lang]}`).join(" · ")}</div>
       </footer>
 
       {showAuth&&<Auth onClose={()=>setShowAuth(false)} onSuccess={handleLoginSuccess} lang={lang} />}
