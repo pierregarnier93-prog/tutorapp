@@ -2,7 +2,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+// The dashboard secret is named `Stripe_secret_key`; env lookups are
+// case-sensitive on Linux, so accept either spelling.
+const STRIPE_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? Deno.env.get("Stripe_secret_key")!;
+
+const stripe = new Stripe(STRIPE_KEY, {
   apiVersion: "2023-10-16",
   httpClient: Stripe.createFetchHttpClient(),
 });
