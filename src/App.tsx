@@ -3,8 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
+const SUPABASE_URL = "https://ihtcmemyrwejeetybepg.supabase.co";
+
 const supabase = createClient(
-  "https://ihtcmemyrwejeetybepg.supabase.co",
+  SUPABASE_URL,
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlodGNtZW15cndlamVldHliZXBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTQ0NjAsImV4cCI6MjA5NDY5MDQ2MH0.xyGnBYE2ex1vn5jbwrbfTbvcUtNC9SmzBIUiRQoIPEo"
 );
 
@@ -111,6 +113,42 @@ async function getTeacherStats(userId) {
   const { data: ratings } = await supabase.from("ratings").select("score").eq("teacher_id", userId);
   const avgRating = ratings?.length ? (ratings.reduce((s, r) => s + r.score, 0) / ratings.length).toFixed(1) : "—";
   return { revenue: totalRevenue, courses: allBookings?.length || 0, rating: avgRating };
+}
+
+function hasTeacherAccess(sub: any): boolean {
+  if (!sub) return false;
+  if (!["active", "trialing"].includes(sub.status)) return false;
+  const until = sub.current_period_end || sub.trial_ends_at;
+  return until ? new Date(until).getTime() > Date.now() : true;
+}
+
+function subDaysLeft(sub: any): number {
+  const until = sub?.current_period_end || sub?.trial_ends_at;
+  if (!until) return 0;
+  return Math.max(0, Math.ceil((new Date(until).getTime() - Date.now()) / 86400000));
+}
+
+async function startSubscriptionCheckout(plan: "monthly" | "yearly", referralCode?: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-subscription`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      plan,
+      referralCode: referralCode || null,
+      successUrl: `${window.location.origin}/?sub=success`,
+      cancelUrl: `${window.location.origin}/?sub=cancelled`,
+    }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Checkout failed");
+  window.location.href = json.url;
 }
 
 function timeAgo(date, lang) {
@@ -1321,6 +1359,11 @@ export default function TutorApp() {
   const [suggestedTeachers,setSuggestedTeachers]=useState<any[]>([]);
   const [currentTestimonial,setCurrentTestimonial]=useState(0);
   const [lastCompletedTeacher,setLastCompletedTeacher]=useState<{name:string,id:string,subject:string}|null>(null);
+  const [teacherSub,setTeacherSub]=useState<any>(null);
+  const [showPaywall,setShowPaywall]=useState(false);
+  const [subPlan,setSubPlan]=useState<"monthly"|"yearly">("yearly");
+  const [subLoading,setSubLoading]=useState(false);
+  const [referralInput,setReferralInput]=useState("");
   const [showStudentOnboard,setShowStudentOnboard]=useState(false);
   const [showCancelConfirm,setShowCancelConfirm]=useState(false);
   const [activePack,setActivePack]=useState<any>(null);
@@ -1388,6 +1431,10 @@ export default function TutorApp() {
             bankHolder: profile.bank_holder || "",
             withdrawal: profile.withdrawal_frequency || "wW",
           }));
+
+          const { data: subData } = await supabase
+            .from("subscriptions").select("*").eq("teacher_id", realUserId).maybeSingle();
+          setTeacherSub(subData || null);
 
           const requests = await getMatchedRequests(profile);
           setMatchedRequests(requests);
@@ -1497,6 +1544,27 @@ export default function TutorApp() {
       setUser(session?.user??null);
       if(!session?.user){setUserProfile(null);setPage("home");setProfileLoading(false);}
     });
+    const params=new URLSearchParams(window.location.search);
+    const subResult=params.get("sub");
+    if(subResult){
+      window.history.replaceState({},"",window.location.pathname);
+      if(subResult==="success"){
+        setShowPaywall(false);
+        showToast("🎉 "+(lang==="fr"?"Abonnement activé ! Ton essai de 14 jours commence.":lang==="ar"?"تم تفعيل الاشتراك! تبدأ تجربتك المجانية لمدة 14 يوماً.":"Subscription active! Your 14-day trial starts now."));
+        // The Stripe webhook writes the row asynchronously, so poll briefly for it
+        (async()=>{
+          const {data:{session}}=await supabase.auth.getSession();
+          if(!session?.user) return;
+          for(let i=0;i<6;i++){
+            await new Promise(r=>setTimeout(r,1500));
+            const {data}=await supabase.from("subscriptions").select("*").eq("teacher_id",session.user.id).maybeSingle();
+            if(data){setTeacherSub(data);break;}
+          }
+        })();
+      }else if(subResult==="cancelled"){
+        showToast("ℹ️ "+(lang==="fr"?"Abonnement annulé — tu peux réessayer à tout moment.":lang==="ar"?"تم إلغاء الاشتراك — يمكنك المحاولة في أي وقت.":"Checkout cancelled — you can subscribe anytime."));
+      }
+    }
     // Load real landing stats for non-logged-in visitors
     (async()=>{
       const [{count:tc},{count:lc},{data:revs}]=await Promise.all([
@@ -1784,6 +1852,7 @@ export default function TutorApp() {
   };
 
   const handleBidSubmit=async()=>{
+    if(!hasTeacherAccess(teacherSub)){setShowPaywall(true);return;}
     if(!bidForm.message){showToast("⚠️ Please write a message");return;}
     if(!selectedRequest?.id){return;}
     setSubmittingBid(true);
@@ -1922,7 +1991,11 @@ export default function TutorApp() {
         const {data:pub}=supabase.storage.from("teacher-docs").getPublicUrl(path);
         permitUrl=pub.publicUrl;
       }
+      const referralCode = userProfile?.referral_code
+        || (user.id.replace(/-/g,"").slice(0,8).toUpperCase());
+
       await supabase.from("profiles").update({
+        referral_code: referralCode,
         full_name:teacherForm.name,email:teacherForm.email,withdrawal_frequency:teacherForm.withdrawal,
         bank_name:teacherForm.bankName,bank_iban:teacherForm.bankIban,bank_holder:teacherForm.bankHolder,
         withdrawal_changed_at:new Date().toISOString(),
@@ -3189,6 +3262,22 @@ export default function TutorApp() {
                   </div>
                 </div>
               )}
+              {!hasTeacherAccess(teacherSub)&&(
+                <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={()=>setShowPaywall(true)}>
+                  <div>
+                    <div style={{fontWeight:800,marginBottom:4}}>🔒 {lang==="fr"?"Abonnement requis":lang==="ar"?"الاشتراك مطلوب":"Subscription required"}</div>
+                    <div style={{fontSize:12}}>{lang==="fr"?"14 jours gratuits pour répondre aux annonces — 0% commission →":lang==="ar"?"14 يوماً مجاناً للرد على الطلبات — 0% عمولة ←":"14 days free to answer requests — 0% commission →"}</div>
+                  </div>
+                </div>
+              )}
+              {hasTeacherAccess(teacherSub)&&teacherSub?.status==="trialing"&&(
+                <div className="banner" style={{background:"#EEF2FF",border:"1.5px solid #C7D2FE",marginBottom:"1.5rem"}}>
+                  <div>
+                    <div style={{fontWeight:800,marginBottom:4,color:"#4338CA"}}>✨ {lang==="fr"?`Essai gratuit — ${subDaysLeft(teacherSub)} jours restants`:lang==="ar"?`تجربة مجانية — ${subDaysLeft(teacherSub)} يوماً متبقياً`:`Free trial — ${subDaysLeft(teacherSub)} days left`}</div>
+                    <div style={{fontSize:12,color:"#6366F1"}}>{lang==="fr"?"Profite de toutes les annonces sans limite.":lang==="ar"?"استمتع بجميع الطلبات بدون حدود.":"Enjoy unlimited access to all requests."}</div>
+                  </div>
+                </div>
+              )}
               <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginBottom:"1.5rem"}}>
                 <div className="stat-card"><div className="stat-val">{teacherRevenue.thisMonth} AED</div><div className="stat-lbl">{lang==="fr"?"Ce mois":"This month"}</div></div>
                 <div className="stat-card"><div className="stat-val">{teacherRevenue.courses}</div><div className="stat-lbl">{lang==="fr"?"Cours effectués":"Lessons done"}</div></div>
@@ -3229,6 +3318,32 @@ export default function TutorApp() {
                   openTeacherOnboard();
                 }}>✏️ {lang==="fr"?"Modifier mon profil":lang==="ar"?"تعديل ملفي":"Edit my profile"}</button>
               </div>
+
+              {userProfile?.referral_code&&(
+                <div style={{background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",borderRadius:16,padding:"1.25rem",marginTop:12,color:"#fff"}}>
+                  <div style={{fontWeight:800,fontSize:14,marginBottom:6}}>🎁 {lang==="fr"?"Parraine un collègue, gagne 50%":lang==="ar"?"ادعُ زميلاً واحصل على 50%":"Refer a colleague, get 50% off"}</div>
+                  <div style={{fontSize:12,opacity:.92,lineHeight:1.55,marginBottom:12}}>
+                    {lang==="fr"?"Ton filleul obtient −50% sur sa première période, et toi −50% sur ta prochaine facture.":lang==="ar"?"يحصل صديقك على خصم 50% على فترته الأولى، وتحصل أنت على 50% على فاتورتك التالية.":"They get 50% off their first period, you get 50% off your next invoice."}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.18)",borderRadius:12,padding:"10px 14px",marginBottom:10}}>
+                    <span style={{fontFamily:"monospace",fontSize:17,fontWeight:900,letterSpacing:2,flex:1}}>{userProfile.referral_code}</span>
+                    <button onClick={()=>{navigator.clipboard?.writeText(userProfile.referral_code);showToast("📋 "+(lang==="fr"?"Code copié !":lang==="ar"?"تم نسخ الرمز!":"Code copied!"));}} style={{background:"rgba(255,255,255,.25)",border:"none",borderRadius:8,padding:"6px 12px",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer"}}>
+                      {lang==="fr"?"Copier":lang==="ar"?"نسخ":"Copy"}
+                    </button>
+                  </div>
+                  <button onClick={()=>{
+                    const msg=lang==="fr"?`Rejoins-moi sur TutorApp — 0% de commission sur tes cours ! Utilise mon code ${userProfile.referral_code} pour −50% : https://tutorapp.online`:lang==="ar"?`انضم إليّ على TutorApp — 0% عمولة على حصصك! استخدم رمزي ${userProfile.referral_code} للحصول على خصم 50%: https://tutorapp.online`:`Join me on TutorApp — 0% commission on your lessons! Use my code ${userProfile.referral_code} for 50% off: https://tutorapp.online`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,"_blank");
+                  }} style={{width:"100%",background:"#fff",color:"#5B4FE8",border:"none",borderRadius:12,padding:"11px",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+                    💬 {lang==="fr"?"Partager sur WhatsApp":lang==="ar"?"شارك على واتساب":"Share on WhatsApp"}
+                  </button>
+                  {(userProfile.referral_count||0)>0&&(
+                    <div style={{fontSize:12,fontWeight:700,marginTop:10,textAlign:"center",opacity:.95}}>
+                      ✨ {userProfile.referral_count} {lang==="fr"?"parrainage(s) réussi(s)":lang==="ar"?"إحالة ناجحة":"successful referral(s)"}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -3448,6 +3563,7 @@ export default function TutorApp() {
                 </div>
               )}
               <button className="btn-full" onClick={async()=>{
+                if(!hasTeacherAccess(teacherSub)){setShowPaywall(true);return;}
                 if(!bidForm.message){showToast("⚠️ "+(lang==="fr"?"Écris un message":"Write a message"));return;}
                 setSubmittingBid(true);
                 try{
@@ -3638,6 +3754,89 @@ export default function TutorApp() {
                 </button>
               </div>
             </>}
+          </div>
+        </div>
+      )}
+
+      {showPaywall&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.65)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem",overflowY:"auto"}}>
+          <div style={{background:"#fff",borderRadius:24,padding:"2rem",maxWidth:480,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.25)",maxHeight:"92vh",overflowY:"auto"}}>
+            <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
+              <div style={{fontSize:34,marginBottom:8}}>🚀</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:23,fontWeight:900,color:"#1A1A2E",marginBottom:6}}>
+                {lang==="fr"?"Accède aux annonces élèves":lang==="ar"?"احصل على طلبات الطلاب":"Unlock student requests"}
+              </div>
+              <div style={{fontSize:13,color:"#64748B",lineHeight:1.6}}>
+                {lang==="fr"?"Garde 100% de tes tarifs. Aucune commission sur tes cours — jamais.":lang==="ar"?"احتفظ بـ 100% من أسعارك. بدون عمولة على حصصك — أبداً.":"Keep 100% of your rate. No commission on your lessons — ever."}
+              </div>
+            </div>
+
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:"1.25rem"}}>
+              <div onClick={()=>setSubPlan("yearly")} style={{position:"relative",border:`2px solid ${subPlan==="yearly"?"#5B4FE8":"#E2E8F0"}`,background:subPlan==="yearly"?"#F5F3FF":"#fff",borderRadius:16,padding:"1rem 1.25rem",cursor:"pointer",transition:"all .2s"}}>
+                <div style={{position:"absolute",top:-10,insetInlineEnd:16,background:"#0ABFA3",color:"#fff",fontSize:10,fontWeight:900,padding:"3px 10px",borderRadius:20,letterSpacing:.5}}>
+                  {lang==="fr"?"ÉCONOMISE 44%":lang==="ar"?"وفّر 44%":"SAVE 44%"}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{lang==="fr"?"Annuel":lang==="ar"?"سنوي":"Yearly"}</div>
+                    <div style={{fontSize:12,color:"#64748B",marginTop:2}}>{Math.round(SUB_YEARLY_AED/12)} AED/{lang==="fr"?"mois":lang==="ar"?"شهر":"mo"}</div>
+                  </div>
+                  <div style={{textAlign:"end"}}>
+                    <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:900,color:"#5B4FE8"}}>{SUB_YEARLY_AED} AED</div>
+                    <div style={{fontSize:11,color:"#94A3B8"}}>{lang==="fr"?"par an":lang==="ar"?"سنوياً":"per year"}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div onClick={()=>setSubPlan("monthly")} style={{border:`2px solid ${subPlan==="monthly"?"#5B4FE8":"#E2E8F0"}`,background:subPlan==="monthly"?"#F5F3FF":"#fff",borderRadius:16,padding:"1rem 1.25rem",cursor:"pointer",transition:"all .2s"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{lang==="fr"?"Mensuel":lang==="ar"?"شهري":"Monthly"}</div>
+                    <div style={{fontSize:12,color:"#64748B",marginTop:2}}>{lang==="fr"?"Sans engagement":lang==="ar"?"بدون التزام":"Cancel anytime"}</div>
+                  </div>
+                  <div style={{textAlign:"end"}}>
+                    <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:900,color:"#5B4FE8"}}>{SUB_MONTHLY_AED} AED</div>
+                    <div style={{fontSize:11,color:"#94A3B8"}}>{lang==="fr"?"par mois":lang==="ar"?"شهرياً":"per month"}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{background:"#F0FDF4",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"12px 16px",marginBottom:"1.25rem"}}>
+              {[
+                lang==="fr"?"14 jours d'essai gratuit — sans carte débitée":lang==="ar"?"14 يوماً تجربة مجانية — بدون خصم":"14-day free trial — no charge upfront",
+                lang==="fr"?"0% de commission sur tous tes cours":lang==="ar"?"0% عمولة على جميع حصصك":"0% commission on every lesson",
+                lang==="fr"?"Annonces illimitées + matching prioritaire":lang==="ar"?"طلبات غير محدودة + أولوية في المطابقة":"Unlimited requests + priority matching",
+              ].map((line,i)=>(
+                <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:12.5,color:"#0F6E56",fontWeight:600,marginBottom:i<2?7:0,lineHeight:1.5}}>
+                  <span style={{flexShrink:0}}>✓</span>{line}
+                </div>
+              ))}
+            </div>
+
+            <div className="form-group" style={{marginBottom:"1rem"}}>
+              <label className="form-label" style={{fontSize:12}}>🎁 {lang==="fr"?"Code de parrainage (optionnel)":lang==="ar"?"رمز الإحالة (اختياري)":"Referral code (optional)"}</label>
+              <input className="form-input" placeholder="ABCD1234" value={referralInput} onChange={e=>setReferralInput(e.target.value.toUpperCase())} style={{textTransform:"uppercase",letterSpacing:1}} />
+              <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700,marginTop:5}}>
+                {lang==="fr"?"−50% sur ta première période avec un code valide":lang==="ar"?"−50% على فترتك الأولى برمز صالح":"−50% off your first period with a valid code"}
+              </div>
+            </div>
+
+            <button className="btn-full" disabled={subLoading} onClick={async()=>{
+              setSubLoading(true);
+              try{ await startSubscriptionCheckout(subPlan, referralInput.trim()||undefined); }
+              catch(e){ showToast("❌ "+e.message); setSubLoading(false); }
+            }}>
+              {subLoading
+                ?(lang==="fr"?"⏳ Redirection...":lang==="ar"?"⏳ جاري التحويل...":"⏳ Redirecting...")
+                :(lang==="fr"?"Démarrer l'essai gratuit →":lang==="ar"?"ابدأ التجربة المجانية ←":"Start free trial →")}
+            </button>
+            <button className="btn-ghost" style={{width:"100%",marginTop:8,fontSize:12}} onClick={()=>setShowPaywall(false)}>
+              {lang==="fr"?"Plus tard":lang==="ar"?"لاحقاً":"Maybe later"}
+            </button>
+            <div style={{textAlign:"center",fontSize:11,color:"#94A3B8",marginTop:10}}>
+              🔒 {lang==="fr"?"Paiement sécurisé Stripe · Résiliable à tout moment":lang==="ar"?"دفع آمن عبر Stripe · إلغاء في أي وقت":"Secured by Stripe · Cancel anytime"}
+            </div>
           </div>
         </div>
       )}
