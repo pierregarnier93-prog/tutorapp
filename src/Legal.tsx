@@ -1,6 +1,6 @@
 const LAST_UPDATED = "2026-08-05";
 const COMPANY = "TutorApp";
-const CONTACT = "contact@tutorapp.online";
+const CONTACT = "hello@tutorapp.online";
 
 type Section = { h: string; p: string[] };
 type Doc = { title: string; intro: string; sections: Section[] };
