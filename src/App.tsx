@@ -237,7 +237,21 @@ const CURRICULA = {
   american: { label:{en:"American",ar:"الأمريكي",fr:"Américain"}, levels:{en:["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"],ar:["الصف 1","الصف 2","الصف 3","الصف 4","الصف 5","الصف 6","الصف 7","الصف 8","الصف 9","الصف 10","الصف 11","الصف 12"],fr:["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"]}, cycles:["Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)"] },
   emirati:  { label:{en:"Emirati (MOE)",ar:"الإماراتي",fr:"Émirati"}, levels:{en:["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"],ar:["الصف 1","الصف 2","الصف 3","الصف 4","الصف 5","الصف 6","الصف 7","الصف 8","الصف 9","الصف 10","الصف 11","الصف 12"],fr:["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"]}, cycles:["Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)"] },
   ib:       { label:{en:"IB",ar:"البكالوريا الدولية",fr:"IB"}, levels:{en:["PYP Y1","PYP Y2","PYP Y3","PYP Y4","PYP Y5","PYP Y6","MYP Y1","MYP Y2","MYP Y3","MYP Y4","MYP Y5","DP Y1","DP Y2"],ar:["PYP 1","PYP 2","PYP 3","PYP 4","PYP 5","PYP 6","MYP 1","MYP 2","MYP 3","MYP 4","MYP 5","DP 1","DP 2"],fr:["PYP 1","PYP 2","PYP 3","PYP 4","PYP 5","PYP 6","MYP 1","MYP 2","MYP 3","MYP 4","MYP 5","DP 1","DP 2"]}, cycles:["Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","High School (15-18)","High School (15-18)"] },
+  cbse:     { label:{en:"Indian (CBSE)",ar:"الهندي (CBSE)",fr:"Indien (CBSE)"}, levels:{en:["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10 (Board)","Class 11","Class 12 (Board)"],ar:["الصف 1","الصف 2","الصف 3","الصف 4","الصف 5","الصف 6","الصف 7","الصف 8","الصف 9","الصف 10","الصف 11","الصف 12"],fr:["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10 (Board)","Class 11","Class 12 (Board)"]}, cycles:["Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)"] },
+  icse:     { label:{en:"Indian (ICSE/ISC)",ar:"الهندي (ICSE)",fr:"Indien (ICSE/ISC)"}, levels:{en:["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10 (ICSE)","Class 11","Class 12 (ISC)"],ar:["الصف 1","الصف 2","الصف 3","الصف 4","الصف 5","الصف 6","الصف 7","الصف 8","الصف 9","الصف 10","الصف 11","الصف 12"],fr:["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10 (ICSE)","Class 11","Class 12 (ISC)"]}, cycles:["Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Primary (6-11)","Middle School (11-15)","Middle School (11-15)","Middle School (11-15)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)"] },
+  examprep: { label:{en:"Exam preparation",ar:"التحضير للامتحانات",fr:"Préparation examens"}, levels:{en:["IELTS","TOEFL","SAT","ACT","EmSAT","GCSE resit","A-Level resit","IB Diploma prep","University entrance"],ar:["آيلتس","توفل","SAT","ACT","إمسات","إعادة GCSE","إعادة A-Level","تحضير IB","القبول الجامعي"],fr:["IELTS","TOEFL","SAT","ACT","EmSAT","Rattrapage GCSE","Rattrapage A-Level","Prépa IB","Admission université"]}, cycles:["High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)","High School (15-18)","University / Adult (18+)"] },
 };
+
+// Cycles are stored canonically (English) so a French-speaking tutor and an
+// English-speaking parent produce the same value; only the label is translated.
+const CYCLES = ["Primary (6-11)","Middle School (11-15)","High School (15-18)","University / Adult (18+)"];
+const CYCLE_LABELS = {
+  "Primary (6-11)":          {en:"Primary (6-11)",         ar:"الابتدائية (6-11)",   fr:"Élémentaire (6-11 ans)"},
+  "Middle School (11-15)":   {en:"Middle School (11-15)",  ar:"المتوسطة (11-15)",    fr:"Collège (11-15 ans)"},
+  "High School (15-18)":     {en:"High School (15-18)",    ar:"الثانوية (15-18)",     fr:"Lycée (15-18 ans)"},
+  "University / Adult (18+)":{en:"University / Adult (18+)",ar:"الجامعة / الكبار (+18)",fr:"Université / Adulte (18+)"},
+};
+const cycleLabel = (c, lang) => CYCLE_LABELS[c]?.[lang] || CYCLE_LABELS[c]?.en || c;
 
 const SUBJECTS = [
   {icon:"➕",en:"Mathematics",ar:"الرياضيات",fr:"Mathématiques"},
@@ -638,7 +652,7 @@ function Auth({ onClose, onSuccess, lang }) {
           </>}
           {role==="teacher" && <>
             <div className="section-divider">🎓 Your teaching profile</div>
-            <div className="auth-group"><label className="auth-label">{t.onboard.cycle}</label><div className="auth-chips">{t.cycles.map(c=><div key={c} className={`auth-chip${teachCycle===c?" selected":""}`} onClick={()=>setTeachCycle(c)}>{c}</div>)}</div></div>
+            <div className="auth-group"><label className="auth-label">{t.onboard.cycle}</label><div className="auth-chips">{CYCLES.map(c=><div key={c} className={`auth-chip${teachCycle===c?" selected":""}`} onClick={()=>setTeachCycle(c)}>{cycleLabel(c,appLang)}</div>)}</div></div>
           </>}
         </>}
         <button className="auth-btn" onClick={tab==="login"?handleLogin:handleSignup} disabled={loading}>{loading?"⏳ Loading...":tab==="login"?"Sign in →":"Create account →"}</button>
@@ -749,7 +763,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
           {userProfile.teaching_cycles?.length > 0 && (
             <div className="form-group">
               <label className="form-label">{t.onboard.cycle}</label>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{userProfile.teaching_cycles.map(c=><span key={c} className="badge badge-purple">{c}</span>)}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{userProfile.teaching_cycles.map(c=><span key={c} className="badge badge-purple">{cycleLabel(c,lang)}</span>)}</div>
             </div>
           )}
           <div className="form-group">
@@ -3174,7 +3188,7 @@ export default function TutorApp() {
                 {lang==="fr"?"Que vas-tu enseigner ?":lang==="ar"?"ماذا ستدرّس؟":"What will you teach?"}
               </div>
               <div style={{fontSize:14,color:"#6B7280",marginBottom:"1.5rem"}}>{lang==="fr"?"Sélectionne tout ce qui correspond":lang==="ar"?"اختر كل ما ينطبق عليك":"Select everything that applies"}</div>
-              <div className="form-group"><label className="form-label">{t.onboard.cycle}</label><div className="chips-row">{t.cycles.map(c=><div key={c} className={`chip${teacherForm.cycles.includes(c)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,cycles:[c]})}>{c}</div>)}</div></div>
+              <div className="form-group"><label className="form-label">{t.onboard.cycle}</label><div className="chips-row">{CYCLES.map(c=><div key={c} className={`chip${teacherForm.cycles.includes(c)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,cycles:toggleArr(teacherForm.cycles,c)})}>{cycleLabel(c,lang)}</div>)}</div></div>
               <div className="form-group"><label className="form-label">{t.onboard.curriculum}</label><div className="chips-row">{Object.entries(CURRICULA).map(([k,v])=><div key={k} className={`chip${teacherForm.curricula.includes(k)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,curricula:toggleArr(teacherForm.curricula,k)})}>{v.label[lang]}</div>)}</div></div>
               <div className="form-group"><label className="form-label">{t.onboard.subjects}</label><div className="chips-row">{SUBJECTS.map(s=><div key={s.en} className={`chip${teacherForm.subjects.includes(s.en)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,subjects:toggleArr(teacherForm.subjects,s.en)})}>{s[lang]}</div>)}</div></div>
               <div className="form-group"><label className="form-label">{t.onboard.langTeach}</label><div className="chips-row">{t.instrLangs.map(l=><div key={l} className={`chip${teacherForm.instrLangs.includes(l)?" selected":""}`} onClick={()=>setTeacherForm({...teacherForm,instrLangs:toggleArr(teacherForm.instrLangs,l)})}>{l}</div>)}</div></div>
