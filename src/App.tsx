@@ -273,7 +273,6 @@ const UAE_REGIONS = [
   {code:"DXB",name:"Dubai"},{code:"AUH",name:"Abu Dhabi"},{code:"SHJ",name:"Sharjah"},
   {code:"AJM",name:"Ajman"},{code:"RAK",name:"Ras Al Khaimah"},{code:"FUJ",name:"Fujairah"},{code:"UAQ",name:"Umm Al Quwain"},
 ];
-const TEACHERS=[{initials:"سا",name:{en:"Sarah Al-Mansouri",ar:"سارة المنصوري",fr:"Sarah Al-Mansouri"},verified:true,subjects:["Mathematics","Arabic"],instrLangs:["English","Arabic"],rate:200,rating:4.9,reviews:47,bg:"#EEF0FF",color:"#5B4FE8",country:"UAE"},{initials:"كم",name:{en:"Karim Mansour",ar:"كريم منصور",fr:"Karim Mansour"},verified:true,subjects:["French","History & Geography"],instrLangs:["French","Arabic"],rate:150,rating:4.6,reviews:23,bg:"#E6FAF8",color:"#0ABFA3",country:"KSA"},{initials:"ند",name:{en:"Nadia Deschamps",ar:"ناديا دوشان",fr:"Nadia Deschamps"},verified:true,subjects:["Mathematics","Biology (SVT)"],instrLangs:["French","English"],rate:250,rating:5.0,reviews:11,bg:"#FEF6E4",color:"#B45309",country:"QAT"},{initials:"را",name:{en:"Rania Aziz",ar:"رانيا عزيز",fr:"Rania Aziz"},verified:false,subjects:["English","Spanish"],instrLangs:["English","Arabic","French"],rate:150,rating:4.4,reviews:8,bg:"#FEE2E2",color:"#B91C1C",country:"KWT"}];
 
 const fmtPrice=(price,countryCode)=>{const c=COUNTRIES.find(x=>x.code===countryCode)||COUNTRIES[0];if(c.currency==="KWD"||c.currency==="BHD")return`${(price*c.rate).toFixed(2)} ${c.currency}`;return`${Math.round(price*c.rate)} ${c.currency}`;};
 
@@ -281,7 +280,7 @@ const T = {
   en: {
     dir:"ltr",
     nav:{search:"Find a tutor",teach:"Teach",teachers:"Tutors",start:"Get started"},
-    hero:{badge:"Gulf Region · 100% Online · Verified Tutors",h1:"Find a tutor in ",h1span:"5 minutes,",h1b:" not 5 days.",sub:"Post your need, tutors propose their price, you accept or decline. Pay after the lesson.",cta1:"Find a tutor →",cta2:"Become a tutor",s1v:"200+",s1l:"Verified tutors",s2v:"15 min",s2l:"Avg response time",s3v:"4.9★",s3l:"Average rating",s4v:"5",s4l:"Gulf countries"},
+    hero:{badge:"Gulf Region · 100% Online · Verified Tutors",h1:"Find a tutor in ",h1span:"5 minutes,",h1b:" not 5 days.",sub:"Post your need, tutors propose their price, you accept or decline. Pay after the lesson.",cta1:"Find a tutor →",cta2:"Become a tutor",s1v:"0 AED",s1l:"Cost for parents",s2v:"AI",s2l:"Tutor matching",s3v:"8",s3l:"Curricula covered",s4v:"5",s4l:"Gulf countries"},
     how:{label:"How it works",title:"As simple as ",titleSpan:"booking a ride",steps:[{icon:"📋",t:"Post your request",d:"Subject and level. No budget needed."},{icon:"⚡",t:"Tutors propose prices",d:"Each tutor submits their own rate."},{icon:"👆",t:"Accept or decline",d:"See the price, accept if it suits you."},{icon:"🎓",t:"Lesson + Pay after",d:"Video link sent automatically. Pay after."}]},
     subjects:{label:"All subjects",title:"Maths in ",titleSpan:"English, Arabic or French"},
     form:{title:"Post your request",sub:"Your profile is pre-filled — just select a subject and post!",subject:"Subject *",lang:"Language of instruction",curriculum:"Curriculum",level:"Level *",duration:"Duration",msg:"Message to tutors",msgPh:"Describe difficulties, goals, availability...",publish:"Post request →",onlineBanner:"All lessons via video call — link sent automatically after booking."},
@@ -301,7 +300,7 @@ const T = {
   ar: {
     dir:"rtl",
     nav:{search:"أبحث عن مدرس",teach:"أدرّس",teachers:"المدرسون",start:"ابدأ الآن"},
-    hero:{badge:"منطقة الخليج · 100% عبر الإنترنت",h1:"ابحث عن مدرس في ",h1span:"5 دقائق،",h1b:" لا 5 أيام.",sub:"انشر احتياجك، المدرسون يقترحون أسعارهم، ادفع بعد الحصة.",cta1:"ابحث عن مدرس ←",cta2:"أصبح مدرساً",s1v:"200+",s1l:"مدرس موثّق",s2v:"15 د",s2l:"متوسط وقت الرد",s3v:"4.9★",s3l:"متوسط التقييم",s4v:"5",s4l:"دول خليجية"},
+    hero:{badge:"منطقة الخليج · 100% عبر الإنترنت",h1:"ابحث عن مدرس في ",h1span:"5 دقائق،",h1b:" لا 5 أيام.",sub:"انشر احتياجك، المدرسون يقترحون أسعارهم، ادفع بعد الحصة.",cta1:"ابحث عن مدرس ←",cta2:"أصبح مدرساً",s1v:"0 درهم",s1l:"التكلفة على الأهل",s2v:"ذكاء اصطناعي",s2l:"مطابقة المدرسين",s3v:"8",s3l:"مناهج مغطاة",s4v:"5",s4l:"دول خليجية"},
     how:{label:"كيف يعمل",title:"بسيط مثل ",titleSpan:"حجز سيارة أجرة",steps:[{icon:"📋",t:"انشر طلبك",d:"المادة والمستوى فقط."},{icon:"⚡",t:"المدرسون يقترحون أسعارهم",d:"كل مدرس يقدم سعره."},{icon:"👆",t:"اقبل أو ارفض",d:"شاهد السعر واقبله إن ناسبك."},{icon:"🎓",t:"حصة + دفع بعدها",d:"رابط الفيديو يُرسل تلقائياً."}]},
     subjects:{label:"جميع المواد",title:"الرياضيات بـ",titleSpan:"العربية أو الإنجليزية أو الفرنسية"},
     form:{title:"انشر طلبك",sub:"ملفك مُعبأ مسبقاً — اختر المادة وانشر!",subject:"المادة *",lang:"لغة التدريس",curriculum:"المنهج",level:"المستوى *",duration:"المدة",msg:"رسالة للمدرسين",msgPh:"صف الصعوبات والأهداف...",publish:"نشر الطلب ←",onlineBanner:"جميع الحصص عبر مكالمة فيديو."},
@@ -321,7 +320,7 @@ const T = {
   fr: {
     dir:"ltr",
     nav:{search:"Je cherche un cours",teach:"J'enseigne",teachers:"Enseignants",start:"Commencer"},
-    hero:{badge:"Golfe · 100% Distanciel · Enseignants vérifiés",h1:"Trouve un prof en ",h1span:"5 minutes,",h1b:" pas en 5 jours.",sub:"Poste ton besoin, les profs proposent leurs prix, tu acceptes ou refuses. Paiement après le cours.",cta1:"Je cherche un cours →",cta2:"Je suis enseignant",s1v:"200+",s1l:"Enseignants vérifiés",s2v:"15 min",s2l:"Temps de réponse",s3v:"4.9★",s3l:"Note moyenne",s4v:"5",s4l:"Pays du Golfe"},
+    hero:{badge:"Golfe · 100% Distanciel · Enseignants vérifiés",h1:"Trouve un prof en ",h1span:"5 minutes,",h1b:" pas en 5 jours.",sub:"Poste ton besoin, les profs proposent leurs prix, tu acceptes ou refuses. Paiement après le cours.",cta1:"Je cherche un cours →",cta2:"Je suis enseignant",s1v:"0 AED",s1l:"Coût pour les parents",s2v:"IA",s2l:"Mise en relation",s3v:"8",s3l:"Cursus couverts",s4v:"5",s4l:"Pays du Golfe"},
     how:{label:"Comment ça marche",title:"Aussi simple que ",titleSpan:"commander un taxi",steps:[{icon:"📋",t:"Tu postes ton besoin",d:"Matière et niveau. Pas de budget."},{icon:"⚡",t:"Les profs proposent leurs prix",d:"Chaque enseignant soumet son tarif."},{icon:"👆",t:"Tu acceptes ou refuses",d:"Tu vois le prix et tu décides."},{icon:"🎓",t:"Cours + Paiement après",d:"Lien visio automatique. Tu paies après."}]},
     subjects:{label:"Toutes les matières",title:"Les maths en ",titleSpan:"anglais, arabe ou français"},
     form:{title:"Poste ton annonce",sub:"Ton profil est pré-rempli — choisis juste une matière et publie !",subject:"Matière *",lang:"Langue d'enseignement",curriculum:"Cursus",level:"Niveau *",duration:"Durée",msg:"Message pour les enseignants",msgPh:"Décris les difficultés et objectifs...",publish:"Publier l'annonce →",onlineBanner:"Tous les cours en visioconférence."},
@@ -1314,6 +1313,111 @@ const TESTIMONIALS = [
   { name: "Fatima R.", text: { fr: "Le prof était parfait et le paiement après le cours c'est top.", en: "The tutor was perfect and paying after the lesson is great.", ar: "المدرس كان رائعاً والدفع بعد الحصة ممتاز." }, stars: 5 },
 ];
 
+// Shows real verified tutors. Until there are enough of them, it recruits
+// instead of pretending — an empty marketplace is a founding-tutor pitch,
+// not a reason to invent profiles.
+function LandingTutors({ lang, country, onBecomeTutor }) {
+  const [tutors, setTutors] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id,full_name,avatar_url,teaching_subjects,teaching_langs,teaching_rate,country_code,rating,rating_count")
+        .eq("role", "teacher")
+        .eq("verified", true)
+        .not("teaching_rate", "is", null)
+        .order("rating", { ascending: false, nullsFirst: false })
+        .limit(8);
+      setTutors(data || []);
+      setLoaded(true);
+    })();
+  }, []);
+
+  if (!loaded) return null;
+
+  if (tutors.length < 3) {
+    return (
+      <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",padding:"4rem 0"}}>
+        <div className="section" style={{padding:"0 2rem",maxWidth:720,margin:"0 auto",textAlign:"center"}}>
+          <div style={{display:"inline-block",background:"#EEF2FF",color:"#4338CA",fontWeight:800,fontSize:12,padding:"6px 14px",borderRadius:999,marginBottom:"1rem"}}>
+            {lang==="fr"?"🚀 Plateforme en lancement":lang==="ar"?"🚀 منصة قيد الإطلاق":"🚀 Now launching"}
+          </div>
+          <div className="section-title" style={{marginBottom:"0.75rem"}}>
+            {lang==="fr"?"Devenez l'un de nos premiers enseignants"
+             :lang==="ar"?"كن من أوائل المدرسين لدينا"
+             :"Become one of our founding tutors"}
+          </div>
+          <div style={{fontSize:15,color:"#4B5563",lineHeight:1.7,marginBottom:"1.75rem"}}>
+            {lang==="fr"?"Nous ouvrons tout juste aux Émirats. Les premiers enseignants inscrits reçoivent les demandes en priorité, sans concurrence, et gardent 100% de leur tarif — les parents ne paient aucune commission."
+             :lang==="ar"?"نفتح أبوابنا حديثاً في الإمارات. المدرسون الأوائل يتلقون الطلبات أولاً، بلا منافسة، ويحتفظون بكامل أجرهم."
+             :"We're just opening in the UAE. Founding tutors receive requests first, with no competition, and keep 100% of their rate — parents pay no commission."}
+          </div>
+          <div style={{display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap",marginBottom:"1.75rem"}}>
+            {[
+              [lang==="fr"?"14 jours d'essai":lang==="ar"?"14 يوم تجربة":"14-day free trial", "🎁"],
+              [lang==="fr"?"−50% par parrainage":lang==="ar"?"خصم 50% للإحالة":"−50% per referral", "🤝"],
+              [lang==="fr"?"100% en ligne":lang==="ar"?"100% عبر الإنترنت":"100% online", "💻"],
+            ].map(([label,icon])=>(
+              <div key={label as string} style={{fontSize:13,fontWeight:700,color:"#374151"}}>
+                <span style={{marginInlineEnd:6}}>{icon}</span>{label}
+              </div>
+            ))}
+          </div>
+          <button className="btn-big" onClick={onBecomeTutor}>
+            {lang==="fr"?"Rejoindre les premiers enseignants →":lang==="ar"?"انضم إلى المدرسين الأوائل ←":"Join as a founding tutor →"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",padding:"4rem 0"}}>
+      <div className="section" style={{padding:"0 2rem"}}>
+        <div className="section-label">{lang==="fr"?"Enseignants":lang==="ar"?"المدرسون":"Tutors"}</div>
+        <div className="section-title" style={{marginBottom:"2rem"}}>
+          {lang==="ar"?"جميعهم موثّقون":lang==="fr"?"Tous vérifiés":"All verified, all passionate"}
+        </div>
+        <div className="teachers-grid">
+          {tutors.map(tc=>{
+            const initials=(tc.full_name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+            return (
+              <div className="teacher-card" key={tc.id}>
+                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}>
+                  {tc.avatar_url
+                    ? <img src={tc.avatar_url} alt="" className="tc-avatar" style={{objectFit:"cover"}} />
+                    : <div className="tc-avatar" style={{background:"#EEF0FF",color:"#5B4FE8"}}>{initials}</div>}
+                  <div>
+                    <div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{tc.full_name}</div>
+                    <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ {lang==="fr"?"Vérifié":lang==="ar"?"موثّق":"Verified"}</div>
+                  </div>
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>
+                  {(tc.teaching_subjects||[]).slice(0,2).map(s=>{
+                    const subj=SUBJECTS.find(x=>x.en===s);
+                    return <span className="pill" key={s}>{subj?subj[lang]:s}</span>;
+                  })}
+                  {(tc.teaching_langs||[]).map(l=><span className="pill pill-teal" key={l}>{l}</span>)}
+                </div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>
+                    {fmtPrice(tc.teaching_rate,country)}<span style={{fontSize:12,fontWeight:500,color:"#6B7280"}}>/h</span>
+                  </div>
+                  {tc.rating_count>0&&(
+                    <div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.rating_count})</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TutorApp() {
   const [lang,setLang]=useState("en");
   const [country]=useState("UAE");
@@ -1589,8 +1693,9 @@ export default function TutorApp() {
         supabase.from("bookings").select("*",{count:"exact",head:true}).eq("status","completed"),
         supabase.from("reviews").select("score"),
       ]);
-      const avg=revs?.length?(revs.reduce((s,r)=>s+r.score,0)/revs.length).toFixed(1):"4.9";
-      setLandingStats({teachers:tc||0,lessons:lc||0,rating:avg});
+      // No reviews means no rating — never invent one.
+      const avg=revs?.length?(revs.reduce((s,r)=>s+r.score,0)/revs.length).toFixed(1):null;
+      setLandingStats({teachers:tc||0,lessons:lc||0,rating:avg,reviews:revs?.length||0});
     })();
     return ()=>subscription.unsubscribe();
   },[]);
@@ -2138,16 +2243,25 @@ export default function TutorApp() {
             <button className="btn-big btn-big-primary" onClick={()=>go("student-home")}>{t.hero.cta1}</button>
             <button className="btn-big btn-big-outline" onClick={()=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab("teacher-home");openTeacherOnboard();}}>{t.hero.cta2}</button>
           </div>
+          {/* Traction numbers replace the value props only once they are
+              meaningful; below the threshold a real figure reads worse than
+              what the product actually offers. */}
           <div className="hero-stats">{[
-            {v:landingStats.teachers>0?`${landingStats.teachers}+`:t.hero.s1v,l:t.hero.s1l},
+            landingStats.teachers>=5
+              ? {v:`${landingStats.teachers}+`,l:lang==="fr"?"Enseignants vérifiés":lang==="ar"?"مدرس موثّق":"Verified tutors"}
+              : {v:t.hero.s1v,l:t.hero.s1l},
             {v:t.hero.s2v,l:t.hero.s2l},
-            {v:landingStats.rating?`${landingStats.rating}★`:t.hero.s3v,l:t.hero.s3l},
-            {v:landingStats.lessons>0?`${landingStats.lessons}+`:t.hero.s4v,l:lang==="fr"?"Cours effectués":lang==="ar"?"دروس مكتملة":"Lessons done"},
+            landingStats.reviews>=5
+              ? {v:`${landingStats.rating}★`,l:lang==="fr"?"Note moyenne":lang==="ar"?"متوسط التقييم":"Average rating"}
+              : {v:t.hero.s3v,l:t.hero.s3l},
+            landingStats.lessons>=10
+              ? {v:`${landingStats.lessons}+`,l:lang==="fr"?"Cours effectués":lang==="ar"?"دروس مكتملة":"Lessons done"}
+              : {v:t.hero.s4v,l:t.hero.s4l},
           ].map((s,i)=><div key={i} style={{textAlign:"center"}}><div className="hero-stat-val">{s.v}</div><div className="hero-stat-lbl">{s.l}</div></div>)}</div>
         </section>
         <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",borderBottom:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.how.label}</div><div className="section-title">{t.how.title}<span>{t.how.titleSpan}</span></div><div className="steps-grid">{t.how.steps.map((s,i)=><div className="step-card" key={i}><div className="step-num-bg">{i+1}</div><div className="step-icon">{s.icon}</div><h3>{s.t}</h3><p>{s.d}</p></div>)}</div></div></div>
         <div className="section"><div className="section-label">{t.subjects.label}</div><div className="section-title">{t.subjects.title}<span>{t.subjects.titleSpan}</span></div><div className="subj-grid">{SUBJECTS.map(s=><div className="subj-card" key={s.en} onClick={()=>go("student-home")}><span style={{fontSize:20}}>{s.icon}</span><span>{s[lang]}</span></div>)}</div></div>
-        <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",padding:"4rem 0"}}><div className="section" style={{padding:"0 2rem"}}><div className="section-label">{t.nav.teachers}</div><div className="section-title" style={{marginBottom:"2rem"}}>{lang==="ar"?"جميعهم موثّقون":lang==="fr"?"Tous vérifiés":"All verified, all passionate"}</div><div className="teachers-grid">{TEACHERS.map(tc=><div className="teacher-card" key={tc.name.en} onClick={()=>setPage("teachers")}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"1rem"}}><div className="tc-avatar" style={{background:tc.bg,color:tc.color}}>{tc.initials}</div><div><div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{tc.name[lang]}</div>{tc.verified&&<div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ Verified</div>}</div></div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>{tc.subjects.slice(0,2).map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="pill" key={s}>{subj?subj[lang]:s}</span>;})} {tc.instrLangs.map(l=><span className="pill pill-teal" key={l}>{l}</span>)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{fmtPrice(tc.rate,country)}<span style={{fontSize:12,fontWeight:500,color:"#6B7280"}}>/h</span></div><div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>★ {tc.rating} ({tc.reviews})</div></div></div>)}</div></div></div>
+        <LandingTutors lang={lang} country={country} onBecomeTutor={()=>{if(!user){setShowAuth(true);return;}setPage("app");setAppTab("teacher-home");openTeacherOnboard();}} />
       </>}
 
       {page==="teachers"&&(()=>{
@@ -2404,13 +2518,17 @@ export default function TutorApp() {
                 <div className="page-sub">{lang==="fr"?"Trouve un prof en 5 minutes — paiement après le cours.":lang==="ar"?"ابحث عن مدرس في 5 دقائق — الدفع بعد الحصة.":"Find a tutor in 5 minutes — pay after the lesson."}</div>
               </div>
 
-              {/* Preuve sociale */}
+              {/* Real activity when there is some; the promise itself until then. */}
               <div style={{background:"linear-gradient(135deg, #5B4FE8 0%, #3D34C4 100%)",borderRadius:18,padding:"1.25rem 1.5rem",marginBottom:"1.5rem",display:"flex",justifyContent:"space-around",flexWrap:"wrap",gap:12}}>
-                {[
-                  [liveStats.todayLessons>0?`${liveStats.todayLessons}`:"10+",lang==="fr"?"cours aujourd'hui":lang==="ar"?"دروس اليوم":"lessons today"],
+                {(liveStats.activeTeachers>=5?[
+                  [`${liveStats.todayLessons}`,lang==="fr"?"cours aujourd'hui":lang==="ar"?"دروس اليوم":"lessons today"],
                   [`${liveStats.avgResponseMin} min`,lang==="fr"?"temps de réponse":lang==="ar"?"وقت الرد":"avg response"],
-                  [liveStats.activeTeachers>0?`${liveStats.activeTeachers}`:"20+",lang==="fr"?"profs vérifiés":lang==="ar"?"مدرسون موثّقون":"verified tutors"],
-                ].map(([val,lbl])=>(
+                  [`${liveStats.activeTeachers}`,lang==="fr"?"profs vérifiés":lang==="ar"?"مدرسون موثّقون":"verified tutors"],
+                ]:[
+                  ["0 AED",lang==="fr"?"pour les parents":lang==="ar"?"للأهل":"for parents"],
+                  ["IA",lang==="fr"?"mise en relation":lang==="ar"?"مطابقة ذكية":"AI matching"],
+                  ["✓",lang==="fr"?"profs vérifiés":lang==="ar"?"مدرسون موثّقون":"verified tutors"],
+                ]).map(([val,lbl])=>(
                   <div key={String(lbl)} style={{textAlign:"center"}}>
                     <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#fff"}}>{val}</div>
                     <div style={{fontSize:11,color:"rgba(255,255,255,.75)",fontWeight:600,marginTop:2}}>{lbl}</div>
