@@ -340,101 +340,108 @@ const T = {
 };
 
 const css=`
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:#F5F7FF;color:#111827;min-height:100vh;line-height:1.75;-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+/* Inter ships tabular figures and contextual alternates behind feature flags;
+   without them prices jitter as digits change and quotes stay straight. */
+.app-root,button,input,select,textarea{font-feature-settings:'cv02','cv03','cv04','ss01';font-variant-numeric:tabular-nums}
+.hero-stat-val,.page-title,.section-title{font-variant-numeric:normal}
+/* Keyboard focus was invisible before, which fails WCAG and reads as unfinished. */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid #5B4FE8;outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}}
+body{background:#FAFBFC;color:#0F172A;min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font-family:inherit}
 img,svg{max-width:100%;display:block}
-.app-root{font-family:'Nunito',sans-serif;background:#F5F7FF}
+.app-root{font-family:'Inter',system-ui,sans-serif;background:#FAFBFC}
 .app-root.rtl{font-family:'Cairo',sans-serif;direction:rtl}
 .nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.96);backdrop-filter:blur(18px);border-bottom:1px solid rgba(226,232,240,.9);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:72px}
-.nav-logo{font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#5B4FE8;cursor:pointer;letter-spacing:-.5px;white-space:nowrap}
+.nav-logo{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#5B4FE8;cursor:pointer;letter-spacing:-.5px;white-space:nowrap}
 .nav-links{display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap}
-.nav-link{font-size:13px;color:#667085;cursor:pointer;font-weight:700;transition:color .2s;white-space:nowrap}
+.nav-link{font-size:14px;color:#475569;cursor:pointer;font-weight:500;transition:color .2s;white-space:nowrap}
 .nav-link:hover{color:#5B4FE8}
 .lang-switch{display:flex;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;background:#fff}
-.lang-btn{padding:6px 12px;cursor:pointer;transition:all .15s;color:#667085;background:transparent;border:none;font-size:12px;font-weight:800}
+.lang-btn{padding:6px 12px;cursor:pointer;transition:all .15s;color:#667085;background:transparent;border:none;font-size:12px;font-weight:600}
 .lang-btn.active{background:#5B4FE8;color:#fff}
-.nav-cta{background:#5B4FE8;color:#fff;border:none;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:800;cursor:pointer;transition:transform .2s,background .2s;white-space:nowrap;box-shadow:0 16px 40px rgba(91,79,232,.18)}
+.nav-cta{background:#5B4FE8;color:#fff;border:none;border-radius:999px;padding:13px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:transform .2s,background .2s;white-space:nowrap;min-height:44px;box-shadow:0 1px 2px rgba(16,24,40,.06),0 6px 16px rgba(91,79,232,.18)}
 .nav-cta:hover{background:#3D34C4;transform:translateY(-1px)}
-.nav-logout{background:#F8FAFC;color:#344054;border:none;border-radius:999px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;transition:background .2s}
+.nav-logout{background:#F1F3F7;color:#475569;border:none;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s}
 .nav-logout:hover{background:#E2E8F0}
-.user-badge{background:#EEF2FF;color:#4338CA;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .2s}
+.user-badge{background:#EEF2FF;color:#4338CA;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:500;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .2s}
 .user-badge:hover{background:#DDD9FF}
 .hero{min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4rem 2rem;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at top, rgba(91,79,232,.14) 0%, transparent 42%);z-index:0}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;background:#EEF2FF;color:#4F46E5;border:1px solid #D9DBFE;border-radius:999px;padding:8px 18px;font-size:12px;font-weight:800;margin-bottom:1.5rem;position:relative;z-index:1}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%, rgba(91,79,232,.10) 0%, transparent 70%);z-index:0}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:#EEF2FF;color:#4F46E5;border:1px solid #D9DBFE;border-radius:999px;padding:8px 18px;font-size:12px;font-weight:600;margin-bottom:1.5rem;position:relative;z-index:1}
 .hero-dot{width:8px;height:8px;border-radius:50%;background:#5B4FE8;animation:pulse 2.2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.28}}
-.hero h1{font-family:'Fraunces',serif;font-size:clamp(2.4rem,6vw,4.4rem);font-weight:900;line-height:1.03;letter-spacing:-1px;color:#111827;max-width:860px;margin-bottom:1.5rem;position:relative;z-index:1}
+.hero h1{font-family:'Fraunces',serif;font-size:clamp(2.4rem,6vw,4.4rem);font-weight:700;line-height:1.08;letter-spacing:-.03em;color:#111827;max-width:860px;margin-bottom:1.5rem;position:relative;z-index:1}
 .rtl .hero h1{font-family:'Cairo',sans-serif;letter-spacing:0}
 .hero h1 span{color:#5B4FE8}
-.hero p{font-size:1.05rem;color:#475569;max-width:560px;line-height:1.8;margin-bottom:2.5rem;position:relative;z-index:1;font-weight:500}
+.hero p{font-size:1.15rem;color:#475569;max-width:580px;line-height:1.65;margin-bottom:2.5rem;position:relative;z-index:1;font-weight:400}
 .hero-btns{display:flex;gap:14px;position:relative;z-index:1;flex-wrap:wrap;justify-content:center}
-.btn-big{padding:15px 30px;border-radius:999px;font-size:15px;font-weight:800;cursor:pointer;border:none;transition:all .25s}
-.btn-big-primary{background:#5B4FE8;color:#fff;box-shadow:0 16px 40px rgba(91,79,232,.16)}
+.btn-big{padding:15px 30px;border-radius:999px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all .25s}
+.btn-big-primary{background:#5B4FE8;color:#fff;box-shadow:0 1px 2px rgba(16,24,40,.06),0 6px 16px rgba(91,79,232,.18)}
 .btn-big-primary:hover{background:#3D34C4;transform:translateY(-2px)}
 .btn-big-outline{background:transparent;color:#5B4FE8;border:2px solid #5B4FE8}
 .btn-big-outline:hover{background:#EEF2FF}
 .hero-stats{display:flex;gap:2rem;margin-top:3.5rem;position:relative;z-index:1;flex-wrap:wrap;justify-content:center}
-.hero-stat-val{font-family:'Fraunces',serif;font-size:1.85rem;font-weight:900;color:#111827}
-.hero-stat-lbl{font-size:12px;color:#64748B;margin-top:3px;font-weight:600}
-.float-card{position:absolute;background:#fff;border:1px solid #E2E8F0;border-radius:18px;padding:14px 18px;font-size:12px;animation:float 6s ease-in-out infinite;box-shadow:0 20px 48px rgba(15,23,42,.08);font-weight:500}
+.hero-stat-val{font-family:'Fraunces',serif;font-size:1.85rem;font-weight:700;color:#111827}
+.hero-stat-lbl{font-size:13px;color:#64748B;margin-top:4px;font-weight:500}
+.float-card{position:absolute;background:#fff;border:1px solid #E2E8F0;border-radius:18px;padding:14px 18px;font-size:12px;animation:float 6s ease-in-out infinite;box-shadow:0 2px 4px rgba(16,24,40,.04),0 12px 32px rgba(16,24,40,.08);font-weight:500}
 .float-card:nth-child(1){top:18%;left:4%;animation-delay:0s}
 .float-card:nth-child(2){top:24%;right:4%;animation-delay:-2s}
 .float-card:nth-child(3){bottom:20%;left:7%;animation-delay:-4s}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 .section{padding:5rem 2rem;max-width:1120px;margin:0 auto}
-.section-label{font-size:11px;font-weight:800;letter-spacing:.15em;color:#5B4FE8;text-transform:uppercase;margin-bottom:.7rem}
-.section-title{font-family:'Fraunces',serif;font-size:clamp(1.8rem,3.3vw,2.6rem);font-weight:900;letter-spacing:-.35px;color:#111827;margin-bottom:2.25rem}
+.section-label{font-size:11px;font-weight:600;letter-spacing:.15em;color:#5B4FE8;text-transform:uppercase;margin-bottom:.7rem}
+.section-title{font-family:'Fraunces',serif;font-size:clamp(1.8rem,3.3vw,2.6rem);font-weight:700;letter-spacing:-.02em;color:#111827;margin-bottom:2.25rem}
 .section-title span{color:#5B4FE8}
 .steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.3rem}
 .step-card{background:#fff;border:1px solid #E2E8F0;border-radius:22px;padding:1.75rem;position:relative;overflow:hidden;transition:transform .25s,box-shadow .25s}
-.step-card:hover{transform:translateY(-4px);box-shadow:0 18px 42px rgba(91,79,232,.12)}
-.step-num-bg{position:absolute;top:-14px;right:-8px;font-family:'Fraunces',serif;font-size:88px;font-weight:900;color:#F8FAFF;line-height:1;user-select:none}
+.step-card:hover{transform:translateY(-4px);box-shadow:0 2px 4px rgba(16,24,40,.05),0 12px 28px rgba(16,24,40,.09)}
+.step-num-bg{position:absolute;top:-14px;right:-8px;font-family:'Fraunces',serif;font-size:88px;font-weight:700;color:#F8FAFF;line-height:1;user-select:none}
 .step-icon{font-size:28px;margin-bottom:1rem}
 .step-card h3{font-family:'Fraunces',serif;font-size:16px;font-weight:700;margin-bottom:.4rem}
-.step-card p{font-size:13px;color:#64748B;line-height:1.7;font-weight:500}
+.step-card p{font-size:14px;color:#64748B;line-height:1.65;font-weight:400}
 .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.subj-card{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #E2E8F0;border-radius:18px;padding:16px 18px;cursor:pointer;transition:transform .25s,border-color .25s,background .25s;font-weight:700;font-size:13px}
+.subj-card{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #E8EAEF;border-radius:18px;padding:16px 18px;cursor:pointer;transition:transform .25s,border-color .25s,background .25s;font-weight:700;font-size:13px}
 .subj-card:hover{border-color:#5B4FE8;background:#EEF2FF;color:#1D4ED8;transform:translateY(-2px)}
 .teachers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:1.3rem}
-.teacher-card{background:#fff;border:1.5px solid #E2E8F0;border-radius:22px;padding:1.6rem;transition:transform .25s,border-color .25s,box-shadow .25s;cursor:pointer;box-shadow:0 16px 40px rgba(91,79,232,.06)}
-.teacher-card:hover{border-color:#5B4FE8;transform:translateY(-3px);box-shadow:0 22px 55px rgba(91,79,232,.1)}
-.tc-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0}
-.pill{background:#EEF2FF;color:#4F46E5;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:800}
-.pill-teal{background:#ECFDF5;color:#0F766E;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:800}
-.app-container{background:#fff;border:1.5px solid #E2E8F0;border-radius:26px;overflow:hidden;box-shadow:0 24px 80px rgba(91,79,232,.08)}
+.teacher-card{background:#fff;border:1px solid #E8EAEF;border-radius:22px;padding:1.6rem;transition:transform .25s,border-color .25s,box-shadow .25s;cursor:pointer;box-shadow:0 1px 2px rgba(16,24,40,.04),0 4px 12px rgba(16,24,40,.05)}
+.teacher-card:hover{border-color:#5B4FE8;transform:translateY(-3px);box-shadow:0 2px 4px rgba(16,24,40,.05),0 12px 28px rgba(16,24,40,.10)}
+.tc-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.pill{background:#EEF2FF;color:#4F46E5;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600}
+.pill-teal{background:#ECFDF5;color:#0F766E;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600}
+.app-container{background:#fff;border:1px solid #E8EAEF;border-radius:26px;overflow:hidden;box-shadow:0 1px 3px rgba(16,24,40,.05),0 16px 48px rgba(16,24,40,.07)}
 .app-topbar{background:#111827;color:#fff;padding:16px 22px;display:flex;align-items:center;gap:12px}
 .app-dot-row{display:flex;gap:8px}
 .app-dot{width:10px;height:10px;border-radius:50%;background:#A78BFA}
 .app-url{flex:1;background:#1F2937;border-radius:10px;padding:8px 14px;font-size:11px;color:#94A3B8;font-family:monospace}
-.app-tabs{display:flex;border-bottom:1.5px solid #E2E8F0;background:#F8FAFF;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.app-tabs{display:flex;border-bottom:1px solid #E8EAEF;background:#F8F9FB;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .app-tabs::-webkit-scrollbar{display:none}
-.app-tab{padding:14px 20px;font-size:13px;font-weight:800;cursor:pointer;border-bottom:2.5px solid transparent;color:#667085;transition:all .25s;white-space:nowrap;flex-shrink:0}
+.app-tab{padding:14px 20px;font-size:14px;font-weight:500;cursor:pointer;border-bottom:2.5px solid transparent;color:#667085;transition:all .25s;white-space:nowrap;flex-shrink:0}
 .app-tab.active{color:#5B4FE8;border-bottom-color:#5B4FE8;background:#fff}
 .app-body{padding:2rem;min-height:520px}
-.page-title{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:#111827;margin-bottom:.4rem}
-.page-sub{font-size:13px;color:#64748B;margin-bottom:1.5rem;font-weight:500}
+.page-title{font-family:'Fraunces',serif;font-size:2rem;font-weight:700;color:#111827;margin-bottom:.4rem}
+.page-sub{font-size:15px;color:#64748B;margin-bottom:1.5rem;font-weight:400}
 .prefilled-banner{background:#ECFDF5;border:1.5px solid #86EFAC;border-radius:14px;padding:14px 18px;font-size:13px;font-weight:700;color:#0F766E;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .form-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-.form-label{font-size:11px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:.08em}
-.form-select,.form-input,.form-textarea{border:1.5px solid #E2E8F0;border-radius:16px;padding:14px 16px;font-size:14px;background:#F8FAFF;color:#111827;outline:none;transition:border-color .25s,box-shadow .25s;min-height:48px;font-weight:600}
+.form-label{font-size:11px;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:.08em}
+.form-select,.form-input,.form-textarea{border:1px solid #E8EAEF;border-radius:16px;padding:14px 16px;font-size:14px;background:#F8F9FB;color:#111827;outline:none;transition:border-color .25s,box-shadow .25s;min-height:48px;font-weight:600}
 .form-select:focus,.form-input:focus,.form-textarea:focus{border-color:#5B4FE8;background:#fff;box-shadow:0 0 0 4px rgba(91,79,232,.08)}
 .form-select.prefilled{background:#ECFDF5;border-color:#86EFAC;color:#166534;font-weight:700}
 .form-textarea{min-height:100px;resize:vertical}
 .chips-row{display:flex;flex-wrap:wrap;gap:10px}
-.chip{padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;border:1.5px solid #E2E8F0;background:#fff;cursor:pointer;transition:all .2s}
+.chip{padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid #E8EAEF;background:#fff;cursor:pointer;transition:all .2s}
 .chip.selected{background:#5B4FE8;color:#fff;border-color:#5B4FE8}
 .chip:hover:not(.selected){border-color:#5B4FE8;color:#5B4FE8;transform:translateY(-1px)}
 .rate-chips{display:flex;flex-wrap:wrap;gap:10px}
-.rate-chip{padding:12px 18px;border-radius:16px;font-size:14px;font-weight:800;border:1.5px solid #E2E8F0;background:#fff;cursor:pointer;transition:all .2s;font-family:'Fraunces',serif}
+.rate-chip{padding:12px 18px;border-radius:16px;font-size:14px;font-weight:600;border:1px solid #E8EAEF;background:#fff;cursor:pointer;transition:all .2s;font-family:'Fraunces',serif}
 .rate-chip.selected{background:#5B4FE8;color:#fff;border-color:#5B4FE8}
 .rate-chip:hover:not(.selected){border-color:#5B4FE8;color:#5B4FE8;transform:translateY(-1px)}
-.submit-btn{width:100%;padding:15px;background:#5B4FE8;color:#fff;border:none;border-radius:18px;font-size:15px;font-weight:800;cursor:pointer;margin-top:1.25rem;transition:background .25s,transform .25s;box-shadow:0 18px 36px rgba(91,79,232,.16)}
+.submit-btn{width:100%;padding:15px;background:#5B4FE8;color:#fff;border:none;border-radius:18px;font-size:15px;font-weight:600;cursor:pointer;margin-top:1.25rem;transition:background .25s,transform .25s;box-shadow:0 18px 36px rgba(91,79,232,.16)}
 .submit-btn:hover{background:#3D34C4;transform:translateY(-1px)}
 .submit-btn:disabled{background:#C7D2FA;cursor:not-allowed;box-shadow:none;transform:none}
 .online-banner{display:flex;align-items:center;gap:10px;background:#EEF2FF;border:1.5px solid #D8DBFE;border-radius:16px;padding:14px 18px;font-size:13px;font-weight:700;color:#3730A3;margin-bottom:1.5rem}
@@ -445,38 +452,38 @@ img,svg{max-width:100%;display:block}
 .badge-green{background:#DCFCE7;color:#0F766E}
 .badge-blue{background:#EFF6FF;color:#1D4ED8}
 .badge-gray{background:#F8FAFC;color:#334155}
-.offer-card{border:1.5px solid #E2E8F0;border-radius:22px;padding:1.75rem;margin-bottom:16px;background:#fff;transition:transform .25s,border-color .25s,box-shadow .25s;box-shadow:0 20px 50px rgba(91,79,232,.06)}
+.offer-card{border:1px solid #E8EAEF;border-radius:22px;padding:1.75rem;margin-bottom:16px;background:#fff;transition:transform .25s,border-color .25s,box-shadow .25s;box-shadow:0 20px 50px rgba(91,79,232,.06)}
 .offer-card:hover{border-color:#5B4FE8;transform:translateY(-3px);box-shadow:0 30px 70px rgba(91,79,232,.09)}
-.offer-price{font-family:'Fraunces',serif;font-size:28px;font-weight:900;color:#5B4FE8}
-.offer-teacher{font-weight:800;font-size:16px;color:#111827;margin-bottom:4px}
+.offer-price{font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:#5B4FE8}
+.offer-teacher{font-weight:600;font-size:16px;color:#111827;margin-bottom:4px}
 .offer-msg{font-size:13px;color:#64748B;line-height:1.7;margin:10px 0 16px}
 .offer-actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn-accept{flex:2;padding:13px;background:#5B4FE8;color:#fff;border:none;border-radius:16px;font-size:14px;font-weight:800;cursor:pointer;transition:background .2s}
+.btn-accept{flex:2;padding:13px;background:#5B4FE8;color:#fff;border:none;border-radius:16px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s}
 .btn-accept:hover{background:#3D34C4}
-.btn-decline{flex:1;padding:13px;background:transparent;border:1.5px solid #E2E8F0;border-radius:16px;font-size:14px;color:#667085;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-decline{flex:1;padding:13px;background:transparent;border:1px solid #E8EAEF;border-radius:16px;font-size:14px;color:#667085;font-weight:700;cursor:pointer;transition:all .2s}
 .btn-decline:hover{border-color:#EF4444;color:#EF4444}
 .payment-screen{max-width:520px;margin:0 auto}
-.payment-card{background:#fff;border:1.5px solid #E2E8F0;border-radius:24px;padding:1.9rem;margin-bottom:1.3rem;box-shadow:0 22px 58px rgba(91,79,232,.06)}
+.payment-card{background:#fff;border:1px solid #E8EAEF;border-radius:24px;padding:1.9rem;margin-bottom:1.3rem;box-shadow:0 22px 58px rgba(91,79,232,.06)}
 .payment-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F1F5F9;font-size:14px}
 .payment-row:last-child{border-bottom:none}
-.payment-total{font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#5B4FE8}
+.payment-total{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#5B4FE8}
 .payment-note{background:#FEF3C7;border:1.5px solid #FDE68A;border-radius:16px;padding:14px 18px;font-size:13px;color:#B45309;margin-bottom:1.25rem;font-weight:700}
 .stripe-badge{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#94A3B8;margin-top:10px;font-weight:600}
 .teacher-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem}
-.stat-card{background:#F8FAFF;border:1.5px solid #E2E8F0;border-radius:18px;padding:1.2rem;text-align:center;box-shadow:0 18px 40px rgba(91,79,232,.05)}
-.stat-val{font-family:'Fraunces',serif;font-size:24px;font-weight:900;color:#5B4FE8}
+.stat-card{background:#F8F9FB;border:1px solid #E8EAEF;border-radius:18px;padding:1.2rem;text-align:center;box-shadow:0 18px 40px rgba(91,79,232,.05)}
+.stat-val{font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:#5B4FE8}
 .stat-lbl{font-size:11px;color:#64748B;margin-top:6px;font-weight:600}
-.req-card{border:1.5px solid #E2E8F0;border-radius:18px;padding:1.4rem;margin-bottom:14px;transition:border-color .25s,transform .25s}
+.req-card{border:1px solid #E8EAEF;border-radius:18px;padding:1.4rem;margin-bottom:14px;transition:border-color .25s,transform .25s}
 .req-card:hover{border-color:#0ABFA3;transform:translateY(-2px)}
 .req-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:#111827}
-.upload-zone{border:2px dashed #D7DCEC;border-radius:18px;padding:22px 18px;text-align:center;cursor:pointer;transition:all .25s;background:#F8FAFF}
+.upload-zone{border:2px dashed #D7DCEC;border-radius:18px;padding:22px 18px;text-align:center;cursor:pointer;transition:all .25s;background:#F8F9FB}
 .upload-zone:hover{border-color:#5B4FE8;background:#EEF2FF}
-.btn-teal{flex:1;padding:10px;background:#0ABFA3;color:#fff;border:none;border-radius:14px;font-size:13px;font-weight:800;cursor:pointer;transition:background .2s}
+.btn-teal{flex:1;padding:10px;background:#0ABFA3;color:#fff;border:none;border-radius:14px;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s}
 .btn-teal:hover{background:#089e87}
-.btn-ghost{padding:10px 16px;background:transparent;border:1.5px solid #E2E8F0;border-radius:14px;font-size:13px;color:#667085;font-weight:700;cursor:pointer;transition:border-color .2s}
+.btn-ghost{padding:10px 16px;background:transparent;border:1px solid #E8EAEF;border-radius:14px;font-size:13px;color:#667085;font-weight:700;cursor:pointer;transition:border-color .2s}
 .btn-ghost:hover{border-color:#64748B;color:#111827}
 .success-screen{text-align:center;padding:2rem 1rem}
-.confirm-detail{background:#F8FAFF;border:1.5px solid #E2E8F0;border-radius:18px;padding:1.3rem;max-width:420px;margin:0 auto 1.5rem;text-align:start}
+.confirm-detail{background:#F8F9FB;border:1px solid #E8EAEF;border-radius:18px;padding:1.3rem;max-width:420px;margin:0 auto 1.5rem;text-align:start}
 .confirm-row{display:flex;justify-content:space-between;font-size:14px;padding:8px 0;border-bottom:1px solid #F1F5F9}
 .confirm-row:last-child{border-bottom:none;padding-top:10px;margin-top:4px}
 .jitsi-box{background:#ECFDF5;border:1.5px solid #A7F3D0;border-radius:16px;padding:16px;max-width:420px;margin:0 auto 1.25rem;text-align:center}
@@ -484,7 +491,7 @@ img,svg{max-width:100%;display:block}
 .empty-state{text-align:center;padding:3rem;color:#64748B}
 .empty-icon{font-size:48px;margin-bottom:1rem}
 .footer{background:#111827;color:#CBD5E1;padding:3rem 2rem;text-align:center;margin-top:4rem}
-.footer-logo{font-family:'Fraunces',serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:.75rem}
+.footer-logo{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:.75rem}
 .toast{position:fixed;bottom:1.75rem;right:1.75rem;background:#111827;color:#fff;padding:14px 20px;border-radius:16px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px;z-index:999;animation:slideUp .3s ease;box-shadow:0 18px 50px rgba(0,0,0,.18)}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes popIn{0%{transform:scale(0.7);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
@@ -492,22 +499,22 @@ img,svg{max-width:100%;display:block}
 @keyframes offerSlide{from{transform:translateX(-18px);opacity:0}to{transform:translateX(0);opacity:1}}
 .auth-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.75);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
 .auth-box{background:#fff;border-radius:28px;padding:2.5rem;width:100%;max-width:480px;box-shadow:0 24px 80px rgba(91,79,232,0.16);position:relative;max-height:90vh;overflow-y:auto}
-.auth-logo{font-family:'Fraunces',serif;font-size:24px;font-weight:900;color:#5B4FE8;text-align:center;margin-bottom:.4rem}
-.auth-title{font-size:18px;font-weight:800;color:#111827;text-align:center;margin-bottom:.2rem}
+.auth-logo{font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:#5B4FE8;text-align:center;margin-bottom:.4rem}
+.auth-title{font-size:18px;font-weight:600;color:#111827;text-align:center;margin-bottom:.2rem}
 .auth-sub{font-size:13px;color:#64748B;text-align:center;margin-bottom:1.5rem}
-.auth-tabs{display:flex;background:#F8FAFF;border-radius:14px;padding:4px;margin-bottom:1.5rem}
+.auth-tabs{display:flex;background:#F8F9FB;border-radius:14px;padding:4px;margin-bottom:1.5rem}
 .auth-tab{flex:1;padding:12px;border:none;background:transparent;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;color:#64748B}
 .auth-tab.active{background:#fff;color:#5B4FE8;box-shadow:0 2px 12px rgba(91,79,232,.08)}
 .auth-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
-.auth-label{font-size:11px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:.06em}
-.auth-input,.auth-select{border:1.5px solid #E2E8F0;border-radius:16px;padding:13px 14px;font-size:14px;background:#F8FAFF;color:#111827;outline:none;transition:border-color .25s,width .25s;min-height:46px}
+.auth-label{font-size:11px;font-weight:600;color:#334155;text-transform:uppercase;letter-spacing:.06em}
+.auth-input,.auth-select{border:1px solid #E8EAEF;border-radius:16px;padding:13px 14px;font-size:14px;background:#F8F9FB;color:#111827;outline:none;transition:border-color .25s,width .25s;min-height:46px}
 .auth-input:focus,.auth-select:focus{border-color:#5B4FE8;background:#fff;box-shadow:0 0 0 4px rgba(91,79,232,.08)}
 .auth-role-row{display:flex;gap:10px;margin-bottom:14px}
-.auth-role-btn{flex:1;padding:12px;border:1.5px solid #E2E8F0;border-radius:16px;background:#fff;cursor:pointer;text-align:center;transition:all .2s}
+.auth-role-btn{flex:1;padding:12px;border:1px solid #E8EAEF;border-radius:16px;background:#fff;cursor:pointer;text-align:center;transition:all .2s}
 .auth-role-btn.selected{border-color:#5B4FE8;background:#EEF2FF}
 .auth-role-icon{font-size:22px;margin-bottom:4px}
 .auth-role-label{font-size:12px;font-weight:700;color:#111827}
-.auth-btn{width:100%;padding:14px;background:#5B4FE8;color:#fff;border:none;border-radius:18px;font-size:15px;font-weight:800;cursor:pointer;transition:transform .2s,background .2s;margin-top:.5rem}
+.auth-btn{width:100%;padding:14px;background:#5B4FE8;color:#fff;border:none;border-radius:18px;font-size:15px;font-weight:600;cursor:pointer;transition:transform .2s,background .2s;margin-top:.5rem}
 .auth-btn:hover{background:#3D34C4;transform:translateY(-1px)}
 .auth-btn:disabled{background:#D8DBFE;cursor:not-allowed;transform:none}
 .auth-remember{display:flex;align-items:center;gap:8px;font-size:13px;color:#64748B;margin-bottom:12px;cursor:pointer;font-weight:600}
@@ -516,13 +523,13 @@ img,svg{max-width:100%;display:block}
 .auth-success{background:#ECFDF5;border:1.5px solid #6EE7B7;border-radius:12px;padding:12px 14px;font-size:13px;color:#0F766E;margin-bottom:12px;font-weight:600}
 .auth-close{position:absolute;top:1rem;right:1rem;background:transparent;border:none;font-size:22px;cursor:pointer;color:#64748B}
 .auth-chips{display:flex;flex-wrap:wrap;gap:8px}
-.auth-chip{padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;border:1.5px solid #E2E8F0;background:#fff;cursor:pointer;transition:all .2s}
+.auth-chip{padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #E8EAEF;background:#fff;cursor:pointer;transition:all .2s}
 .auth-chip.selected{background:#5B4FE8;color:#fff;border-color:#5B4FE8}
-.section-divider{font-size:11px;font-weight:800;color:#5B4FE8;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;padding-bottom:6px;border-bottom:1.5px solid #E2E8F0}
-.profile-card{background:#fff;border:1.5px solid #E2E8F0;border-radius:22px;padding:1.75rem;margin-bottom:1.5rem;box-shadow:0 20px 50px rgba(91,79,232,.07)}
-.profile-avatar{width:72px;height:72px;border-radius:50%;background:#EEF2FF;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#5B4FE8;margin:0 auto 1rem}
+.section-divider{font-size:11px;font-weight:600;color:#5B4FE8;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #E8EAEF}
+.profile-card{background:#fff;border:1px solid #E8EAEF;border-radius:22px;padding:1.75rem;margin-bottom:1.5rem;box-shadow:0 20px 50px rgba(91,79,232,.07)}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:#EEF2FF;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#5B4FE8;margin:0 auto 1rem}
 .teacher-subtabs{display:flex;gap:10px;margin-bottom:1.5rem}
-.teacher-subtab{flex:1;padding:12px;border:1.5px solid #E2E8F0;border-radius:16px;font-size:13px;font-weight:800;cursor:pointer;text-align:center;transition:all .2s;background:#fff;color:#64748B}
+.teacher-subtab{flex:1;padding:12px;border:1px solid #E8EAEF;border-radius:16px;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;background:#fff;color:#64748B}
 .teacher-subtab.active{background:#5B4FE8;color:#fff;border-color:#5B4FE8}
 .banking-card{background:#FEF8DD;border:1.5px solid #FACC15;border-radius:18px;padding:1.3rem;margin-bottom:1.25rem}
 .verified-banner{background:#ECFDF5;border:1.5px solid #6EE7B7;border-radius:16px;padding:14px 18px;font-size:13px;font-weight:700;color:#0F766E;margin-bottom:1.25rem;display:flex;align-items:center;gap:10px}
@@ -532,7 +539,7 @@ img,svg{max-width:100%;display:block}
 .missing-bank:hover{background:#FEEAB7}
 @media(max-width:900px){.app-body{padding:1.5rem}.section{padding:4rem 1.25rem}.hero{padding:3.5rem 1.25rem}.app-topbar{flex-direction:column;align-items:flex-start;padding:18px 20px}.nav{padding:0 1rem;gap:10px;row-gap:8px;column-gap:8px}.hero-stats{gap:1.5rem}.form-row{grid-template-columns:1fr}.submit-btn{padding:14px}.hero h1{font-size:clamp(2.2rem,8vw,3.6rem)}}
 @media(max-width:700px){.nav-links{display:none}.nav{justify-content:space-between}.hero{min-height:auto;padding:3rem 1rem}.section{padding:3rem 1rem}.app-body{padding:1rem}.app-container{border-radius:22px}.teacher-card,.offer-card,.payment-card,.profile-card{padding:1.25rem}.app-tab{padding:12px 14px;font-size:12px}.page-title{font-size:1.5rem}.hero-btns{flex-direction:column;gap:12px}.hero-stat-val{font-size:1.4rem}.hero p{max-width:100%}}
-.btn-full{width:100%;padding:15px;background:#5B4FE8;color:#fff;border:none;border-radius:18px;font-size:15px;font-weight:800;cursor:pointer;transition:background .25s,transform .25s;box-shadow:0 18px 36px rgba(91,79,232,.16)}
+.btn-full{width:100%;padding:15px;background:#5B4FE8;color:#fff;border:none;border-radius:18px;font-size:15px;font-weight:600;cursor:pointer;transition:background .25s,transform .25s;box-shadow:0 18px 36px rgba(91,79,232,.16)}
 .btn-full:hover{background:#3D34C4;transform:translateY(-1px)}
 .btn-full:disabled{background:#C7D2FA;cursor:not-allowed;box-shadow:none;transform:none}
 .banner{display:flex;align-items:center;gap:10px;border-radius:16px;padding:14px 18px;font-size:13px;font-weight:700;margin-bottom:1.25rem}
@@ -544,8 +551,8 @@ img,svg{max-width:100%;display:block}
 .empty{text-align:center;padding:3rem 1rem;color:#64748B}
 .empty-icon{font-size:48px;margin-bottom:1rem}
 .loading{text-align:center;padding:3rem;color:#64748B;font-size:14px;font-weight:700}
-.profile-section{background:#fff;border:1.5px solid #E2E8F0;border-radius:22px;padding:1.75rem;margin-bottom:1.5rem;box-shadow:0 20px 50px rgba(91,79,232,.07)}
-.profile-section-title{font-weight:800;font-size:15px;margin-bottom:.75rem;color:#1A1A2E}`;
+.profile-section{background:#fff;border:1px solid #E8EAEF;border-radius:22px;padding:1.75rem;margin-bottom:1.5rem;box-shadow:0 20px 50px rgba(91,79,232,.07)}
+.profile-section-title{font-weight:600;font-size:15px;margin-bottom:.75rem;color:#1A1A2E}`;
 
 function Auth({ onClose, onSuccess, lang }) {
   const appLang = lang || "en";
@@ -756,7 +763,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
       {isTeacherProfile && userProfile?.teaching_subjects?.length > 0 && (
         <div className="profile-card">
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>🎓 {lang==="fr"?"Profil pédagogique":lang==="ar"?"الملف التربوي":"Teaching profile"}</div>
+            <div style={{fontWeight:600,fontSize:15,color:"#1A1A2E"}}>🎓 {lang==="fr"?"Profil pédagogique":lang==="ar"?"الملف التربوي":"Teaching profile"}</div>
             {onEditTeachingProfile && <button className="btn-ghost" onClick={onEditTeachingProfile}>✏️ {lang==="fr"?"Modifier":lang==="ar"?"تعديل":"Edit"}</button>}
           </div>
           {userProfile.teaching_cycles?.length > 0 && (
@@ -778,7 +785,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
           {userProfile.teaching_rate && (
             <div className="form-group" style={{marginBottom:0}}>
               <label className="form-label">{t.teacher.yourRate}</label>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#5B4FE8"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,color:"#5B4FE8"}}>
                 {fmtPrice(userProfile.teaching_rate,country)}/h
                 <span style={{fontSize:13,fontWeight:500,color:"#6B7280",marginInlineStart:8}}>→ {fmtPrice(userProfile.teaching_rate,country)}/h</span>
               </div>
@@ -788,7 +795,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
       )}
       {isTeacherProfile && (
         <div className="profile-card">
-          <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🏦 {t.profile.banking}</div>
+          <div style={{fontWeight:600,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🏦 {t.profile.banking}</div>
           <div className="banking-card">
             <div style={{fontSize:12,color:"#92400E",fontWeight:600,marginBottom:"1rem"}}>🔒 {t.onboard.bankHint}</div>
             <div className="form-group"><label className="form-label">{t.profile.bankName}</label><input className="form-input" placeholder="Wio Bank, Emirates NBD, QNB..." value={bankName} onChange={e=>setBankName(e.target.value)} /></div>
@@ -830,7 +837,7 @@ function ProfilePage({ user, userProfile, profileLoading, lang, onSaved, country
       )}
 
       <div className="profile-card">
-        <div style={{fontWeight:800,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🔒 {t.profile.changePassword}</div>
+        <div style={{fontWeight:600,fontSize:15,marginBottom:"1rem",color:"#1A1A2E"}}>🔒 {t.profile.changePassword}</div>
         <div className="form-group"><label className="form-label">{t.profile.newPassword}</label><input className="form-input" type="password" placeholder="Min. 6 characters" value={newPassword} onChange={e=>setNewPassword(e.target.value)} /></div>
         <div className="form-group"><label className="form-label">{t.profile.confirmPassword}</label><input className="form-input" type="password" placeholder="Repeat new password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} /></div>
         <button className="submit-btn" onClick={handleChangePassword} disabled={savingPwd} style={{marginTop:"0.5rem"}}>{savingPwd?"⏳ Updating...":t.profile.savePassword}</button>
@@ -881,7 +888,7 @@ function CheckoutForm({ booking, totalAmount, onSuccess, onBack, lang }) {
 
   const cardStyle = {
     style: {
-      base: { fontSize:"16px", color:"#1A1A2E", fontFamily:"'Nunito', sans-serif", fontWeight:"600", "::placeholder":{color:"#9CA3AF"} },
+      base: { fontSize:"16px", color:"#1A1A2E", fontFamily:"'Inter',system-ui,sans-serif", fontWeight:"600", "::placeholder":{color:"#9CA3AF"} },
       invalid: { color:"#EF4444" },
     },
   };
@@ -923,9 +930,9 @@ function PaymentScreen({ bid, booking, form, country, lang, onSuccess, onBack })
       <div className="page-sub">{t.payment.sub}</div>
       <div className="payment-card">
         <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.lessonPrice}</span><span style={{fontWeight:700}}>{fmtPrice(lessonPrice,country)}</span></div>
-        <div className="payment-row"><span style={{color:"#0F6E56",fontWeight:700}}>🎁 {lang==="fr"?"Frais de service":lang==="ar"?"رسوم الخدمة":"Service fee"}</span><span style={{fontWeight:800,color:"#0ABFA3"}}>{lang==="fr"?"GRATUIT":lang==="ar"?"مجاناً":"FREE"}</span></div>
+        <div className="payment-row"><span style={{color:"#0F6E56",fontWeight:700}}>🎁 {lang==="fr"?"Frais de service":lang==="ar"?"رسوم الخدمة":"Service fee"}</span><span style={{fontWeight:600,color:"#0ABFA3"}}>{lang==="fr"?"GRATUIT":lang==="ar"?"مجاناً":"FREE"}</span></div>
         <div className="payment-row" style={{borderTop:"2px solid #E8EAF6",paddingTop:12,marginTop:4}}>
-          <span style={{fontWeight:800,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
+          <span style={{fontWeight:600,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
           <span className="payment-total">{fmtPrice(studentTotal,country)}</span>
         </div>
       </div>
@@ -1058,14 +1065,14 @@ function AdminPage({ user, lang, onBack }) {
         {recentBookings.map(b=>(
           <div key={b.id} style={{border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
             <div>
-              <div style={{fontWeight:800,fontSize:14}}>{b.subject||"—"}</div>
+              <div style={{fontWeight:600,fontSize:14}}>{b.subject||"—"}</div>
               <div style={{fontSize:12,color:"#6B7280",marginTop:2}}>
                 👨‍🎓 {b.student?.full_name||"?"} → 👨‍🏫 {b.teacher?.full_name||"?"}
               </div>
               <div style={{fontSize:11,color:"#9CA3AF",marginTop:2}}>{new Date(b.created_at).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}</div>
             </div>
             <div style={{textAlign:"end"}}>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:16,fontWeight:900,color:"#5B4FE8"}}>{b.gross_price_aed} AED</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:16,fontWeight:700,color:"#5B4FE8"}}>{b.gross_price_aed} AED</div>
               <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>+{b.commission_aed||0} AED comm.</div>
               <span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:20,background:b.status==="completed"?"#DCFCE7":b.status==="pending_payment"?"#FEF3C7":"#F3F4F6",color:b.status==="completed"?"#166534":b.status==="pending_payment"?"#92400E":"#6B7280",marginTop:4,display:"inline-block"}}>
                 {b.status==="completed"?"✅ Terminé":b.status==="pending_payment"?"⏳ En cours":b.status==="cancelled"?"❌ Annulé":b.status}
@@ -1102,13 +1109,13 @@ function AdminPage({ user, lang, onBack }) {
       {rejectTarget&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
           <div style={{background:"#fff",borderRadius:20,padding:"2rem",maxWidth:440,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
-            <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:4}}>❌ Refuser {rejectTarget.full_name} ?</div>
+            <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:700,marginBottom:4}}>❌ Refuser {rejectTarget.full_name} ?</div>
             <div style={{fontSize:13,color:"#64748B",marginBottom:"1rem"}}>Le prof recevra un email avec le motif. Il ne pourra plus apparaître sur la plateforme.</div>
             <label style={{fontSize:13,fontWeight:700,color:"#374151",display:"block",marginBottom:6}}>Motif du refus <span style={{color:"#9CA3AF",fontWeight:400}}>(optionnel mais recommandé)</span></label>
             <textarea value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="Ex : Documents illisibles, diplôme non conforme, profil incomplet..." style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"10px 12px",fontSize:13,fontFamily:"inherit",resize:"vertical",minHeight:80,boxSizing:"border-box",marginBottom:"1.25rem"}}/>
             <div style={{display:"flex",gap:10}}>
               <button className="btn-ghost" style={{flex:1}} onClick={()=>{setRejectTarget(null);setRejectReason("");}}>Annuler</button>
-              <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer"}} onClick={confirmReject}>Confirmer le refus</button>
+              <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:600,fontSize:14,cursor:"pointer"}} onClick={confirmReject}>Confirmer le refus</button>
             </div>
           </div>
         </div>
@@ -1119,11 +1126,11 @@ function AdminPage({ user, lang, onBack }) {
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12}}>
             <div style={{flex:1}}>
               <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:8}}>
-                <div style={{width:44, height:44, borderRadius:"50%", background:"#EEF0FF", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:16, color:"#5B4FE8", flexShrink:0}}>
+                <div style={{width:44, height:44, borderRadius:"50%", background:"#EEF0FF", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:16, color:"#5B4FE8", flexShrink:0}}>
                   {(teacher.full_name||"?").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2)}
                 </div>
                 <div>
-                  <div style={{fontWeight:800, fontSize:16}}>{teacher.full_name || "Sans nom"}</div>
+                  <div style={{fontWeight:600, fontSize:16}}>{teacher.full_name || "Sans nom"}</div>
                   <div style={{fontSize:12, color:"#6B7280"}}>{teacher.email || teacher.id}</div>
                 </div>
                 {teacher.verified ? <span className="badge badge-green">✅ Vérifié</span> : <span className="badge badge-amber">⏳ En attente</span>}
@@ -1210,7 +1217,7 @@ function StudentHistory({ userId, lang, onBookAgain }: { userId: string, lang: s
       {totalSpent > 0 && (
         <div style={{background:"#EEF2FF",border:"1.5px solid #D8DBFE",borderRadius:14,padding:"1rem",marginBottom:"1.5rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontWeight:700,color:"#5B4FE8"}}>{lang==="fr"?"Total dépensé":lang==="ar"?"إجمالي المصروف":"Total spent"}</span>
-          <span style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,color:"#5B4FE8"}}>{totalSpent} AED</span>
+          <span style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:700,color:"#5B4FE8"}}>{totalSpent} AED</span>
         </div>
       )}
       {bookings.length === 0 && (
@@ -1225,12 +1232,12 @@ function StudentHistory({ userId, lang, onBookAgain }: { userId: string, lang: s
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
 
             <div>
-              <div style={{fontWeight:800,fontSize:15}}>{b.subject||"Cours"}</div>
+              <div style={{fontWeight:600,fontSize:15}}>{b.subject||"Cours"}</div>
               <div style={{fontSize:13,color:"#64748B",marginTop:3}}>{b.teacher?.full_name}</div>
               <div style={{fontSize:11,color:"#9CA3AF",fontWeight:600,marginTop:3}}>{new Date(b.created_at).toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{day:"numeric",month:"long",year:"numeric"})}</div>
             </div>
             <div style={{textAlign:"end"}}>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900,color:"#5B4FE8"}}>{b.gross_price_aed} AED</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:700,color:"#5B4FE8"}}>{b.gross_price_aed} AED</div>
               <span className={`badge ${b.status==="completed"?"badge-green":b.status==="pending_payment"?"badge-amber":"badge-gray"}`} style={{marginTop:4,display:"inline-flex"}}>
                 {b.status==="completed"?(lang==="fr"?"✅ Confirmé":lang==="ar"?"✅ مكتمل":"✅ Done"):b.status==="pending_payment"?(lang==="fr"?"⏳ En attente":lang==="ar"?"⏳ في الانتظار":"⏳ Pending"):b.status}
               </span>
@@ -1288,12 +1295,12 @@ function TeacherHistory({ userId, lang }: { userId: string, lang: string }) {
           <div key={b.id||i} style={{border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
               <div>
-                <div style={{fontWeight:800,fontSize:15}}>{subject}</div>
+                <div style={{fontWeight:600,fontSize:15}}>{subject}</div>
                 <div style={{fontSize:13,color:"#64748B",marginTop:3}}>👤 {b.student?.full_name||"—"}</div>
                 <div style={{fontSize:11,color:"#9CA3AF",fontWeight:600,marginTop:3}}>{dateStr}</div>
               </div>
               <div style={{textAlign:"end"}}>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:900,color:"#0ABFA3"}}>+{netEarned} AED</div>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:700,color:"#0ABFA3"}}>+{netEarned} AED</div>
                 <span className={`badge ${b.status==="completed"?"badge-green":b.status==="pending_payment"?"badge-amber":"badge-gray"}`} style={{marginTop:4,display:"inline-flex"}}>
                   {b.status==="completed"?(lang==="fr"?"✅ Payé":lang==="ar"?"✅ مدفوع":"✅ Paid"):b.status==="pending_payment"?(lang==="fr"?"⏳ En attente":lang==="ar"?"⏳ معلّق":"⏳ Pending"):b.status}
                 </span>
@@ -1341,7 +1348,7 @@ function LandingTutors({ lang, country, onBecomeTutor }) {
     return (
       <div style={{background:"#fff",borderTop:"1.5px solid #E8EAF6",padding:"4rem 0"}}>
         <div className="section" style={{padding:"0 2rem",maxWidth:720,margin:"0 auto",textAlign:"center"}}>
-          <div style={{display:"inline-block",background:"#EEF2FF",color:"#4338CA",fontWeight:800,fontSize:12,padding:"6px 14px",borderRadius:999,marginBottom:"1rem"}}>
+          <div style={{display:"inline-block",background:"#EEF2FF",color:"#4338CA",fontWeight:600,fontSize:12,padding:"6px 14px",borderRadius:999,marginBottom:"1rem"}}>
             {lang==="fr"?"🚀 Plateforme en lancement":lang==="ar"?"🚀 منصة قيد الإطلاق":"🚀 Now launching"}
           </div>
           <div className="section-title" style={{marginBottom:"0.75rem"}}>
@@ -1390,7 +1397,7 @@ function LandingTutors({ lang, country, onBecomeTutor }) {
                     ? <img src={tc.avatar_url} alt="" className="tc-avatar" style={{objectFit:"cover"}} />
                     : <div className="tc-avatar" style={{background:"#EEF0FF",color:"#5B4FE8"}}>{initials}</div>}
                   <div>
-                    <div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{tc.full_name}</div>
+                    <div style={{fontWeight:600,fontSize:15,color:"#1A1A2E"}}>{tc.full_name}</div>
                     <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ {lang==="fr"?"Vérifié":lang==="ar"?"موثّق":"Verified"}</div>
                   </div>
                 </div>
@@ -1402,7 +1409,7 @@ function LandingTutors({ lang, country, onBecomeTutor }) {
                   {(tc.teaching_langs||[]).map(l=><span className="pill pill-teal" key={l}>{l}</span>)}
                 </div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:700}}>
                     {fmtPrice(tc.teaching_rate,country)}<span style={{fontSize:12,fontWeight:500,color:"#6B7280"}}>/h</span>
                   </div>
                   {tc.rating_count>0&&(
@@ -2215,7 +2222,7 @@ export default function TutorApp() {
           </>}
           <span className="nav-link" onClick={()=>setPage("teachers")}>{t.nav.teachers}</span>
           {user?.email==="pierre.garnier93@gmail.com" && (
-            <span className="nav-link" onClick={()=>setPage("admin")} style={{color:"#E24B4A",fontWeight:900}}>⚙️ Admin</span>
+            <span className="nav-link" onClick={()=>setPage("admin")} style={{color:"#E24B4A",fontWeight:700}}>⚙️ Admin</span>
           )}
           <div className="lang-switch">{["en","ar","fr"].map(l=><button key={l} className={`lang-btn${lang===l?" active":""}`} onClick={()=>setLang(l)}>{l.toUpperCase()}</button>)}</div>
         </div>
@@ -2232,9 +2239,9 @@ export default function TutorApp() {
       {page==="home"&&<>
         <section className="hero">
           <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
-            <div className="float-card"><div style={{fontWeight:800,fontSize:13,marginBottom:4}}>📋 New request</div><div style={{color:"#6B7280",fontSize:12}}>Maths · Grade 9 · 1h</div><div style={{color:"#0ABFA3",fontSize:12,marginTop:4,fontWeight:700}}>3 offers received ✓</div></div>
-            <div className="float-card"><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:34,height:34,borderRadius:"50%",background:"#EEF0FF",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:13,color:"#5B4FE8"}}>سا</div><div><div style={{fontWeight:800,fontSize:13}}>Sarah A.</div><div style={{color:"#F5A623",fontSize:11}}>★★★★★ 4.9</div></div><div style={{marginInlineStart:"auto",fontFamily:"Fraunces,serif",fontWeight:900,color:"#5B4FE8",fontSize:15}}>200 AED</div></div></div>
-            <div className="float-card"><div style={{fontWeight:800,fontSize:13,marginBottom:4,color:"#0ABFA3"}}>💳 Paid after lesson ✓</div><div style={{color:"#6B7280",fontSize:12}}>📹 Video link sent</div><div style={{color:"#6B7280",fontSize:12}}>🔒 Secured by Stripe</div></div>
+            <div className="float-card"><div style={{fontWeight:600,fontSize:13,marginBottom:4}}>📋 New request</div><div style={{color:"#6B7280",fontSize:12}}>Maths · Grade 9 · 1h</div><div style={{color:"#0ABFA3",fontSize:12,marginTop:4,fontWeight:700}}>3 offers received ✓</div></div>
+            <div className="float-card"><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:34,height:34,borderRadius:"50%",background:"#EEF0FF",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#5B4FE8"}}>سا</div><div><div style={{fontWeight:600,fontSize:13}}>Sarah A.</div><div style={{color:"#F5A623",fontSize:11}}>★★★★★ 4.9</div></div><div style={{marginInlineStart:"auto",fontFamily:"Fraunces,serif",fontWeight:700,color:"#5B4FE8",fontSize:15}}>200 AED</div></div></div>
+            <div className="float-card"><div style={{fontWeight:600,fontSize:13,marginBottom:4,color:"#0ABFA3"}}>💳 Paid after lesson ✓</div><div style={{color:"#6B7280",fontSize:12}}>📹 Video link sent</div><div style={{color:"#6B7280",fontSize:12}}>🔒 Secured by Stripe</div></div>
           </div>
           <div className="hero-badge"><div className="hero-dot"></div>{t.hero.badge}</div>
           <h1>{t.hero.h1}<span>{t.hero.h1span}</span>{t.hero.h1b}</h1>
@@ -2306,10 +2313,10 @@ export default function TutorApp() {
                         ?<img src={tc.avatar_url} alt={tc.full_name} className="tc-avatar" style={{objectFit:"cover"}} />
                         :<div className="tc-avatar" style={{background:bgColors[ci],color:fgColors[ci]}}>{initials}</div>}
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:800,fontSize:15,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tc.full_name}</div>
+                        <div style={{fontWeight:600,fontSize:15,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tc.full_name}</div>
                         <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✓ {lang==="fr"?"Vérifié":lang==="ar"?"موثّق":"Verified"}</div>
                       </div>
-                      {tc.avgRating&&<div style={{fontSize:13,color:"#F59E0B",fontWeight:800}}>★ {tc.avgRating}</div>}
+                      {tc.avgRating&&<div style={{fontSize:13,color:"#F59E0B",fontWeight:600}}>★ {tc.avgRating}</div>}
                     </div>
                     {tc.teaching_bio&&<div style={{fontSize:12,color:"#64748B",marginBottom:10,lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{tc.teaching_bio}</div>}
                     <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.75rem"}}>
@@ -2317,7 +2324,7 @@ export default function TutorApp() {
                       {(tc.teaching_langs||[]).map(l=><span className="pill pill-teal" key={l}>{l}</span>)}
                     </div>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}>
-                      <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{tc.teaching_rate} AED/h</div>
+                      <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:700}}>{tc.teaching_rate} AED/h</div>
                       <div style={{fontSize:12,color:"#6B7280",fontWeight:600}}>{tc.reviews?.length||0} {lang==="fr"?"avis":lang==="ar"?"تقييم":"reviews"}</div>
                     </div>
                     <div style={{display:"flex",gap:8}}>
@@ -2352,20 +2359,20 @@ export default function TutorApp() {
             <div style={{background:"linear-gradient(135deg,#5B4FE8 0%,#3D34C4 100%)",borderRadius:24,padding:"2rem",marginBottom:"1.5rem",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
               {tc.avatar_url
                 ?<img src={tc.avatar_url} alt={tc.full_name} style={{width:72,height:72,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"3px solid rgba(255,255,255,.3)"}} />
-                :<div style={{width:72,height:72,borderRadius:"50%",background:bgColors[ci],color:fgColors[ci],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:24,flexShrink:0}}>{initials}</div>}
+                :<div style={{width:72,height:72,borderRadius:"50%",background:bgColors[ci],color:fgColors[ci],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:24,flexShrink:0}}>{initials}</div>}
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#fff",marginBottom:4}}>{tc.full_name}</div>
+                <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,color:"#fff",marginBottom:4}}>{tc.full_name}</div>
                 <div style={{fontSize:12,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:8}}>✓ {lang==="fr"?"Enseignant vérifié":lang==="ar"?"مدرس موثّق":"Verified tutor"}</div>
                 <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                  {tc.avgRating&&<span style={{background:"rgba(255,255,255,.15)",color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:13,fontWeight:800}}>★ {tc.avgRating} ({tc.reviews?.length} {lang==="fr"?"avis":lang==="ar"?"تقييم":"reviews"})</span>}
-                  <span style={{background:"rgba(255,255,255,.15)",color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:13,fontWeight:800}}>{tc.teaching_rate} AED/h</span>
+                  {tc.avgRating&&<span style={{background:"rgba(255,255,255,.15)",color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:13,fontWeight:600}}>★ {tc.avgRating} ({tc.reviews?.length} {lang==="fr"?"avis":lang==="ar"?"تقييم":"reviews"})</span>}
+                  <span style={{background:"rgba(255,255,255,.15)",color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:13,fontWeight:600}}>{tc.teaching_rate} AED/h</span>
                 </div>
               </div>
             </div>
             {/* Bio */}
             {tc.teaching_bio&&(
               <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.25rem"}}>
-                <div style={{fontWeight:800,fontSize:13,color:"#5B4FE8",marginBottom:8}}>💬 {lang==="fr"?"À propos":lang==="ar"?"عن المدرس":"About"}</div>
+                <div style={{fontWeight:600,fontSize:13,color:"#5B4FE8",marginBottom:8}}>💬 {lang==="fr"?"À propos":lang==="ar"?"عن المدرس":"About"}</div>
                 <div style={{fontSize:14,color:"#374151",lineHeight:1.7}}>{tc.teaching_bio}</div>
               </div>
             )}
@@ -2373,25 +2380,25 @@ export default function TutorApp() {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:"1.25rem"}}>
               {tc.teaching_subjects?.length>0&&(
                 <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem"}}>
-                  <div style={{fontWeight:800,fontSize:12,color:"#5B4FE8",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>📚 {lang==="fr"?"Matières":lang==="ar"?"المواد":"Subjects"}</div>
+                  <div style={{fontWeight:600,fontSize:12,color:"#5B4FE8",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>📚 {lang==="fr"?"Matières":lang==="ar"?"المواد":"Subjects"}</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{tc.teaching_subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return<span className="badge badge-purple" key={s}>{subj?subj[lang]:s}</span>;})}</div>
                 </div>
               )}
               {tc.teaching_langs?.length>0&&(
                 <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem"}}>
-                  <div style={{fontWeight:800,fontSize:12,color:"#0ABFA3",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>🗣 {lang==="fr"?"Langues":lang==="ar"?"اللغات":"Languages"}</div>
+                  <div style={{fontWeight:600,fontSize:12,color:"#0ABFA3",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>🗣 {lang==="fr"?"Langues":lang==="ar"?"اللغات":"Languages"}</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{tc.teaching_langs.map(l=><span className="badge badge-green" key={l}>{l}</span>)}</div>
                 </div>
               )}
               {tc.teaching_curricula?.length>0&&(
                 <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem"}}>
-                  <div style={{fontWeight:800,fontSize:12,color:"#92400E",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>🎓 {lang==="fr"?"Cursus":lang==="ar"?"المناهج":"Curricula"}</div>
+                  <div style={{fontWeight:600,fontSize:12,color:"#92400E",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>🎓 {lang==="fr"?"Cursus":lang==="ar"?"المناهج":"Curricula"}</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{tc.teaching_curricula.map(c=>{const cur=CURRICULA[c];return<span className="badge badge-amber" key={c}>{cur?cur.label[lang]:c}</span>;})}</div>
                 </div>
               )}
               <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1rem"}}>
-                <div style={{fontWeight:800,fontSize:12,color:"#0F6E56",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>💰 {lang==="fr"?"Tarif":lang==="ar"?"السعر":"Rate"}</div>
-                <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,color:"#0ABFA3"}}>{tc.teaching_rate} AED/h</div>
+                <div style={{fontWeight:600,fontSize:12,color:"#0F6E56",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>💰 {lang==="fr"?"Tarif":lang==="ar"?"السعر":"Rate"}</div>
+                <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:700,color:"#0ABFA3"}}>{tc.teaching_rate} AED/h</div>
                 <div style={{fontSize:11,color:"#64748B",marginTop:4}}>{lang==="fr"?`Tu paies ${tc.teaching_rate} AED → prof reçoit ${netRate} AED`:lang==="ar"?`تدفع ${tc.teaching_rate} AED → يستلم ${netRate} AED`:`You pay ${tc.teaching_rate} AED → tutor gets ${netRate} AED`}</div>
               </div>
             </div>
@@ -2405,7 +2412,7 @@ export default function TutorApp() {
                 showToast(lang==="fr"?`✅ Annonce pré-remplie pour ${tc.full_name}`:lang==="ar"?`✅ تم تعبئة الطلب لـ ${tc.full_name}`:`✅ Request pre-filled for ${tc.full_name}`);
               }}>📋 {lang==="fr"?"Poster une annonce":lang==="ar"?"نشر إعلان":"Post a request"}</button>
               {tc.teaching_whatsapp&&(
-                <a href={`https://wa.me/${tc.teaching_whatsapp.replace(/\+/,"")}?text=${encodeURIComponent(lang==="fr"?`Bonjour ${tc.full_name}, je vous contacte via TutorApp pour des cours de ${(tc.teaching_subjects||[])[0]||"cours"}.`:lang==="ar"?`مرحباً ${tc.full_name}، أتواصل معك عبر TutorApp لدروس ${(tc.teaching_subjects||[])[0]||""}.`:`Hi ${tc.full_name}, I found you on TutorApp and would like to book ${(tc.teaching_subjects||[])[0]||"tutoring"} lessons.`)}`} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"#25D366",color:"#fff",borderRadius:14,padding:"12px 20px",fontSize:14,fontWeight:800,textDecoration:"none",flex:1,minWidth:160}}>
+                <a href={`https://wa.me/${tc.teaching_whatsapp.replace(/\+/,"")}?text=${encodeURIComponent(lang==="fr"?`Bonjour ${tc.full_name}, je vous contacte via TutorApp pour des cours de ${(tc.teaching_subjects||[])[0]||"cours"}.`:lang==="ar"?`مرحباً ${tc.full_name}، أتواصل معك عبر TutorApp لدروس ${(tc.teaching_subjects||[])[0]||""}.`:`Hi ${tc.full_name}, I found you on TutorApp and would like to book ${(tc.teaching_subjects||[])[0]||"tutoring"} lessons.`)}`} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"#25D366",color:"#fff",borderRadius:14,padding:"12px 20px",fontSize:14,fontWeight:600,textDecoration:"none",flex:1,minWidth:160}}>
                   💬 {lang==="fr"?"WhatsApp":lang==="ar"?"واتساب":"WhatsApp"}
                 </a>
               )}
@@ -2413,7 +2420,7 @@ export default function TutorApp() {
             {/* Reviews */}
             {teacherProfileReviews.length>0&&(
               <div>
-                <div style={{fontWeight:800,fontSize:16,marginBottom:"1rem"}}>⭐ {lang==="fr"?"Avis":lang==="ar"?"التقييمات":"Reviews"} ({teacherProfileReviews.length})</div>
+                <div style={{fontWeight:600,fontSize:16,marginBottom:"1rem"}}>⭐ {lang==="fr"?"Avis":lang==="ar"?"التقييمات":"Reviews"} ({teacherProfileReviews.length})</div>
                 {teacherProfileReviews.map((r,i)=>(
                   <div key={i} style={{border:"1.5px solid #E2E8F0",borderRadius:14,padding:"1rem",marginBottom:10}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
@@ -2438,7 +2445,7 @@ export default function TutorApp() {
       {page==="legal"&&<LegalPage lang={lang} activeDoc={legalDoc} onSelectDoc={setLegalDoc} onBack={()=>setPage("home")} />}
 
       {page==="admin"&&user?.email==="pierre.garnier93@gmail.com"&&<AdminPage user={user} lang={lang} onBack={()=>setPage("home")} />}
-      {page==="admin"&&user?.email!=="pierre.garnier93@gmail.com"&&<div style={{textAlign:"center",padding:"4rem 2rem",fontWeight:800,fontSize:18,color:"#EF4444"}}>⛔ Accès refusé</div>}
+      {page==="admin"&&user?.email!=="pierre.garnier93@gmail.com"&&<div style={{textAlign:"center",padding:"4rem 2rem",fontWeight:600,fontSize:18,color:"#EF4444"}}>⛔ Accès refusé</div>}
 
       {page==="app"&&<div className="section"><div className="app-container">
         <div className="app-topbar"><div className="app-dot-row"><div className="app-dot" style={{background:"#E24B4A"}}></div><div className="app-dot" style={{background:"#F5A623"}}></div><div className="app-dot" style={{background:"#0ABFA3"}}></div></div><div className="app-url">tutorapp.online · 🔒 {currentCountry.flag} {currentCountry.name[lang]}</div></div>
@@ -2452,7 +2459,7 @@ export default function TutorApp() {
             <div className={`app-tab${appTab==="teacher-history"?" active":""}`} onClick={()=>setAppTab("teacher-history")}>📋 {lang==="fr"?"Historique":lang==="ar"?"السجل":"History"}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {lang==="fr"?"Mon profil":lang==="ar"?"ملفي":"My profile"}</div>
           </> : <>
-            <div className={`app-tab${appTab==="student-home"?" active":""}`} onClick={()=>setAppTab("student-home")}>🏠 {lang==="fr"?"Accueil":lang==="ar"?"الرئيسية":"Home"}{studentState==="offers"&&activeOffers.length>0&&<span style={{background:"#E34948",color:"#fff",borderRadius:"50%",fontSize:10,fontWeight:900,padding:"1px 6px",marginLeft:6,animation:"pulse 1s infinite"}}>{activeOffers.length}</span>}</div>
+            <div className={`app-tab${appTab==="student-home"?" active":""}`} onClick={()=>setAppTab("student-home")}>🏠 {lang==="fr"?"Accueil":lang==="ar"?"الرئيسية":"Home"}{studentState==="offers"&&activeOffers.length>0&&<span style={{background:"#E34948",color:"#fff",borderRadius:"50%",fontSize:10,fontWeight:700,padding:"1px 6px",marginLeft:6,animation:"pulse 1s infinite"}}>{activeOffers.length}</span>}</div>
             <div className={`app-tab${appTab==="student-history"?" active":""}`} onClick={()=>setAppTab("student-history")}>📅 {lang==="fr"?"Mes cours":lang==="ar"?"دروسي":"My lessons"}</div>
             <div className={`app-tab${appTab==="profile"?" active":""}`} onClick={()=>setAppTab("profile")}>👤 {lang==="fr"?"Mon profil":lang==="ar"?"ملفي":"My profile"}</div>
           </>}
@@ -2488,8 +2495,8 @@ export default function TutorApp() {
                   <div key={r.id||i} style={{background:"#fff",border:`1.5px solid ${reqState==="offers"?"#C7D2FE":reqState==="booked"?"#A7F3D0":"#E2E8F0"}`,borderRadius:18,padding:"1.25rem 1.5rem",marginBottom:12,cursor:"pointer",transition:"transform .2s,box-shadow .2s",boxShadow:"0 4px 16px rgba(91,79,232,.06)"}}
                     onClick={()=>openStudentRequest(entry)}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                      <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:900}}>{r.subject} · {r.level}</div>
-                      <span style={{background:statusColor,color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:800,whiteSpace:"nowrap"}}>{statusLabel}</span>
+                      <div style={{fontFamily:"Fraunces,serif",fontSize:17,fontWeight:700}}>{r.subject} · {r.level}</div>
+                      <span style={{background:statusColor,color:"#fff",borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{statusLabel}</span>
                     </div>
                     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
                       {r.instr_lang&&<span className="badge badge-blue">🗣 {r.instr_lang}</span>}
@@ -2500,7 +2507,7 @@ export default function TutorApp() {
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:12,color:"#6B7280",fontWeight:600}}>
                       <span>⏱ {timeLabel}</span>
                       {reqState==="booked"&&booking?.teacher&&<span>👤 {booking.teacher.full_name}</span>}
-                      <span style={{color:statusColor,fontWeight:800}}>{lang==="fr"?"Voir →":lang==="ar"?"عرض ←":"View →"}</span>
+                      <span style={{color:statusColor,fontWeight:600}}>{lang==="fr"?"Voir →":lang==="ar"?"عرض ←":"View →"}</span>
                     </div>
                   </div>
                 );
@@ -2530,7 +2537,7 @@ export default function TutorApp() {
                   ["✓",lang==="fr"?"profs vérifiés":lang==="ar"?"مدرسون موثّقون":"verified tutors"],
                 ]).map(([val,lbl])=>(
                   <div key={String(lbl)} style={{textAlign:"center"}}>
-                    <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#fff"}}>{val}</div>
+                    <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,color:"#fff"}}>{val}</div>
                     <div style={{fontSize:11,color:"rgba(255,255,255,.75)",fontWeight:600,marginTop:2}}>{lbl}</div>
                   </div>
                 ))}
@@ -2546,14 +2553,14 @@ export default function TutorApp() {
 
               {/* Formulaire */}
               <div style={{background:"#fff",border:"1.5px solid #E2E8F0",borderRadius:20,padding:"1.75rem"}}>
-                <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:"1.25rem"}}>📋 {lang==="fr"?"Nouvelle annonce":lang==="ar"?"إعلان جديد":"Post a request"}</div>
+                <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:700,marginBottom:"1.25rem"}}>📋 {lang==="fr"?"Nouvelle annonce":lang==="ar"?"إعلان جديد":"Post a request"}</div>
                 <div className="banner banner-blue" style={{marginBottom:"1rem"}}>📹 {lang==="fr"?"Cours en visioconférence — lien envoyé automatiquement":lang==="ar"?"الحصة عبر الفيديو — يُرسل الرابط تلقائياً":"Online lesson — video link sent automatically"}</div>
 
                 {(form.curriculum&&form.level&&form.instrLang)?(<>
                   <div style={{background:"linear-gradient(135deg,#F0FDF4,#DCFCE7)",border:"1.5px solid #86EFAC",borderRadius:14,padding:"0.9rem 1.1rem",marginBottom:"1.25rem",display:"flex",alignItems:"center",gap:10}}>
                     <div style={{fontSize:22}}>⚡</div>
                     <div style={{flex:1}}>
-                      <div style={{fontWeight:800,fontSize:13,color:"#0F6E56"}}>{lang==="fr"?"Profil pré-rempli !":lang==="ar"?"ملفك مُعبأ تلقائياً !":"Pre-filled from your profile!"}</div>
+                      <div style={{fontWeight:600,fontSize:13,color:"#0F6E56"}}>{lang==="fr"?"Profil pré-rempli !":lang==="ar"?"ملفك مُعبأ تلقائياً !":"Pre-filled from your profile!"}</div>
                       <div style={{fontSize:11,color:"#16A34A",marginTop:1}}>{lang==="fr"?"Choisis une matière et c'est parti.":lang==="ar"?"اختر المادة وانطلق.":"Just pick a subject and you're done."}</div>
                     </div>
                   </div>
@@ -2608,7 +2615,7 @@ export default function TutorApp() {
                             {form.slots.map((s,i)=>(
                               <div key={i} style={{background:"#EEF2FF",border:"1.5px solid #C7D2FE",borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:700,color:"#4338CA",display:"flex",alignItems:"center",gap:6}}>
                                 📅 {s}
-                                <span onClick={()=>setForm({...form,slots:form.slots.filter((_,j)=>j!==i)})} style={{cursor:"pointer",color:"#9CA3AF",fontWeight:900}}>×</span>
+                                <span onClick={()=>setForm({...form,slots:form.slots.filter((_,j)=>j!==i)})} style={{cursor:"pointer",color:"#9CA3AF",fontWeight:700}}>×</span>
                               </div>
                             ))}
                           </div>
@@ -2624,7 +2631,7 @@ export default function TutorApp() {
                     <div style={{fontSize:11,fontWeight:700,color:"#5B4FE8",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>
                       👁 {lang==="fr"?"Aperçu — ce que les profs verront":lang==="ar"?"معاينة — ما سيراه المدرسون":"Preview — what tutors will see"}
                     </div>
-                    <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>{form.subject} · {form.level}</div>
+                    <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>{form.subject} · {form.level}</div>
                     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:form.message?8:0}}>
                       {form.curriculum&&<span className="badge badge-purple">{Object.entries(CURRICULA).find(([k])=>k===form.curriculum)?.[1]?.label[lang]||form.curriculum}</span>}
                       {form.instrLang&&<span className="badge badge-blue">🗣 {form.instrLang}</span>}
@@ -2646,7 +2653,7 @@ export default function TutorApp() {
             {/* ÉTAT 2 — waiting */}
             {studentState==="waiting"&&<div style={{maxWidth:520,margin:"0 auto",textAlign:"center",padding:"2rem 0"}}>
               <div style={{fontSize:56,marginBottom:"1rem",animation:"pulse 2s infinite"}}>🔍</div>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Recherche en cours...":lang==="ar"?"البحث جارٍ...":"Searching for tutors..."}</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,marginBottom:8}}>{lang==="fr"?"Recherche en cours...":lang==="ar"?"البحث جارٍ...":"Searching for tutors..."}</div>
               <div style={{fontSize:13,color:"#64748B",marginBottom:"1rem",lineHeight:1.7}}>{lang==="fr"?"Détendez-vous — les enseignants se disputent votre cours en ce moment.":lang==="ar"?"استرخِ — المدرسون يتنافسون على حصتك الآن.":"Sit back — tutors are competing for your lesson right now."}</div>
               <div style={{background:"#EEF2FF",border:"1.5px solid #D8DBFE",borderRadius:12,padding:"10px 20px",display:"inline-block",marginBottom:"1rem",fontSize:13,fontWeight:700,color:"#5B4FE8"}}>
                 ⏱ {lang==="fr"?"Annonce publiée il y a":lang==="ar"?"نُشر الإعلان منذ":"Posted"} {formatWaitingTime()}{lang==="en"?" ago":""}
@@ -2660,7 +2667,7 @@ export default function TutorApp() {
                 <div style={{background:"#5B4FE8",height:"100%",width:`${Math.min((waitingSeconds/(24*3600))*100,100)}%`,transition:"width 1s linear",borderRadius:4}}/>
               </div>
               <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
-                <div style={{fontWeight:800,fontSize:15,marginBottom:10}}>{activeRequest?.subject} · {activeRequest?.level}</div>
+                <div style={{fontWeight:600,fontSize:15,marginBottom:10}}>{activeRequest?.subject} · {activeRequest?.level}</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <span className="badge badge-purple">{activeRequest?.curriculum}</span>
                   <span className="badge badge-blue">🗣 {activeRequest?.instr_lang}</span>
@@ -2677,14 +2684,14 @@ export default function TutorApp() {
               {matchingLoading&&(
                 <div style={{textAlign:"center",padding:"1.5rem",marginBottom:"1rem"}}>
                   <div style={{fontSize:26,marginBottom:8}}>🧠</div>
-                  <div style={{fontWeight:800,fontSize:14,color:"#5B4FE8"}}>
+                  <div style={{fontWeight:600,fontSize:14,color:"#5B4FE8"}}>
                     {lang==="fr"?"L'IA sélectionne les meilleurs profs...":lang==="ar"?"الذكاء الاصطناعي يختار أفضل المدرسين...":"AI is selecting the best tutors..."}
                   </div>
                 </div>
               )}
               {!matchingLoading&&suggestedTeachers.length>0&&(
                 <div style={{textAlign:"start",marginBottom:"1.5rem"}}>
-                  <div style={{fontWeight:800,fontSize:15,marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{fontWeight:600,fontSize:15,marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
                     <span style={{background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
                       🧠 {lang==="fr"?"Sélectionnés par l'IA pour ton enfant":lang==="ar"?"مختارون بالذكاء الاصطناعي لطفلك":"AI-selected for your child"}
                     </span>
@@ -2696,7 +2703,7 @@ export default function TutorApp() {
                           {t.avatar_url?<img src={t.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<span style={{fontSize:20,color:"#fff"}}>👤</span>}
                         </div>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontWeight:800,fontSize:14,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                          <div style={{fontWeight:600,fontSize:14,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                             {t.full_name||"Tutor"}
                             {t.permit_verified&&<span style={{fontSize:11,marginInlineStart:6}} title="UAE permit">🏛️</span>}
                           </div>
@@ -2706,7 +2713,7 @@ export default function TutorApp() {
                           </div>
                         </div>
                         <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-                          {t.match_score>=60&&<div style={{fontSize:11,color:"#0F6E56",fontWeight:800,background:"#D1FAE5",borderRadius:8,padding:"3px 8px"}}>{t.match_score}% match</div>}
+                          {t.match_score>=60&&<div style={{fontSize:11,color:"#0F6E56",fontWeight:600,background:"#D1FAE5",borderRadius:8,padding:"3px 8px"}}>{t.match_score}% match</div>}
                           <div style={{fontSize:11,color:"#0ABFA3",fontWeight:700,background:"#F0FDF4",borderRadius:8,padding:"3px 8px"}}>✓ {lang==="fr"?"Notifié":lang==="ar"?"تم الإخطار":"Notified"}</div>
                         </div>
                       </div>
@@ -2732,7 +2739,7 @@ export default function TutorApp() {
                 <div style={{background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",borderRadius:16,padding:"1rem 1.25rem",marginBottom:"1rem",display:"flex",alignItems:"center",gap:12,animation:"popIn .4s ease"}}>
                   <div style={{fontSize:32}}>🎉</div>
                   <div>
-                    <div style={{fontWeight:900,fontSize:15,color:"#fff"}}>{lang==="fr"?"Des profs ont répondu !":lang==="ar"?"ردّ عليك مدرسون !":"Tutors responded to your request!"}</div>
+                    <div style={{fontWeight:700,fontSize:15,color:"#fff"}}>{lang==="fr"?"Des profs ont répondu !":lang==="ar"?"ردّ عليك مدرسون !":"Tutors responded to your request!"}</div>
                     <div style={{fontSize:12,color:"rgba(255,255,255,.85)",marginTop:2}}>{lang==="fr"?"Compare les offres et choisis le meilleur pour toi.":lang==="ar"?"قارن العروض واختر الأفضل.":"Compare offers and pick the best fit."}</div>
                   </div>
                 </div>
@@ -2780,15 +2787,15 @@ export default function TutorApp() {
                       <div style={{display:"flex",alignItems:"center",gap:12}}>
                         {offer.teacher?.avatar_url
                           ?<img src={offer.teacher.avatar_url} alt={offer.teacher?.full_name} style={{width:46,height:46,borderRadius:"50%",objectFit:"cover",flexShrink:0}} />
-                          :<div style={{width:46,height:46,borderRadius:"50%",background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:16,color:"#5B4FE8",flexShrink:0}}>
+                          :<div style={{width:46,height:46,borderRadius:"50%",background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:16,color:"#5B4FE8",flexShrink:0}}>
                             {(offer.teacher?.full_name||"T").split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2)}
                           </div>}
                         <div>
-                          <div style={{fontWeight:800,fontSize:15}}>{offer.teacher?.full_name||"Tutor"}</div>
+                          <div style={{fontWeight:600,fontSize:15}}>{offer.teacher?.full_name||"Tutor"}</div>
                           <div style={{display:"flex",gap:6,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
                             <span style={{fontSize:11,color:"#0ABFA3",fontWeight:700}}>✅ {lang==="fr"?"Vérifié":lang==="ar"?"موثّق":"Verified"}</span>
                             {offerRatings[offer.teacher_id]&&(
-                              <span style={{fontSize:12,color:"#F59E0B",fontWeight:800,background:"#FEF9C3",padding:"2px 7px",borderRadius:8}}>
+                              <span style={{fontSize:12,color:"#F59E0B",fontWeight:600,background:"#FEF9C3",padding:"2px 7px",borderRadius:8}}>
                                 ★ {offerRatings[offer.teacher_id].avg} <span style={{color:"#92400E",fontWeight:600}}>({offerRatings[offer.teacher_id].count})</span>
                               </span>
                             )}
@@ -2798,7 +2805,7 @@ export default function TutorApp() {
                         </div>
                       </div>
                       <div style={{textAlign:"end"}}>
-                        <div style={{fontFamily:"Fraunces,serif",fontSize:26,fontWeight:900,color:"#5B4FE8"}}>{offer.net_price_aed} AED</div>
+                        <div style={{fontFamily:"Fraunces,serif",fontSize:26,fontWeight:700,color:"#5B4FE8"}}>{offer.net_price_aed} AED</div>
                         <div style={{fontSize:11,color:"#9CA3AF"}}>/heure</div>
                       </div>
                     </div>
@@ -2827,7 +2834,7 @@ export default function TutorApp() {
                     )}
                     {offer.proposed_slots?.length>0&&(
                       <div style={{background:"#F0FDF4",border:"1.5px solid #A7F3D0",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
-                        <div style={{fontWeight:800,fontSize:12,color:"#0F6E56",marginBottom:8}}>📅 {lang==="fr"?"Créneaux proposés — choisis un :":lang==="ar"?"المواعيد المقترحة — اختر واحداً:":"Proposed slots — pick one:"}</div>
+                        <div style={{fontWeight:600,fontSize:12,color:"#0F6E56",marginBottom:8}}>📅 {lang==="fr"?"Créneaux proposés — choisis un :":lang==="ar"?"المواعيد المقترحة — اختر واحداً:":"Proposed slots — pick one:"}</div>
                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
                           {offer.proposed_slots.map((slot,si)=>{
                             const label=String(slot);
@@ -2857,9 +2864,9 @@ export default function TutorApp() {
               <div className="page-sub">{t.payment.sub}</div>
               <div className="payment-card">
                 <div className="payment-row"><span style={{color:"#6B7280"}}>{t.payment.lessonPrice}</span><span style={{fontWeight:700}}>{selectedOffer.net_price_aed} AED</span></div>
-                <div className="payment-row"><span style={{color:"#0F6E56",fontWeight:700}}>🎁 {t.payment.serviceFee}</span><span style={{fontWeight:800,color:"#0ABFA3"}}>{lang==="fr"?"GRATUIT":lang==="ar"?"مجاناً":"FREE"}</span></div>
+                <div className="payment-row"><span style={{color:"#0F6E56",fontWeight:700}}>🎁 {t.payment.serviceFee}</span><span style={{fontWeight:600,color:"#0ABFA3"}}>{lang==="fr"?"GRATUIT":lang==="ar"?"مجاناً":"FREE"}</span></div>
                 <div className="payment-row" style={{borderTop:"2px solid #E8EAF6",paddingTop:12,marginTop:4}}>
-                  <span style={{fontWeight:800,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
+                  <span style={{fontWeight:600,color:"#1A1A2E",fontSize:16}}>{t.payment.total}</span>
                   <span className="payment-total">{activeBooking.gross_price_aed} AED</span>
                 </div>
               </div>
@@ -2880,13 +2887,13 @@ export default function TutorApp() {
             {studentState==="booked"&&<div style={{maxWidth:520,margin:"0 auto",textAlign:"center"}}>
               <div style={{background:"linear-gradient(135deg, #0ABFA3 0%, #089e87 100%)",borderRadius:20,padding:"2rem 1.5rem",marginBottom:"1.5rem"}}>
                 <div style={{fontSize:48,marginBottom:8}}>🎉</div>
-                <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,color:"#fff",marginBottom:8}}>
+                <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,color:"#fff",marginBottom:8}}>
                   {childName?(lang==="fr"?`${childName} va avoir son cours de ${activeRequest?.subject} !`:lang==="ar"?`${childName} سيحصل على حصة ${activeRequest?.subject} !`:`${childName} is getting their ${activeRequest?.subject} lesson!`):(lang==="fr"?"Cours réservé !":lang==="ar"?"تم حجز الدرس !":"Lesson booked!")}
                 </div>
                 <div style={{fontSize:13,color:"rgba(255,255,255,.85)"}}>{lang==="fr"?"Avec":lang==="ar"?"مع":"With"} <strong>{activeBooking?.teacher?.full_name}</strong> · {lang==="fr"?"Enseignant vérifié ✅":lang==="ar"?"مدرس موثّق ✅":"Verified tutor ✅"}</div>
               </div>
               <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.25rem",textAlign:"start",animation:"slideUp .4s ease"}}>
-                <div style={{fontWeight:800,fontSize:13,color:"#5B4FE8",marginBottom:12,textTransform:"uppercase",letterSpacing:.5}}>📋 {lang==="fr"?"Comment ça se passe ?":lang==="ar"?"كيف تسير الأمور؟":"What happens next?"}</div>
+                <div style={{fontWeight:600,fontSize:13,color:"#5B4FE8",marginBottom:12,textTransform:"uppercase",letterSpacing:.5}}>📋 {lang==="fr"?"Comment ça se passe ?":lang==="ar"?"كيف تسير الأمور؟":"What happens next?"}</div>
                 {[
                   {icon:"📅",title:lang==="fr"?"Convenez d'un horaire":lang==="ar"?"حددوا الموعد":"Agree on a time",sub:lang==="fr"?"Via la messagerie ou WhatsApp ci-dessous":lang==="ar"?"عبر الرسائل أو واتساب أدناه":"Via chat or WhatsApp below"},
                   {icon:"📹",title:lang==="fr"?"Rejoignez le cours en ligne":lang==="ar"?"انضموا للحصة أونلاين":"Join the online lesson",sub:lang==="fr"?"Cliquez sur le lien Jitsi — aucune installation requise":lang==="ar"?"انقر رابط Jitsi — لا تثبيت مطلوب":"Click the Jitsi link — no install needed"},
@@ -2907,8 +2914,8 @@ export default function TutorApp() {
                 <div style={{background:"linear-gradient(135deg,#F0FDF4,#DCFCE7)",border:"1.5px solid #86EFAC",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1.25rem",display:"flex",alignItems:"center",gap:12}}>
                   <div style={{fontSize:28}}>📅</div>
                   <div>
-                    <div style={{fontWeight:800,fontSize:13,color:"#0F6E56",marginBottom:2}}>{lang==="fr"?"Cours prévu le":lang==="ar"?"موعد الحصة":"Lesson scheduled"}</div>
-                    <div style={{fontWeight:900,fontSize:15,color:"#166534"}}>{new Date(activeBooking.scheduled_at).toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{weekday:"long",day:"numeric",month:"long"})} · {new Date(activeBooking.scheduled_at).toLocaleTimeString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{hour:"2-digit",minute:"2-digit"})}</div>
+                    <div style={{fontWeight:600,fontSize:13,color:"#0F6E56",marginBottom:2}}>{lang==="fr"?"Cours prévu le":lang==="ar"?"موعد الحصة":"Lesson scheduled"}</div>
+                    <div style={{fontWeight:700,fontSize:15,color:"#166534"}}>{new Date(activeBooking.scheduled_at).toLocaleDateString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{weekday:"long",day:"numeric",month:"long"})} · {new Date(activeBooking.scheduled_at).toLocaleTimeString(lang==="ar"?"ar-AE":lang==="fr"?"fr-FR":"en-AE",{hour:"2-digit",minute:"2-digit"})}</div>
                   </div>
                 </div>
               )}
@@ -2930,8 +2937,8 @@ export default function TutorApp() {
                 const jitsiLink=jitsiRoom?`https://meet.jit.si/${jitsiRoom}`:null;
                 return jitsiLink?(
                   <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem"}}>
-                    <div style={{fontWeight:800,fontSize:14,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Visioconférence":lang==="ar"?"مكالمة فيديو":"Video call"}</div>
-                    <button onClick={()=>{setVideoCallUrl(jitsiLink);setShowVideoCall(true);}} style={{width:"100%",background:"#0ABFA3",color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
+                    <div style={{fontWeight:600,fontSize:14,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Visioconférence":lang==="ar"?"مكالمة فيديو":"Video call"}</div>
+                    <button onClick={()=>{setVideoCallUrl(jitsiLink);setShowVideoCall(true);}} style={{width:"100%",background:"#0ABFA3",color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
                       🎥 {lang==="fr"?"Lancer le cours maintenant":lang==="ar"?"ابدأ الحصة الآن":"Start lesson now"}
                     </button>
                     <div style={{display:"flex",gap:8}}>
@@ -2947,18 +2954,18 @@ export default function TutorApp() {
               })()}
               {recurringSetup&&(
                 <div style={{background:"#EEF2FF",border:"1.5px solid #C7D2FE",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",textAlign:"start"}}>
-                  <div style={{fontWeight:800,fontSize:14,color:"#4338CA",marginBottom:4}}>🔄 {lang==="fr"?`Cours ${recurringSetup==="weekly"?"hebdomadaires":"bimensuels"} activés !`:lang==="ar"?`دروس ${recurringSetup==="weekly"?"أسبوعية":"نصف أسبوعية"} مفعّلة !`:`${recurringSetup==="weekly"?"Weekly":"Biweekly"} lessons activated!`}</div>
+                  <div style={{fontWeight:600,fontSize:14,color:"#4338CA",marginBottom:4}}>🔄 {lang==="fr"?`Cours ${recurringSetup==="weekly"?"hebdomadaires":"bimensuels"} activés !`:lang==="ar"?`دروس ${recurringSetup==="weekly"?"أسبوعية":"نصف أسبوعية"} مفعّلة !`:`${recurringSetup==="weekly"?"Weekly":"Biweekly"} lessons activated!`}</div>
                   <div style={{fontSize:12,color:"#6366F1",lineHeight:1.5}}>{lang==="fr"?`Tu recevras un rappel avant chaque prochain cours avec ${activeBooking?.teacher?.full_name}.`:lang==="ar"?`ستتلقى تذكيراً قبل كل حصة قادمة مع ${activeBooking?.teacher?.full_name}.`:`You'll get a reminder before each upcoming lesson with ${activeBooking?.teacher?.full_name}.`}</div>
                 </div>
               )}
               {activePack&&activePack.status==="active"?(
                 <div style={{background:"linear-gradient(135deg,#EEF2FF,#F0FDF4)",border:"1.5px solid #C7D2FE",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1.25rem",textAlign:"start"}}>
-                  <div style={{fontWeight:800,fontSize:14,color:"#4338CA",marginBottom:6}}>📦 {lang==="fr"?"Pack actif":lang==="ar"?"الباقة النشطة":"Active pack"}</div>
+                  <div style={{fontWeight:600,fontSize:14,color:"#4338CA",marginBottom:6}}>📦 {lang==="fr"?"Pack actif":lang==="ar"?"الباقة النشطة":"Active pack"}</div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                     <div style={{fontSize:13,color:"#374151"}}>
                       {lang==="fr"?`${activePack.total_lessons - activePack.lessons_done} cours restant(s) sur ${activePack.total_lessons}`:lang==="ar"?`${activePack.total_lessons - activePack.lessons_done} درس متبقٍ من ${activePack.total_lessons}`:`${activePack.total_lessons - activePack.lessons_done} lesson(s) left of ${activePack.total_lessons}`}
                     </div>
-                    <div style={{fontWeight:900,fontSize:15,color:"#5B4FE8"}}>{(activePack.total_lessons - activePack.lessons_done) * activePack.price_per_lesson_aed} AED</div>
+                    <div style={{fontWeight:700,fontSize:15,color:"#5B4FE8"}}>{(activePack.total_lessons - activePack.lessons_done) * activePack.price_per_lesson_aed} AED</div>
                   </div>
                   <div style={{background:"#E2E8F0",borderRadius:4,height:6,overflow:"hidden",marginBottom:10}}>
                     <div style={{background:"linear-gradient(90deg,#5B4FE8,#0ABFA3)",height:"100%",width:`${(activePack.lessons_done/activePack.total_lessons)*100}%`,borderRadius:4,transition:"width .5s ease"}}/>
@@ -2971,7 +2978,7 @@ export default function TutorApp() {
                 !activePack&&<div style={{background:"linear-gradient(135deg,#EEF2FF,#F5F3FF)",border:"1.5px dashed #A5B4FC",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1.25rem",cursor:"pointer"}} onClick={()=>setShowPackModal(true)}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
-                      <div style={{fontWeight:800,fontSize:14,color:"#4338CA",marginBottom:3}}>📦 {lang==="fr"?"Prendre un pack de cours ?":lang==="ar"?"هل تريد باقة دروس؟":"Get a lesson pack?"}</div>
+                      <div style={{fontWeight:600,fontSize:14,color:"#4338CA",marginBottom:3}}>📦 {lang==="fr"?"Prendre un pack de cours ?":lang==="ar"?"هل تريد باقة دروس؟":"Get a lesson pack?"}</div>
                       <div style={{fontSize:12,color:"#6366F1"}}>{lang==="fr"?"4, 8 ou 12 cours — économise jusqu'à 10%":lang==="ar"?"4 أو 8 أو 12 درساً — وفّر حتى 10%":"4, 8 or 12 lessons — save up to 10%"}</div>
                     </div>
                     <div style={{fontSize:22}}>→</div>
@@ -3003,7 +3010,7 @@ export default function TutorApp() {
             {showPackModal&&activeBooking&&(
               <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"1rem"}}>
                 <div style={{background:"#fff",borderRadius:20,padding:"1.75rem",maxWidth:440,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
-                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:4,color:"#1A1A2E"}}>📦 {lang==="fr"?"Choisir un pack":lang==="ar"?"اختر الباقة":"Choose a pack"}</div>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:700,marginBottom:4,color:"#1A1A2E"}}>📦 {lang==="fr"?"Choisir un pack":lang==="ar"?"اختر الباقة":"Choose a pack"}</div>
                   <div style={{fontSize:13,color:"#64748B",marginBottom:"1.25rem"}}>{lang==="fr"?`Avec ${activeBooking.teacher?.full_name} · ${activeRequest?.subject}`:lang==="ar"?`مع ${activeBooking.teacher?.full_name} · ${activeRequest?.subject}`:`With ${activeBooking.teacher?.full_name} · ${activeRequest?.subject}`}</div>
                   {([4,8,12] as const).map(n=>{
                     const pricePerLesson=activeBooking.gross_price_aed;
@@ -3033,8 +3040,8 @@ export default function TutorApp() {
                         }catch(e){showToast("❌ "+e.message);}
                         finally{setPackCreating(false);}
                       }} style={{width:"100%",background:n===8?"linear-gradient(135deg,#5B4FE8,#0ABFA3)":"#F8FAFF",border:n===8?"none":"1.5px solid #E2E8F0",borderRadius:14,padding:"14px 16px",marginBottom:10,textAlign:"start",cursor:"pointer",position:"relative"}}>
-                        {n===8&&<div style={{position:"absolute",top:-8,right:12,background:"#F59E0B",color:"#fff",fontSize:11,fontWeight:800,padding:"2px 10px",borderRadius:20}}>⭐ {lang==="fr"?"Populaire":lang==="ar"?"الأكثر طلباً":"Most popular"}</div>}
-                        <div style={{fontWeight:800,fontSize:15,color:n===8?"#fff":"#1A1A2E",marginBottom:4}}>{n} {lang==="fr"?"cours":lang==="ar"?"دروس":"lessons"}{discount>0&&<span style={{fontSize:12,marginLeft:8,background:n===8?"rgba(255,255,255,.2)":"#EEF2FF",color:n===8?"#fff":"#5B4FE8",borderRadius:10,padding:"1px 8px"}}>-{discount*100}%</span>}</div>
+                        {n===8&&<div style={{position:"absolute",top:-8,right:12,background:"#F59E0B",color:"#fff",fontSize:11,fontWeight:600,padding:"2px 10px",borderRadius:20}}>⭐ {lang==="fr"?"Populaire":lang==="ar"?"الأكثر طلباً":"Most popular"}</div>}
+                        <div style={{fontWeight:600,fontSize:15,color:n===8?"#fff":"#1A1A2E",marginBottom:4}}>{n} {lang==="fr"?"cours":lang==="ar"?"دروس":"lessons"}{discount>0&&<span style={{fontSize:12,marginLeft:8,background:n===8?"rgba(255,255,255,.2)":"#EEF2FF",color:n===8?"#fff":"#5B4FE8",borderRadius:10,padding:"1px 8px"}}>-{discount*100}%</span>}</div>
                         <div style={{fontSize:13,color:n===8?"rgba(255,255,255,.85)":"#64748B"}}>{discountedPrice} AED {lang==="fr"?"/ cours":lang==="ar"?"/ درس":"/ lesson"} · <strong style={{color:n===8?"#fff":"#1A1A2E"}}>{total} AED {lang==="fr"?"au total":lang==="ar"?"الإجمالي":"total"}</strong></div>
                       </button>
                     );
@@ -3050,20 +3057,20 @@ export default function TutorApp() {
               <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
                 <div style={{background:"#fff",borderRadius:20,padding:"2rem",maxWidth:400,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)",textAlign:"center"}}>
                   <div style={{fontSize:40,marginBottom:12}}>📦</div>
-                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:8,color:"#1A1A2E"}}>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:700,marginBottom:8,color:"#1A1A2E"}}>
                     {lang==="fr"?"Annuler le pack ?":lang==="ar"?"إلغاء الباقة؟":"Cancel the pack?"}
                   </div>
                   <div style={{fontSize:13,color:"#64748B",marginBottom:6,lineHeight:1.6}}>
                     {lang==="fr"?`Tu seras remboursé(e) pour ${activePack.total_lessons-activePack.lessons_done} cours non-utilisés.`:lang==="ar"?`سيتم استرداد ${activePack.total_lessons-activePack.lessons_done} درس غير مستخدم.`:`You'll be refunded for ${activePack.total_lessons-activePack.lessons_done} unused lessons.`}
                   </div>
-                  <div style={{fontWeight:900,fontSize:22,color:"#0ABFA3",marginBottom:"1.5rem"}}>
+                  <div style={{fontWeight:700,fontSize:22,color:"#0ABFA3",marginBottom:"1.5rem"}}>
                     {(activePack.total_lessons-activePack.lessons_done)*activePack.price_per_lesson_aed} AED
                   </div>
                   <div style={{display:"flex",gap:10}}>
                     <button className="btn-ghost" style={{flex:1}} onClick={()=>setShowCancelPackConfirm(false)}>
                       {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Go back"}
                     </button>
-                    <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer"}} onClick={async()=>{
+                    <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:600,fontSize:14,cursor:"pointer"}} onClick={async()=>{
                       try{
                         await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/cancel-pack",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({packId:activePack.id})});
                         await supabase.from("packs").update({status:"cancelled"}).eq("id",activePack.id);
@@ -3083,7 +3090,7 @@ export default function TutorApp() {
               <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
                 <div style={{background:"#fff",borderRadius:20,padding:"2rem",maxWidth:400,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)",textAlign:"center"}}>
                   <div style={{fontSize:40,marginBottom:12}}>⚠️</div>
-                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:8,color:"#1A1A2E"}}>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:700,marginBottom:8,color:"#1A1A2E"}}>
                     {lang==="fr"?"Annuler la réservation ?":lang==="ar"?"إلغاء الحجز؟":"Cancel the booking?"}
                   </div>
                   <div style={{fontSize:13,color:"#64748B",marginBottom:"1.5rem",lineHeight:1.6}}>
@@ -3093,7 +3100,7 @@ export default function TutorApp() {
                     <button className="btn-ghost" style={{flex:1}} onClick={()=>setShowCancelConfirm(false)}>
                       {lang==="fr"?"Retour":lang==="ar"?"رجوع":"Go back"}
                     </button>
-                    <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer",opacity:cancellingBooking?0.6:1}} disabled={cancellingBooking} onClick={async()=>{
+                    <button style={{flex:1,background:"#DC2626",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontWeight:600,fontSize:14,cursor:"pointer",opacity:cancellingBooking?0.6:1}} disabled={cancellingBooking} onClick={async()=>{
                       setCancellingBooking(true);
                       try{
                         await fetch("https://ihtcmemyrwejeetybepg.supabase.co/functions/v1/cancel-booking",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:activeBooking?.id})});
@@ -3122,7 +3129,7 @@ export default function TutorApp() {
               <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.7)",zIndex:2001,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0"}}>
                 <div style={{background:"#fff",borderRadius:"24px 24px 0 0",width:"100%",maxWidth:560,maxHeight:"80vh",display:"flex",flexDirection:"column",boxShadow:"0 -8px 40px rgba(0,0,0,.2)"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1rem 1.25rem",borderBottom:"1px solid #E2E8F0"}}>
-                    <div style={{fontWeight:900,fontSize:16,color:"#1A1A2E"}}>💬 {activeBooking?.teacher?.full_name}</div>
+                    <div style={{fontWeight:700,fontSize:16,color:"#1A1A2E"}}>💬 {activeBooking?.teacher?.full_name}</div>
                     <button style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#9CA3AF"}} onClick={()=>setShowChat(false)}>✕</button>
                   </div>
                   <div style={{flex:1,overflowY:"auto",padding:"1rem",display:"flex",flexDirection:"column",gap:8}}>
@@ -3156,14 +3163,14 @@ export default function TutorApp() {
               <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.7)",zIndex:2001,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
                 <div style={{background:"#fff",borderRadius:24,padding:"2rem 1.5rem",maxWidth:400,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.25)",textAlign:"center"}}>
                   <div style={{fontSize:48,marginBottom:12}}>🔄</div>
-                  <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:900,marginBottom:8,color:"#1A1A2E"}}>
+                  <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:700,marginBottom:8,color:"#1A1A2E"}}>
                     {lang==="fr"?"Cours réguliers ?":lang==="ar"?"دروس منتظمة؟":"Regular lessons?"}
                   </div>
                   <div style={{fontSize:13,color:"#64748B",marginBottom:"1.75rem",lineHeight:1.65}}>
                     {lang==="fr"?`Continue avec ${activeBooking?.teacher?.full_name} — on te rappelle avant chaque séance.`:lang==="ar"?`استمر مع ${activeBooking?.teacher?.full_name} — سنذكّرك قبل كل حصة.`:`Keep learning with ${activeBooking?.teacher?.full_name} — we'll remind you before each session.`}
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                    <button onClick={()=>handleSetupRecurring("weekly")} style={{background:"linear-gradient(135deg,#5B4FE8,#7C73F0)",color:"#fff",border:"none",borderRadius:14,padding:"14px 20px",fontSize:15,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                    <button onClick={()=>handleSetupRecurring("weekly")} style={{background:"linear-gradient(135deg,#5B4FE8,#7C73F0)",color:"#fff",border:"none",borderRadius:14,padding:"14px 20px",fontSize:15,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                       📅 {lang==="fr"?"Toutes les semaines":lang==="ar"?"كل أسبوع":"Every week"}
                     </button>
                     <button onClick={()=>handleSetupRecurring("biweekly")} style={{background:"#F1F5F9",color:"#1A1A2E",border:"1.5px solid #E2E8F0",borderRadius:14,padding:"14px 20px",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
@@ -3180,7 +3187,7 @@ export default function TutorApp() {
             {/* ÉTAT 5 — rate */}
             {studentState==="rate"&&<div style={{maxWidth:480,margin:"0 auto",textAlign:"center",padding:"2rem 0"}}>
               <div style={{fontSize:56,marginBottom:"1rem"}}>⭐</div>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Comment s'est passé le cours ?":lang==="ar"?"كيف كانت الحصة؟":"How was the lesson?"}</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,marginBottom:8}}>{lang==="fr"?"Comment s'est passé le cours ?":lang==="ar"?"كيف كانت الحصة؟":"How was the lesson?"}</div>
               <div style={{fontSize:14,color:"#64748B",marginBottom:"2rem",lineHeight:1.7}}>{lang==="fr"?"Ta note aide les autres familles à choisir.":lang==="ar"?"تقييمك يساعد الأسر الأخرى.":"Your rating helps other families choose."}</div>
               <div style={{fontSize:14,color:"#5B4FE8",fontWeight:700,marginBottom:"1rem",minHeight:22}}>
                 {hoveredStar===1?(lang==="fr"?"Décevant":lang==="ar"?"مخيب":"Disappointing"):hoveredStar===2?(lang==="fr"?"Passable":lang==="ar"?"مقبول":"Fair"):hoveredStar===3?(lang==="fr"?"Bien":lang==="ar"?"جيد":"Good"):hoveredStar===4?(lang==="fr"?"Très bien":lang==="ar"?"جيد جداً":"Very good"):hoveredStar===5?(lang==="fr"?"Excellent !":lang==="ar"?"ممتاز !":"Excellent!"):""}
@@ -3220,7 +3227,7 @@ export default function TutorApp() {
             {/* ÉTAT 6 — post_rate */}
             {studentState==="post_rate"&&<div style={{maxWidth:480,margin:"0 auto",textAlign:"center",padding:"2rem 0"}}>
               <div style={{fontSize:48,marginBottom:"1rem"}}>🙌</div>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Super, merci !":lang==="ar"?"رائع، شكراً !":"Great, thanks!"}</div>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:20,fontWeight:700,marginBottom:8}}>{lang==="fr"?"Super, merci !":lang==="ar"?"رائع، شكراً !":"Great, thanks!"}</div>
               <div style={{fontSize:14,color:"#64748B",marginBottom:"2rem"}}>{lang==="fr"?"Que veux-tu faire maintenant ?":lang==="ar"?"ماذا تريد أن تفعل الآن؟":"What would you like to do now?"}</div>
               <div style={{display:"flex",flexDirection:"column",gap:12,maxWidth:360,margin:"0 auto"}}>
                 {lastCompletedTeacher&&(
@@ -3258,7 +3265,7 @@ export default function TutorApp() {
                   lang==="fr"?"Documents":lang==="ar"?"الوثائق":"Documents",
                 ].map((label,i)=>(
                   <div key={i} style={{flex:1,textAlign:"center",fontSize:11,fontWeight:700,color:teacherOnboardStep>i+1?"#0ABFA3":teacherOnboardStep===i+1?"#5B4FE8":"#9CA3AF"}}>
-                    <div style={{width:28,height:28,borderRadius:"50%",margin:"0 auto 4px",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:13,background:teacherOnboardStep>i+1?"#0ABFA3":teacherOnboardStep===i+1?"#5B4FE8":"#E5E7EB",color:teacherOnboardStep>=i+1?"#fff":"#9CA3AF",transition:"all .3s"}}>
+                    <div style={{width:28,height:28,borderRadius:"50%",margin:"0 auto 4px",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,background:teacherOnboardStep>i+1?"#0ABFA3":teacherOnboardStep===i+1?"#5B4FE8":"#E5E7EB",color:teacherOnboardStep>=i+1?"#fff":"#9CA3AF",transition:"all .3s"}}>
                       {teacherOnboardStep>i+1?"✓":i+1}
                     </div>
                     {label}
@@ -3272,7 +3279,7 @@ export default function TutorApp() {
 
             {/* STEP 1 — Profil */}
             {teacherOnboardStep===1&&<>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,marginBottom:6,color:"#1A1A2E"}}>
                 {lang==="fr"?"Parle-nous de toi":lang==="ar"?"أخبرنا عنك":"Tell us about yourself"}
               </div>
               <div style={{fontSize:14,color:"#6B7280",marginBottom:"1.5rem"}}>{lang==="fr"?"Ces infos apparaîtront sur ton profil":lang==="ar"?"ستظهر هذه المعلومات في ملفك":"This info will appear on your profile"}</div>
@@ -3302,7 +3309,7 @@ export default function TutorApp() {
 
             {/* STEP 2 — Matières & Tarif */}
             {teacherOnboardStep===2&&<>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,marginBottom:6,color:"#1A1A2E"}}>
                 {lang==="fr"?"Que vas-tu enseigner ?":lang==="ar"?"ماذا ستدرّس؟":"What will you teach?"}
               </div>
               <div style={{fontSize:14,color:"#6B7280",marginBottom:"1.5rem"}}>{lang==="fr"?"Sélectionne tout ce qui correspond":lang==="ar"?"اختر كل ما ينطبق عليك":"Select everything that applies"}</div>
@@ -3326,7 +3333,7 @@ export default function TutorApp() {
 
             {/* STEP 3 — Documents & Paiement */}
             {teacherOnboardStep===3&&<>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,marginBottom:6,color:"#1A1A2E"}}>
                 {lang==="fr"?"Documents & paiement":lang==="ar"?"الوثائق والدفع":"Documents & payment"}
               </div>
               <div style={{fontSize:14,color:"#6B7280",marginBottom:"1.5rem"}}>{lang==="fr"?"Dernière étape — sécurisée et chiffrée":lang==="ar"?"الخطوة الأخيرة — آمنة ومشفّرة":"Last step — secure and encrypted"}</div>
@@ -3430,7 +3437,7 @@ export default function TutorApp() {
               {(!userProfile?.teaching_subjects?.length||!userProfile?.teaching_langs?.length)&&(
                 <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={openTeacherOnboard}>
                   <div>
-                    <div style={{fontWeight:800,marginBottom:4}}>⚠️ {lang==="fr"?"Profil incomplet":lang==="ar"?"ملف غير مكتمل":"Incomplete profile"}</div>
+                    <div style={{fontWeight:600,marginBottom:4}}>⚠️ {lang==="fr"?"Profil incomplet":lang==="ar"?"ملف غير مكتمل":"Incomplete profile"}</div>
                     <div style={{fontSize:12}}>{lang==="fr"?"Complète ton profil pour recevoir des annonces →":lang==="ar"?"أكمل ملفك لتستلم إعلانات →":"Complete your profile to receive matching requests →"}</div>
                   </div>
                 </div>
@@ -3438,7 +3445,7 @@ export default function TutorApp() {
               {!hasTeacherAccess(teacherSub)&&(
                 <div className="banner banner-amber" style={{cursor:"pointer",marginBottom:"1.5rem"}} onClick={()=>setShowPaywall(true)}>
                   <div>
-                    <div style={{fontWeight:800,marginBottom:4}}>🔒 {lang==="fr"?"Abonnement requis":lang==="ar"?"الاشتراك مطلوب":"Subscription required"}</div>
+                    <div style={{fontWeight:600,marginBottom:4}}>🔒 {lang==="fr"?"Abonnement requis":lang==="ar"?"الاشتراك مطلوب":"Subscription required"}</div>
                     <div style={{fontSize:12}}>{lang==="fr"?"14 jours gratuits pour répondre aux annonces — 0% commission →":lang==="ar"?"14 يوماً مجاناً للرد على الطلبات — 0% عمولة ←":"14 days free to answer requests — 0% commission →"}</div>
                   </div>
                 </div>
@@ -3446,7 +3453,7 @@ export default function TutorApp() {
               {hasTeacherAccess(teacherSub)&&teacherSub?.status==="trialing"&&(
                 <div className="banner" style={{background:"#EEF2FF",border:"1.5px solid #C7D2FE",marginBottom:"1.5rem"}}>
                   <div>
-                    <div style={{fontWeight:800,marginBottom:4,color:"#4338CA"}}>✨ {lang==="fr"?`Essai gratuit — ${subDaysLeft(teacherSub)} jours restants`:lang==="ar"?`تجربة مجانية — ${subDaysLeft(teacherSub)} يوماً متبقياً`:`Free trial — ${subDaysLeft(teacherSub)} days left`}</div>
+                    <div style={{fontWeight:600,marginBottom:4,color:"#4338CA"}}>✨ {lang==="fr"?`Essai gratuit — ${subDaysLeft(teacherSub)} jours restants`:lang==="ar"?`تجربة مجانية — ${subDaysLeft(teacherSub)} يوماً متبقياً`:`Free trial — ${subDaysLeft(teacherSub)} days left`}</div>
                     <div style={{fontSize:12,color:"#6366F1"}}>{lang==="fr"?"Profite de toutes les annonces sans limite.":lang==="ar"?"استمتع بجميع الطلبات بدون حدود.":"Enjoy unlimited access to all requests."}</div>
                   </div>
                 </div>
@@ -3458,7 +3465,7 @@ export default function TutorApp() {
                 <div className="stat-card"><div className="stat-val" style={{color:"#0ABFA3"}}>{teacherRevenue.pending} AED</div><div className="stat-lbl">{lang==="fr"?"En attente":"Pending"}</div></div>
               </div>
               <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem"}}>
-                <div style={{fontWeight:800,fontSize:14,marginBottom:12}}>🎓 {lang==="fr"?"Ton profil":lang==="ar"?"ملفك":"Your profile"}</div>
+                <div style={{fontWeight:600,fontSize:14,marginBottom:12}}>🎓 {lang==="fr"?"Ton profil":lang==="ar"?"ملفك":"Your profile"}</div>
                 {userProfile?.teaching_subjects?.length>0&&(
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
                     {userProfile.teaching_subjects.map(s=>{const subj=SUBJECTS.find(x=>x.en===s);return <span key={s} className="badge badge-purple">{subj?subj[lang]:s}</span>;})}
@@ -3494,20 +3501,20 @@ export default function TutorApp() {
 
               {userProfile?.referral_code&&(
                 <div style={{background:"linear-gradient(135deg,#5B4FE8,#0ABFA3)",borderRadius:16,padding:"1.25rem",marginTop:12,color:"#fff"}}>
-                  <div style={{fontWeight:800,fontSize:14,marginBottom:6}}>🎁 {lang==="fr"?"Parraine un collègue, gagne 50%":lang==="ar"?"ادعُ زميلاً واحصل على 50%":"Refer a colleague, get 50% off"}</div>
+                  <div style={{fontWeight:600,fontSize:14,marginBottom:6}}>🎁 {lang==="fr"?"Parraine un collègue, gagne 50%":lang==="ar"?"ادعُ زميلاً واحصل على 50%":"Refer a colleague, get 50% off"}</div>
                   <div style={{fontSize:12,opacity:.92,lineHeight:1.55,marginBottom:12}}>
                     {lang==="fr"?"Ton filleul obtient −50% sur sa première période, et toi −50% sur ta prochaine facture.":lang==="ar"?"يحصل صديقك على خصم 50% على فترته الأولى، وتحصل أنت على 50% على فاتورتك التالية.":"They get 50% off their first period, you get 50% off your next invoice."}
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.18)",borderRadius:12,padding:"10px 14px",marginBottom:10}}>
-                    <span style={{fontFamily:"monospace",fontSize:17,fontWeight:900,letterSpacing:2,flex:1}}>{userProfile.referral_code}</span>
-                    <button onClick={()=>{navigator.clipboard?.writeText(userProfile.referral_code);showToast("📋 "+(lang==="fr"?"Code copié !":lang==="ar"?"تم نسخ الرمز!":"Code copied!"));}} style={{background:"rgba(255,255,255,.25)",border:"none",borderRadius:8,padding:"6px 12px",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer"}}>
+                    <span style={{fontFamily:"monospace",fontSize:17,fontWeight:700,letterSpacing:2,flex:1}}>{userProfile.referral_code}</span>
+                    <button onClick={()=>{navigator.clipboard?.writeText(userProfile.referral_code);showToast("📋 "+(lang==="fr"?"Code copié !":lang==="ar"?"تم نسخ الرمز!":"Code copied!"));}} style={{background:"rgba(255,255,255,.25)",border:"none",borderRadius:8,padding:"6px 12px",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                       {lang==="fr"?"Copier":lang==="ar"?"نسخ":"Copy"}
                     </button>
                   </div>
                   <button onClick={()=>{
                     const msg=lang==="fr"?`Rejoins-moi sur TutorApp — 0% de commission sur tes cours ! Utilise mon code ${userProfile.referral_code} pour −50% : https://tutorapp.online`:lang==="ar"?`انضم إليّ على TutorApp — 0% عمولة على حصصك! استخدم رمزي ${userProfile.referral_code} للحصول على خصم 50%: https://tutorapp.online`:`Join me on TutorApp — 0% commission on your lessons! Use my code ${userProfile.referral_code} for 50% off: https://tutorapp.online`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,"_blank");
-                  }} style={{width:"100%",background:"#fff",color:"#5B4FE8",border:"none",borderRadius:12,padding:"11px",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+                  }} style={{width:"100%",background:"#fff",color:"#5B4FE8",border:"none",borderRadius:12,padding:"11px",fontSize:13,fontWeight:600,cursor:"pointer"}}>
                     💬 {lang==="fr"?"Partager sur WhatsApp":lang==="ar"?"شارك على واتساب":"Share on WhatsApp"}
                   </button>
                   {(userProfile.referral_count||0)>0&&(
@@ -3526,7 +3533,7 @@ export default function TutorApp() {
               <div style={{background:"#5B4FE8",borderRadius:18,padding:"1.25rem 1.5rem",marginBottom:"1.5rem",display:"flex",alignItems:"center",gap:14}}>
                 <div style={{fontSize:32}}>🔔</div>
                 <div>
-                  <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:900,color:"#fff",marginBottom:4}}>{matchedRequests.length} {lang==="fr"?"nouvelle(s) annonce(s) !":lang==="ar"?"إعلان جديد !":"new request(s)!"}</div>
+                  <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:"#fff",marginBottom:4}}>{matchedRequests.length} {lang==="fr"?"nouvelle(s) annonce(s) !":lang==="ar"?"إعلان جديد !":"new request(s)!"}</div>
                   <div style={{fontSize:13,color:"rgba(255,255,255,.8)"}}>{lang==="fr"?"Ces élèves correspondent à ton profil":lang==="ar"?"هؤلاء الطلاب يناسبون ملفك":"These students match your profile"}</div>
                 </div>
               </div>
@@ -3537,7 +3544,7 @@ export default function TutorApp() {
                       <span style={{fontSize:20}}>📋</span>
                       <div className="req-title">{r.subject}</div>
                       {i===0&&<span className="badge badge-green" style={{fontSize:10}}>NEW</span>}
-                      {r._score>=50&&<span style={{fontSize:10,fontWeight:800,background:"#D1FAE5",color:"#0F6E56",borderRadius:8,padding:"2px 7px"}}>{Math.min(99,Math.round(r._score/80*100))}% match</span>}
+                      {r._score>=50&&<span style={{fontSize:10,fontWeight:600,background:"#D1FAE5",color:"#0F6E56",borderRadius:8,padding:"2px 7px"}}>{Math.min(99,Math.round(r._score/80*100))}% match</span>}
                     </div>
                     <span style={{fontSize:11,color:"#9CA3AF",fontWeight:600}}>{timeAgo(r.created_at,lang)}</span>
                   </div>
@@ -3581,14 +3588,14 @@ export default function TutorApp() {
             <div style={{maxWidth:520,margin:"0 auto"}}>
               <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
                 <div style={{fontSize:44,marginBottom:8,animation:"pulse 2s infinite"}}>📨</div>
-                <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:900,marginBottom:6}}>{lang==="fr"?"Offre(s) envoyée(s) !":lang==="ar"?"تم إرسال العرض !":"Offer(s) sent!"}</div>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,marginBottom:6}}>{lang==="fr"?"Offre(s) envoyée(s) !":lang==="ar"?"تم إرسال العرض !":"Offer(s) sent!"}</div>
                 <div style={{fontSize:13,color:"#64748B"}}>{lang==="fr"?"Mise à jour automatique toutes les 30 secondes.":lang==="ar"?"تحديث تلقائي كل 30 ثانية.":"Auto-updates every 30 seconds."}</div>
               </div>
               {teacherPendingOffers.map((offer,i)=>(
                 <div key={offer.id||i} style={{border:"1.5px solid #D8DBFE",borderRadius:16,padding:"1.25rem",marginBottom:12,background:"#FAFBFF"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                    <div style={{fontWeight:800,fontSize:15}}>{offer.request?.subject}</div>
-                    <span style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:900,color:"#5B4FE8"}}>{offer.net_price_aed} AED/h</span>
+                    <div style={{fontWeight:600,fontSize:15}}>{offer.request?.subject}</div>
+                    <span style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:"#5B4FE8"}}>{offer.net_price_aed} AED/h</span>
                   </div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
                     <span className="badge badge-purple">{offer.request?.level}</span>
@@ -3599,7 +3606,7 @@ export default function TutorApp() {
                 </div>
               ))}
               <div style={{background:"#FFF7ED",border:"1.5px solid #FED7AA",borderRadius:14,padding:"1rem",marginBottom:"1.25rem",fontSize:13,color:"#92400E"}}>
-                <div style={{fontWeight:800,marginBottom:6}}>💡 {lang==="fr"?"Conseil":lang==="ar"?"نصيحة":"Tip"}</div>
+                <div style={{fontWeight:600,marginBottom:6}}>💡 {lang==="fr"?"Conseil":lang==="ar"?"نصيحة":"Tip"}</div>
                 <div style={{lineHeight:1.6}}>{lang==="fr"?"Les parents répondent en moyenne en 12 minutes. Profites-en pour consulter les nouvelles annonces.":lang==="ar"?"يرد الآباء في المتوسط خلال 12 دقيقة. استغل الوقت لمراجعة الطلبات الجديدة.":"Parents respond in ~12 minutes on average. Check new requests in the meantime."}</div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginBottom:"1rem"}}>
@@ -3627,7 +3634,7 @@ export default function TutorApp() {
           {appTab==="teacher-home"&&!showOnboard&&teacherState==="booked"&&(
             <div style={{maxWidth:520,margin:"0 auto",textAlign:"center"}}>
               <div style={{fontSize:56,marginBottom:"1rem"}}>🎓</div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Cours réservé !":lang==="ar"?"لديك حصة محجوزة !":"Lesson booked!"}</div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,marginBottom:8}}>{lang==="fr"?"Cours réservé !":lang==="ar"?"لديك حصة محجوزة !":"Lesson booked!"}</div>
               <div style={{fontSize:14,color:"#64748B",marginBottom:"1.5rem"}}>{lang==="fr"?"Avec":lang==="ar"?"مع":"With"} <strong>{teacherActiveBooking?.student?.full_name}</strong></div>
               <div style={{background:"#F8FAFF",border:"1.5px solid #E2E8F0",borderRadius:16,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
                 <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #E2E8F0",fontSize:14}}>
@@ -3636,7 +3643,7 @@ export default function TutorApp() {
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #E2E8F0",fontSize:14}}>
                   <span style={{color:"#64748B"}}>{lang==="fr"?"Tu recevras":lang==="ar"?"ستستلم":"You'll receive"}</span>
-                  <span style={{fontWeight:900,color:"#0ABFA3",fontFamily:"'Fraunces',serif",fontSize:17}}>{(teacherActiveBooking?.net_price_aed||0)} AED</span>
+                  <span style={{fontWeight:700,color:"#0ABFA3",fontFamily:"'Fraunces',serif",fontSize:17}}>{(teacherActiveBooking?.net_price_aed||0)} AED</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:14}}>
                   <span style={{color:"#64748B"}}>{lang==="fr"?"Paiement":lang==="ar"?"الدفع":"Payment"}</span>
@@ -3648,8 +3655,8 @@ export default function TutorApp() {
                 const jLink=jRoom?`https://meet.jit.si/${jRoom}`:null;
                 return jLink?(
                   <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:14,padding:"1.25rem",marginBottom:"1.5rem",textAlign:"start"}}>
-                    <div style={{fontWeight:800,fontSize:13,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Visioconférence":lang==="ar"?"مكالمة فيديو":"Video call"}</div>
-                    <button onClick={()=>{setVideoCallUrl(jLink);setShowVideoCall(true);}} style={{width:"100%",background:"#0ABFA3",color:"#fff",border:"none",borderRadius:10,padding:"12px",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
+                    <div style={{fontWeight:600,fontSize:13,color:"#0F6E56",marginBottom:8}}>📹 {lang==="fr"?"Visioconférence":lang==="ar"?"مكالمة فيديو":"Video call"}</div>
+                    <button onClick={()=>{setVideoCallUrl(jLink);setShowVideoCall(true);}} style={{width:"100%",background:"#0ABFA3",color:"#fff",border:"none",borderRadius:10,padding:"12px",fontWeight:600,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
                       🎥 {lang==="fr"?"Lancer le cours":lang==="ar"?"ابدأ الحصة":"Start lesson"}
                     </button>
                     <button onClick={()=>{navigator.clipboard?.writeText(jLink);showToast("📋 "+(lang==="fr"?"Lien copié !":lang==="ar"?"تم نسخ الرابط !":"Link copied!"));}} style={{width:"100%",background:"#fff",border:"1.5px solid #A7F3D0",borderRadius:10,padding:"8px",fontWeight:700,fontSize:12,cursor:"pointer",color:"#0F6E56"}}>📋 {lang==="fr"?"Copier le lien":lang==="ar"?"نسخ الرابط":"Copy link"}</button>
@@ -3666,10 +3673,10 @@ export default function TutorApp() {
           {appTab==="teacher-home"&&!showOnboard&&teacherState==="pending_payment"&&(
             <div style={{maxWidth:480,margin:"0 auto",textAlign:"center",padding:"2rem 0"}}>
               <div style={{fontSize:56,marginBottom:"1rem"}}>💰</div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:900,marginBottom:8}}>{lang==="fr"?"Paiement en route !":lang==="ar"?"الدفعة في الطريق !":"Payment on its way!"}</div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,marginBottom:8}}>{lang==="fr"?"Paiement en route !":lang==="ar"?"الدفعة في الطريق !":"Payment on its way!"}</div>
               <div style={{fontSize:14,color:"#64748B",marginBottom:"1.5rem"}}>{lang==="fr"?"Le cours est confirmé. Ton virement arrive bientôt.":lang==="ar"?"تم تأكيد الحصة. تحويلك قادم قريباً.":"Lesson confirmed. Your payout is coming soon."}</div>
               <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:16,padding:"1.5rem",marginBottom:"1.5rem"}}>
-                <div style={{fontSize:32,fontFamily:"'Fraunces',serif",fontWeight:900,color:"#0ABFA3",marginBottom:8}}>+{(teacherActiveBooking?.net_price_aed||0)} AED</div>
+                <div style={{fontSize:32,fontFamily:"'Fraunces',serif",fontWeight:700,color:"#0ABFA3",marginBottom:8}}>+{(teacherActiveBooking?.net_price_aed||0)} AED</div>
                 <div style={{fontSize:13,color:"#0F6E56",fontWeight:600}}>
                   {userProfile?.withdrawal_frequency==="wI"?(lang==="fr"?"Virement immédiat":"Immediate payout"):userProfile?.withdrawal_frequency==="wW"?(lang==="fr"?"Cette semaine":"This week"):(lang==="fr"?"Ce mois":"This month")}
                 </div>
@@ -3726,7 +3733,7 @@ export default function TutorApp() {
                       return(
                         <div key={si} onClick={()=>setBidSlots(checked?bidSlots.filter(x=>x!==label):[...bidSlots,label])} style={{display:"flex",alignItems:"center",gap:10,background:checked?"#EEF2FF":"#F8FAFF",border:`1.5px solid ${checked?"#5B4FE8":"#E2E8F0"}`,borderRadius:10,padding:"10px 14px",cursor:"pointer"}}>
                           <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?"#5B4FE8":"#CBD5E1"}`,background:checked?"#5B4FE8":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                            {checked&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
+                            {checked&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}
                           </div>
                           <span style={{fontSize:13,fontWeight:700,color:checked?"#4338CA":"#374151"}}>📅 {label}</span>
                         </div>
@@ -3815,7 +3822,7 @@ export default function TutorApp() {
               <div style={{width:8,height:8,borderRadius:"50%",background:"#0ABFA3",animation:"pulse 1.5s infinite"}}/>
               <span style={{color:"#fff",fontWeight:700,fontSize:14}}>🎥 {lang==="fr"?"Cours en cours":lang==="ar"?"الحصة جارية":"Lesson in progress"}</span>
             </div>
-            <button onClick={()=>setShowVideoCall(false)} style={{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontWeight:800,fontSize:13,cursor:"pointer"}}>
+            <button onClick={()=>setShowVideoCall(false)} style={{background:"#DC2626",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontWeight:600,fontSize:13,cursor:"pointer"}}>
               ✕ {lang==="fr"?"Quitter":lang==="ar"?"خروج":"Leave"}
             </button>
           </div>
@@ -3832,7 +3839,7 @@ export default function TutorApp() {
         <div style={{position:"fixed",inset:0,background:"rgba(15,15,40,.6)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
           <div style={{background:"#fff",borderRadius:20,padding:"2rem",maxWidth:420,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
             <div style={{fontSize:36,marginBottom:8,textAlign:"center"}}>⚠️</div>
-            <div style={{fontFamily:"Fraunces,serif",fontSize:18,fontWeight:900,marginBottom:6,textAlign:"center"}}>
+            <div style={{fontFamily:"Fraunces,serif",fontSize:18,fontWeight:700,marginBottom:6,textAlign:"center"}}>
               {lang==="fr"?"Signaler un problème":lang==="ar"?"الإبلاغ عن مشكلة":"Report an issue"}
             </div>
             <div style={{fontSize:13,color:"#64748B",marginBottom:"1.25rem",textAlign:"center"}}>
@@ -3872,7 +3879,7 @@ export default function TutorApp() {
 
             {onboardStep===1&&<>
               <div style={{fontSize:28,marginBottom:8}}>👨‍👩‍👧</div>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,marginBottom:6,color:"#1A1A2E"}}>
                 {lang==="fr"?"Parlez-nous de votre enfant":lang==="ar"?"أخبرنا عن طفلك":"Tell us about your child"}
               </div>
               <div style={{fontSize:13,color:"#64748B",marginBottom:"1.5rem",lineHeight:1.6}}>
@@ -3892,7 +3899,7 @@ export default function TutorApp() {
 
             {onboardStep===2&&<>
               <div style={{fontSize:28,marginBottom:8}}>📚</div>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,marginBottom:6,color:"#1A1A2E"}}>
                 {lang==="fr"?`Quel est le cursus de ${childName||"l'enfant"} ?`:lang==="ar"?`ما هو منهج ${childName||"الطفل"}؟`:`What's ${childName||"the child"}'s curriculum?`}
               </div>
               <div className="form-group">
@@ -3919,7 +3926,7 @@ export default function TutorApp() {
 
             {onboardStep===3&&<>
               <div style={{fontSize:28,marginBottom:8}}>🗣</div>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:900,marginBottom:6,color:"#1A1A2E"}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:22,fontWeight:700,marginBottom:6,color:"#1A1A2E"}}>
                 {lang==="fr"?"Langue d'enseignement préférée ?":lang==="ar"?"لغة التدريس المفضلة؟":"Preferred teaching language?"}
               </div>
               <div style={{fontSize:13,color:"#64748B",marginBottom:"1.25rem"}}>
@@ -3947,7 +3954,7 @@ export default function TutorApp() {
           <div style={{background:"#fff",borderRadius:24,padding:"2rem",maxWidth:480,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.25)",maxHeight:"92vh",overflowY:"auto"}}>
             <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
               <div style={{fontSize:34,marginBottom:8}}>🚀</div>
-              <div style={{fontFamily:"Fraunces,serif",fontSize:23,fontWeight:900,color:"#1A1A2E",marginBottom:6}}>
+              <div style={{fontFamily:"Fraunces,serif",fontSize:23,fontWeight:700,color:"#1A1A2E",marginBottom:6}}>
                 {lang==="fr"?"Accède aux annonces élèves":lang==="ar"?"احصل على طلبات الطلاب":"Unlock student requests"}
               </div>
               <div style={{fontSize:13,color:"#64748B",lineHeight:1.6}}>
@@ -3957,16 +3964,16 @@ export default function TutorApp() {
 
             <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:"1.25rem"}}>
               <div onClick={()=>setSubPlan("yearly")} style={{position:"relative",border:`2px solid ${subPlan==="yearly"?"#5B4FE8":"#E2E8F0"}`,background:subPlan==="yearly"?"#F5F3FF":"#fff",borderRadius:16,padding:"1rem 1.25rem",cursor:"pointer",transition:"all .2s"}}>
-                <div style={{position:"absolute",top:-10,insetInlineEnd:16,background:"#0ABFA3",color:"#fff",fontSize:10,fontWeight:900,padding:"3px 10px",borderRadius:20,letterSpacing:.5}}>
+                <div style={{position:"absolute",top:-10,insetInlineEnd:16,background:"#0ABFA3",color:"#fff",fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,letterSpacing:.5}}>
                   {lang==="fr"?"ÉCONOMISE 44%":lang==="ar"?"وفّر 44%":"SAVE 44%"}
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
-                    <div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{lang==="fr"?"Annuel":lang==="ar"?"سنوي":"Yearly"}</div>
+                    <div style={{fontWeight:600,fontSize:15,color:"#1A1A2E"}}>{lang==="fr"?"Annuel":lang==="ar"?"سنوي":"Yearly"}</div>
                     <div style={{fontSize:12,color:"#64748B",marginTop:2}}>{Math.round(SUB_YEARLY_AED/12)} AED/{lang==="fr"?"mois":lang==="ar"?"شهر":"mo"}</div>
                   </div>
                   <div style={{textAlign:"end"}}>
-                    <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:900,color:"#5B4FE8"}}>{SUB_YEARLY_AED} AED</div>
+                    <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:700,color:"#5B4FE8"}}>{SUB_YEARLY_AED} AED</div>
                     <div style={{fontSize:11,color:"#94A3B8"}}>{lang==="fr"?"par an":lang==="ar"?"سنوياً":"per year"}</div>
                   </div>
                 </div>
@@ -3975,11 +3982,11 @@ export default function TutorApp() {
               <div onClick={()=>setSubPlan("monthly")} style={{border:`2px solid ${subPlan==="monthly"?"#5B4FE8":"#E2E8F0"}`,background:subPlan==="monthly"?"#F5F3FF":"#fff",borderRadius:16,padding:"1rem 1.25rem",cursor:"pointer",transition:"all .2s"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
-                    <div style={{fontWeight:800,fontSize:15,color:"#1A1A2E"}}>{lang==="fr"?"Mensuel":lang==="ar"?"شهري":"Monthly"}</div>
+                    <div style={{fontWeight:600,fontSize:15,color:"#1A1A2E"}}>{lang==="fr"?"Mensuel":lang==="ar"?"شهري":"Monthly"}</div>
                     <div style={{fontSize:12,color:"#64748B",marginTop:2}}>{lang==="fr"?"Sans engagement":lang==="ar"?"بدون التزام":"Cancel anytime"}</div>
                   </div>
                   <div style={{textAlign:"end"}}>
-                    <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:900,color:"#5B4FE8"}}>{SUB_MONTHLY_AED} AED</div>
+                    <div style={{fontFamily:"Fraunces,serif",fontSize:21,fontWeight:700,color:"#5B4FE8"}}>{SUB_MONTHLY_AED} AED</div>
                     <div style={{fontSize:11,color:"#94A3B8"}}>{lang==="fr"?"par mois":lang==="ar"?"شهرياً":"per month"}</div>
                   </div>
                 </div>
